@@ -216,7 +216,7 @@ export const SettingsView: React.FC<Props> = ({
               type="text"
               value={sheetId}
               onChange={(e) => setSheetId(e.target.value)}
-              placeholder="1VsOG-E4S9A4tUvPaw467d9KO4VRSn79k2HmJIhfZUkw"
+              placeholder="วาง Sheet ID ของคุณที่นี่"
               className="w-full border-2 border-[#eae3cf] rounded-xl px-3.5 py-2 text-sm font-mono font-semibold text-[#0d3a57]"
             />
           </div>
