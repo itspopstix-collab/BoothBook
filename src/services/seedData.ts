@@ -1,16 +1,3036 @@
 import { AppDatabaseState, FlavorCategory } from '../types';
-import { DEFAULT_REFV_POS_SETTINGS } from './posSync';
 
-export const REFV_BASE_FLAVORS: { name: string; category: FlavorCategory; image: string }[] = [];
+export const REFV_BASE_FLAVORS: { name: string; category: FlavorCategory; image: string }[] = [
+  { name: 'Plain Choco', category: 'Classic', image: '🍫' },
+  { name: 'Dark Choco', category: 'Classic', image: '🍫' },
+  { name: 'White Choco', category: 'Classic', image: '🤍' },
+  { name: 'Strawberry Choco', category: 'Classic', image: '🍓' },
+  { name: 'Matcha Choco', category: 'Classic', image: '🍵' },
+  { name: 'Banoffee Pop', category: 'Special', image: '🍌' },
+  { name: 'Berry Pop', category: 'Special', image: '🫐' },
+  { name: 'Cookie & Cream Pop', category: 'Special', image: '🍪' },
+  { name: 'Pistachio Dubai Pop', category: 'Special', image: '🥜' },
+];
+
+export const MIGRATED_REFV_DATA: AppDatabaseState = {
+  "settings": {
+    "sheetId": "1VsOG-E4S9A4tUvPaw467d9KO4VRSn79k2HmJIhfZUkw",
+    "appsScriptUrl": "https://script.google.com/macros/s/AKfycbyC8sOIL0oSuJFi7A8rDgMoY83FuGfGqqzx8t28AH-ULPR0f3BxVAaO55x_A2U8DIlU/exec",
+    "shopName": "REFV Gelato",
+    "branchName": "Event & Booth Operations"
+  },
+  "packagingItems": [
+    {
+      "id": "pkg-cup",
+      "name": "แก้วไอติม (Cup)",
+      "unit": "ใบ",
+      "usagePerCup": 1,
+      "applyToType": "all"
+    },
+    {
+      "id": "pkg-spoon",
+      "name": "ช้อนตักไอติม (Spoon)",
+      "unit": "คัน",
+      "usagePerCup": 1,
+      "applyToType": "all"
+    }
+  ],
+  "packagingLots": [
+    {
+      "id": "lot-pkg-1794805830720",
+      "itemId": "pkg-spoon",
+      "purchaseDate": "2026-09-26",
+      "vendor": "Thaijoy Home",
+      "quantity": 400,
+      "totalPrice": 131,
+      "unitCost": 0.3275
+    },
+    {
+      "id": "lot-pkg-1794805925336",
+      "itemId": "pkg-spoon",
+      "purchaseDate": "2026-10-14",
+      "vendor": "ครบครัน เบเกอรี่",
+      "quantity": 200,
+      "totalPrice": 93,
+      "unitCost": 0.465
+    },
+    {
+      "id": "lot-pkg-1794806460329",
+      "itemId": "pkg-cup",
+      "purchaseDate": "2026-10-15",
+      "vendor": "Screen Queen",
+      "quantity": 300,
+      "totalPrice": 2620,
+      "unitCost": 8.733333333333333
+    }
+  ],
+  "ingredients": [
+    {
+      "id": "ing-1794806875795",
+      "name": "Pistachio Paste",
+      "category": "flavoring"
+    },
+    {
+      "id": "ing-1794806896561",
+      "name": "นม HP",
+      "category": "dairy"
+    },
+    {
+      "id": "ing-1794806908794",
+      "name": "นมสด Fat 4%",
+      "category": "dairy"
+    },
+    {
+      "id": "ing-1794806919010",
+      "name": "Cream Cheese",
+      "category": "dairy"
+    },
+    {
+      "id": "ing-1794806948544",
+      "name": "Allulose",
+      "category": "base"
+    },
+    {
+      "id": "ing-1794806957677",
+      "name": "วิปครีม",
+      "category": "dairy"
+    },
+    {
+      "id": "ing-1794806968510",
+      "name": "Xanthan Gum",
+      "category": "base"
+    },
+    {
+      "id": "ing-1794806977594",
+      "name": "Glucose",
+      "category": "base"
+    },
+    {
+      "id": "ing-1794806988644",
+      "name": "Maltodextrin",
+      "category": "base"
+    },
+    {
+      "id": "ing-1794806995061",
+      "name": "Inulin",
+      "category": "base"
+    },
+    {
+      "id": "ing-1794807017577",
+      "name": "Dextrose",
+      "category": "base"
+    },
+    {
+      "id": "ing-1794807027527",
+      "name": "ผง Matcha",
+      "category": "flavoring"
+    },
+    {
+      "id": "ing-1794807046427",
+      "name": "Choc Chunk",
+      "category": "flavoring"
+    },
+    {
+      "id": "ing-1794807056577",
+      "name": "เมล็ดกาแฟ",
+      "category": "flavoring"
+    },
+    {
+      "id": "ing-1794807066727",
+      "name": "Peacan",
+      "category": "topping"
+    },
+    {
+      "id": "ing-1794807088860",
+      "name": "Butter",
+      "category": "topping"
+    },
+    {
+      "id": "ing-1794807108460",
+      "name": "Vanila Bean",
+      "category": "flavoring"
+    },
+    {
+      "id": "ing-1794807117827",
+      "name": "Combu",
+      "category": "flavoring"
+    },
+    {
+      "id": "ing-1794807124611",
+      "name": "Spirulina",
+      "category": "flavoring"
+    },
+    {
+      "id": "ing-1794807134364",
+      "name": "Kinako",
+      "category": "topping"
+    },
+    {
+      "id": "ing-1794807194202",
+      "name": "Steriliser/Emulsifier",
+      "category": "base"
+    },
+    {
+      "id": "ing-1794807212685",
+      "name": "Cheese Cake",
+      "category": "topping"
+    },
+    {
+      "id": "ing-1794807221986",
+      "name": "Strawberry Yam",
+      "category": "topping"
+    },
+    {
+      "id": "ing-1794807241452",
+      "name": "น้ำองุ่น",
+      "category": "base"
+    },
+    {
+      "id": "ing-1794807251618",
+      "name": "ชา Jasmine",
+      "category": "base"
+    },
+    {
+      "id": "ing-1794807273385",
+      "name": "แยมส้ม",
+      "category": "topping"
+    },
+    {
+      "id": "ing-infuse-coffee-milk",
+      "name": "นมสด Infuse Coffee",
+      "category": "dairy"
+    },
+    {
+      "id": "ing-white-sugar",
+      "name": "น้ำตาลทราย",
+      "category": "base"
+    },
+    {
+      "id": "ing-milk-powder",
+      "name": "นมผง",
+      "category": "dairy"
+    },
+    {
+      "id": "ing-cocoa-powder",
+      "name": "ผงโกโก้",
+      "category": "flavoring"
+    },
+    {
+      "id": "ing-dark-choc-compound",
+      "name": "Dark Choc Compound",
+      "category": "flavoring"
+    }
+  ],
+  "ingredientLots": [
+    {
+      "id": "ilot-1794819298833",
+      "ingredientId": "ing-1794807194202",
+      "purchaseDate": "2026-11-03",
+      "vendor": "IamSoftServe",
+      "weightGrams": 100,
+      "totalPrice": 69,
+      "costPerGram": 0.69
+    },
+    {
+      "id": "ilot-1794819423182",
+      "ingredientId": "ing-1794806875795",
+      "purchaseDate": "2026-09-28",
+      "vendor": "Nut And You",
+      "weightGrams": 500,
+      "totalPrice": 832,
+      "costPerGram": 1.664
+    },
+    {
+      "id": "ilot-1794819457081",
+      "ingredientId": "ing-1794806875795",
+      "purchaseDate": "2026-10-26",
+      "vendor": "GoodNight Butter",
+      "weightGrams": 200,
+      "totalPrice": 345,
+      "costPerGram": 1.725
+    },
+    {
+      "id": "ilot-1794819715901",
+      "ingredientId": "ing-1794806948544",
+      "purchaseDate": "2026-10-27",
+      "vendor": "Keto",
+      "weightGrams": 1000,
+      "totalPrice": 399,
+      "costPerGram": 0.399
+    },
+    {
+      "id": "ilot-1794819810651",
+      "ingredientId": "ing-1794807108460",
+      "purchaseDate": "2026-10-27",
+      "vendor": "My Vanilla TH",
+      "weightGrams": 6,
+      "totalPrice": 135,
+      "costPerGram": 22.5
+    },
+    {
+      "id": "ilot-1794819920550",
+      "ingredientId": "ing-1794806988644",
+      "purchaseDate": "2026-10-27",
+      "vendor": "Lanagrow",
+      "weightGrams": 500,
+      "totalPrice": 27,
+      "costPerGram": 0.054
+    },
+    {
+      "id": "ilot-1794819940767",
+      "ingredientId": "ing-1794806977594",
+      "purchaseDate": "2026-10-27",
+      "vendor": "Lanagrow",
+      "weightGrams": 1000,
+      "totalPrice": 79,
+      "costPerGram": 0.079
+    },
+    {
+      "id": "ilot-1794819954600",
+      "ingredientId": "ing-1794807017577",
+      "purchaseDate": "2026-10-27",
+      "vendor": "Lanagrow",
+      "weightGrams": 500,
+      "totalPrice": 129,
+      "costPerGram": 0.258
+    },
+    {
+      "id": "ilot-1794819986817",
+      "ingredientId": "ing-1794807046427",
+      "purchaseDate": "2026-10-27",
+      "vendor": "Suncao",
+      "weightGrams": 250,
+      "totalPrice": 319,
+      "costPerGram": 1.276
+    },
+    {
+      "id": "ilot-1794820018667",
+      "ingredientId": "ing-1794806995061",
+      "purchaseDate": "2026-10-27",
+      "vendor": "SU Chem",
+      "weightGrams": 500,
+      "totalPrice": 203,
+      "costPerGram": 0.406
+    },
+    {
+      "id": "ilot-1794820212150",
+      "ingredientId": "ing-1794807056577",
+      "purchaseDate": "2026-09-26",
+      "vendor": "COFF man",
+      "weightGrams": 400,
+      "unit": "g",
+      "totalPrice": 329,
+      "costPerGram": 0.8225
+    },
+    {
+      "id": "ilot-1794820259167",
+      "ingredientId": "ing-1794807108460",
+      "purchaseDate": "2026-11-03",
+      "vendor": "My Vanilla TH",
+      "weightGrams": 2,
+      "unit": "pcs",
+      "totalPrice": 135,
+      "costPerGram": 67.5
+    },
+    {
+      "id": "ilot-1794820566797",
+      "ingredientId": "ing-1794806919010",
+      "purchaseDate": "2026-11-03",
+      "vendor": "Prairie Farms",
+      "weightGrams": 226,
+      "unit": "g",
+      "totalPrice": 139,
+      "costPerGram": 0.6150442477876106
+    },
+    {
+      "id": "ilot-1794820613380",
+      "ingredientId": "ing-1794806957677",
+      "purchaseDate": "2026-11-03",
+      "vendor": "Magnolia",
+      "weightGrams": 1000,
+      "unit": "g",
+      "totalPrice": 199,
+      "costPerGram": 0.199
+    },
+    {
+      "id": "ilot-1794820618897",
+      "ingredientId": "ing-1794806957677",
+      "purchaseDate": "2026-11-03",
+      "vendor": "Magnolia",
+      "weightGrams": 1000,
+      "unit": "g",
+      "totalPrice": 199,
+      "costPerGram": 0.199
+    },
+    {
+      "id": "ilot-1794820666181",
+      "ingredientId": "ing-1794806908794",
+      "purchaseDate": "2026-11-03",
+      "vendor": "Meji",
+      "weightGrams": 2000,
+      "unit": "g",
+      "totalPrice": 99,
+      "costPerGram": 0.0495
+    },
+    {
+      "id": "ilot-1794820690197",
+      "ingredientId": "ing-1794806908794",
+      "purchaseDate": "2026-11-06",
+      "vendor": "Meji",
+      "weightGrams": 890,
+      "unit": "g",
+      "totalPrice": 49,
+      "costPerGram": 0.0550561797752809
+    },
+    {
+      "id": "ilot-1794820705097",
+      "ingredientId": "ing-1794806908794",
+      "purchaseDate": "2026-11-06",
+      "vendor": "Meji",
+      "weightGrams": 1000,
+      "unit": "g",
+      "totalPrice": 99,
+      "costPerGram": 0.099
+    },
+    {
+      "id": "ilot-1794820732897",
+      "ingredientId": "ing-1794806896561",
+      "purchaseDate": "2026-11-03",
+      "vendor": "Sunshine",
+      "weightGrams": 340,
+      "unit": "g",
+      "totalPrice": 40,
+      "costPerGram": 0.11764705882352941
+    },
+    {
+      "id": "ilot-1794821001181",
+      "ingredientId": "ing-1794807066727",
+      "purchaseDate": "2026-11-03",
+      "vendor": "Tops",
+      "weightGrams": 100,
+      "unit": "g",
+      "totalPrice": 136,
+      "costPerGram": 1.36
+    },
+    {
+      "id": "ilot-1794821104982",
+      "ingredientId": "ing-1794806988644",
+      "purchaseDate": "2026-09-27",
+      "vendor": "Lanagrow",
+      "weightGrams": 1000,
+      "unit": "g",
+      "totalPrice": 43,
+      "costPerGram": 0.043
+    },
+    {
+      "id": "ilot-1794821115564",
+      "ingredientId": "ing-1794807017577",
+      "purchaseDate": "2026-09-27",
+      "vendor": "Lanagrow",
+      "weightGrams": 1000,
+      "unit": "g",
+      "totalPrice": 38,
+      "costPerGram": 0.038
+    },
+    {
+      "id": "ilot-1794821160215",
+      "ingredientId": "ing-1794807194202",
+      "purchaseDate": "2026-08-17",
+      "vendor": "Rabbitsmoothy",
+      "weightGrams": 100,
+      "unit": "g",
+      "totalPrice": 175,
+      "costPerGram": 1.75
+    },
+    {
+      "id": "ilot-1794821201715",
+      "ingredientId": "ing-1794807134364",
+      "purchaseDate": "2026-07-08",
+      "vendor": "Honmono Nippon",
+      "weightGrams": 180,
+      "unit": "g",
+      "totalPrice": 50,
+      "costPerGram": 0.2777777777777778
+    },
+    {
+      "id": "ilot-1794821240265",
+      "ingredientId": "ing-1794807124611",
+      "purchaseDate": "2026-07-01",
+      "vendor": "FocusHerb",
+      "weightGrams": 50,
+      "unit": "g",
+      "totalPrice": 106,
+      "costPerGram": 2.12
+    },
+    {
+      "id": "ilot-1794821261781",
+      "ingredientId": "ing-1794807117827",
+      "purchaseDate": "2026-06-30",
+      "vendor": "Kokiri",
+      "weightGrams": 100,
+      "unit": "g",
+      "totalPrice": 81,
+      "costPerGram": 0.81
+    },
+    {
+      "id": "ilot-1794821297132",
+      "ingredientId": "ing-1794806977594",
+      "purchaseDate": "2026-06-28",
+      "vendor": "Lanagrow",
+      "weightGrams": 500,
+      "unit": "g",
+      "totalPrice": 76,
+      "costPerGram": 0.152
+    },
+    {
+      "id": "ilot-1794821341000",
+      "ingredientId": "ing-1794807212685",
+      "purchaseDate": "2026-11-03",
+      "vendor": "Homemade",
+      "weightGrams": 1,
+      "unit": "pcs",
+      "totalPrice": 120,
+      "costPerGram": 120
+    },
+    {
+      "id": "ilot-1794821464333",
+      "ingredientId": "ing-1794807251618",
+      "purchaseDate": "2026-11-03",
+      "vendor": "Tops",
+      "weightGrams": 125,
+      "unit": "g",
+      "totalPrice": 70,
+      "costPerGram": 0.56
+    },
+    {
+      "id": "ilot-1794821527435",
+      "ingredientId": "ing-1794807241452",
+      "purchaseDate": "2026-11-03",
+      "vendor": "Chabaa",
+      "weightGrams": 1000,
+      "unit": "g",
+      "totalPrice": 89,
+      "costPerGram": 0.089
+    },
+    {
+      "id": "ilot-1794821605186",
+      "ingredientId": "ing-1794807273385",
+      "purchaseDate": "2026-10-16",
+      "vendor": "ดอยคำ",
+      "weightGrams": 132,
+      "unit": "g",
+      "totalPrice": 35,
+      "costPerGram": 0.26515151515151514
+    },
+    {
+      "id": "ilot-1794821648653",
+      "ingredientId": "ing-infuse-coffee-milk",
+      "purchaseDate": "2026-11-03",
+      "vendor": "Meji",
+      "weightGrams": 1000,
+      "unit": "g",
+      "totalPrice": 99,
+      "costPerGram": 0.099
+    },
+    {
+      "id": "ilot-1794821742703",
+      "ingredientId": "ing-1794807221986",
+      "purchaseDate": "2026-11-03",
+      "vendor": "Imperial",
+      "weightGrams": 160,
+      "unit": "g",
+      "totalPrice": 39,
+      "costPerGram": 0.24375
+    }
+  ],
+  "recipes": [
+    {
+      "id": "rec-1",
+      "name": "Holy Cow!",
+      "category": "Original",
+      "image": "/images/holy-cow.png",
+      "mode": "per_batch",
+      "batchYieldCups": 1,
+      "halfScoopRatio": 0.625,
+      "ingredients": [],
+      "gramsPerHalfCup": 50,
+      "gramsPerCup": 100
+    },
+    {
+      "id": "rec-2",
+      "name": "Thai Tea",
+      "category": "Original",
+      "image": "/images/thai-tea.png",
+      "mode": "per_batch",
+      "batchYieldCups": 1,
+      "halfScoopRatio": 0.5,
+      "ingredients": [],
+      "gramsPerCup": 100,
+      "gramsPerHalfCup": 50
+    },
+    {
+      "id": "rec-3",
+      "name": "Pecan't Sleep",
+      "category": "Premium",
+      "image": "/images/pecan-sleep.png",
+      "mode": "per_batch",
+      "batchYieldCups": 6.25,
+      "batchYieldGrams": 500,
+      "gramsPerCup": 100,
+      "gramsPerHalfCup": 50,
+      "halfScoopRatio": 0.5,
+      "ingredients": [
+        {
+          "ingredientId": "ing-1794806896561",
+          "gramsPerBatch": 32,
+          "selectedLotId": "ilot-1794820732897"
+        },
+        {
+          "ingredientId": "ing-1794806957677",
+          "gramsPerBatch": 76,
+          "selectedLotId": "ilot-1794820613380"
+        },
+        {
+          "ingredientId": "ing-1794807194202",
+          "gramsPerBatch": 2.5,
+          "selectedLotId": "ilot-1794821160215"
+        },
+        {
+          "ingredientId": "ing-1794806995061",
+          "gramsPerBatch": 25,
+          "selectedLotId": "ilot-1794820018667"
+        },
+        {
+          "ingredientId": "ing-1794806948544",
+          "gramsPerBatch": 20,
+          "selectedLotId": "ilot-1794819715901"
+        },
+        {
+          "ingredientId": "ing-1794806977594",
+          "gramsPerBatch": 21,
+          "selectedLotId": "ilot-1794821297132"
+        },
+        {
+          "ingredientId": "ing-1794806988644",
+          "gramsPerBatch": 21,
+          "selectedLotId": "fifo"
+        },
+        {
+          "ingredientId": "ing-1794807017577",
+          "gramsPerBatch": 21,
+          "selectedLotId": "fifo"
+        },
+        {
+          "ingredientId": "ing-white-sugar",
+          "gramsPerBatch": 3,
+          "selectedLotId": "fifo"
+        },
+        {
+          "ingredientId": "ing-1794807066727",
+          "gramsPerBatch": 30,
+          "selectedLotId": "fifo"
+        },
+        {
+          "ingredientId": "ing-1794806908794",
+          "gramsPerBatch": 278.5,
+          "selectedLotId": "fifo"
+        },
+        {
+          "ingredientId": "ing-1794807056577",
+          "gramsPerBatch": 55,
+          "selectedLotId": "ilot-1794820212150"
+        }
+      ],
+      "productionRuns": [
+        {
+          "id": "run-pecan-1",
+          "runNumber": 1,
+          "date": "2026-11-06",
+          "label": "ครั้งที่ 1 (สูตรตั้งต้น 500g)",
+          "batchYieldGrams": 500,
+          "ingredients": [
+            {
+              "ingredientId": "ing-1794806896561",
+              "gramsPerBatch": 32,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-infuse-coffee-milk",
+              "gramsPerBatch": 278.5,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806957677",
+              "gramsPerBatch": 76,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794807194202",
+              "gramsPerBatch": 2.5,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806995061",
+              "gramsPerBatch": 25,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806948544",
+              "gramsPerBatch": 20,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806977594",
+              "gramsPerBatch": 21,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806988644",
+              "gramsPerBatch": 21,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794807017577",
+              "gramsPerBatch": 21,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-white-sugar",
+              "gramsPerBatch": 3,
+              "selectedLotId": "fifo"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rec-4",
+      "name": "70% Into Dark Side",
+      "category": "Premium",
+      "image": "/images/dark-side.png",
+      "mode": "per_batch",
+      "batchYieldCups": 1,
+      "batchYieldGrams": 534.543,
+      "gramsPerCup": 100,
+      "gramsPerHalfCup": 50,
+      "halfScoopRatio": 0.625,
+      "ingredients": [
+        {
+          "ingredientId": "ing-1794806908794",
+          "gramsPerBatch": 380,
+          "selectedLotId": "ilot-1794820666181"
+        },
+        {
+          "ingredientId": "ing-1794806957677",
+          "gramsPerBatch": 12,
+          "selectedLotId": "ilot-1794820618897"
+        },
+        {
+          "ingredientId": "ing-1794807194202",
+          "gramsPerBatch": 2.454,
+          "selectedLotId": "ilot-1794819298833"
+        },
+        {
+          "ingredientId": "ing-1794806995061",
+          "gramsPerBatch": 13,
+          "selectedLotId": "ilot-1794820018667"
+        },
+        {
+          "ingredientId": "ing-1794806948544",
+          "gramsPerBatch": 12.272,
+          "selectedLotId": "ilot-1794819715901"
+        },
+        {
+          "ingredientId": "ing-1794806977594",
+          "gramsPerBatch": 19.285,
+          "selectedLotId": "ilot-1794819940767"
+        },
+        {
+          "ingredientId": "ing-1794806988644",
+          "gramsPerBatch": 15,
+          "selectedLotId": "ilot-1794819920550"
+        },
+        {
+          "ingredientId": "ing-1794807017577",
+          "gramsPerBatch": 17.532,
+          "selectedLotId": "ilot-1794819954600"
+        },
+        {
+          "ingredientId": "ing-1794807046427",
+          "gramsPerBatch": 63,
+          "selectedLotId": "ilot-1794819986817"
+        }
+      ],
+      "productionRuns": [
+        {
+          "id": "run-dark-side-1",
+          "runNumber": 1,
+          "date": "2026-11-06",
+          "label": "ครั้งที่ 1 (สูตรตั้งต้น 534.543g)",
+          "batchYieldGrams": 534.543,
+          "ingredients": [
+            {
+              "ingredientId": "ing-1794806908794",
+              "gramsPerBatch": 380,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806957677",
+              "gramsPerBatch": 12,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794807194202",
+              "gramsPerBatch": 2.454,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806995061",
+              "gramsPerBatch": 13,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806948544",
+              "gramsPerBatch": 12.272,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806977594",
+              "gramsPerBatch": 19.285,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806988644",
+              "gramsPerBatch": 15,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794807017577",
+              "gramsPerBatch": 17.532,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794807046427",
+              "gramsPerBatch": 63,
+              "selectedLotId": "ilot-1794819986817"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rec-5",
+      "name": "Weirdly Wonderful",
+      "category": "Signature",
+      "image": "/images/weirdly-wonderful.png",
+      "mode": "per_batch",
+      "batchYieldCups": 6.072725,
+      "batchYieldGrams": 485.818,
+      "gramsPerCup": 100,
+      "gramsPerHalfCup": 50,
+      "halfScoopRatio": 0.625,
+      "ingredients": [
+        {
+          "ingredientId": "ing-1794806896561",
+          "gramsPerBatch": 70,
+          "selectedLotId": "ilot-1794820732897"
+        },
+        {
+          "ingredientId": "ing-1794806908794",
+          "gramsPerBatch": 200,
+          "selectedLotId": "ilot-1794820690197"
+        },
+        {
+          "ingredientId": "ing-1794806957677",
+          "gramsPerBatch": 70,
+          "selectedLotId": "ilot-1794820618897"
+        },
+        {
+          "ingredientId": "ing-1794807194202",
+          "gramsPerBatch": 2.018,
+          "selectedLotId": "ilot-1794821160215"
+        },
+        {
+          "ingredientId": "ing-1794806995061",
+          "gramsPerBatch": 11,
+          "selectedLotId": "ilot-1794820018667"
+        },
+        {
+          "ingredientId": "ing-1794806948544",
+          "gramsPerBatch": 15,
+          "selectedLotId": "ilot-1794819715901"
+        },
+        {
+          "ingredientId": "ing-1794806977594",
+          "gramsPerBatch": 22.8,
+          "selectedLotId": "ilot-1794819940767"
+        },
+        {
+          "ingredientId": "ing-1794806988644",
+          "gramsPerBatch": 25,
+          "selectedLotId": "ilot-1794819920550"
+        },
+        {
+          "ingredientId": "ing-1794807017577",
+          "gramsPerBatch": 20,
+          "selectedLotId": "ilot-1794819954600"
+        },
+        {
+          "ingredientId": "ing-1794807046427",
+          "gramsPerBatch": 50,
+          "selectedLotId": "ilot-1794819986817"
+        },
+        {
+          "ingredientId": "ing-1794807117827",
+          "gramsPerBatch": 10,
+          "selectedLotId": "ilot-1794821261781"
+        },
+        {
+          "ingredientId": "ing-1794807273385",
+          "gramsPerBatch": 30,
+          "selectedLotId": "ilot-1794821605186"
+        },
+        {
+          "ingredientId": "ing-1794807134364",
+          "gramsPerBatch": 5,
+          "selectedLotId": "fifo"
+        }
+      ],
+      "productionRuns": [
+        {
+          "id": "run-weirdly-1",
+          "runNumber": 1,
+          "date": "2026-11-06",
+          "label": "ครั้งที่ 1 (สูตรตั้งต้น)",
+          "batchYieldGrams": 485.818,
+          "ingredients": [
+            {
+              "ingredientId": "ing-1794806896561",
+              "gramsPerBatch": 70,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806908794",
+              "gramsPerBatch": 200,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806957677",
+              "gramsPerBatch": 70,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794807194202",
+              "gramsPerBatch": 2.018,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806995061",
+              "gramsPerBatch": 11,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806948544",
+              "gramsPerBatch": 15,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806977594",
+              "gramsPerBatch": 22.8,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806988644",
+              "gramsPerBatch": 25,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794807017577",
+              "gramsPerBatch": 20,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-dark-choc-compound",
+              "gramsPerBatch": 50,
+              "selectedLotId": "fifo"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rec-6",
+      "name": "Grapest of All Time",
+      "category": "Premium",
+      "image": "/images/grapest.png",
+      "mode": "per_batch",
+      "batchYieldCups": 6.70625,
+      "batchYieldGrams": 536.5,
+      "gramsPerCup": 100,
+      "gramsPerHalfCup": 50,
+      "halfScoopRatio": 0.5,
+      "ingredients": [
+        {
+          "ingredientId": "ing-1794807194202",
+          "gramsPerBatch": 2.5,
+          "selectedLotId": "ilot-1794821160215"
+        },
+        {
+          "ingredientId": "ing-1794806995061",
+          "gramsPerBatch": 23,
+          "selectedLotId": "ilot-1794820018667"
+        },
+        {
+          "ingredientId": "ing-1794806948544",
+          "gramsPerBatch": 30,
+          "selectedLotId": "ilot-1794819715901"
+        },
+        {
+          "ingredientId": "ing-1794806977594",
+          "gramsPerBatch": 30,
+          "selectedLotId": "ilot-1794819940767"
+        },
+        {
+          "ingredientId": "ing-1794806988644",
+          "gramsPerBatch": 28,
+          "selectedLotId": "ilot-1794819920550"
+        },
+        {
+          "ingredientId": "ing-1794807017577",
+          "gramsPerBatch": 28,
+          "selectedLotId": "ilot-1794819954600"
+        },
+        {
+          "ingredientId": "ing-white-sugar",
+          "gramsPerBatch": 10,
+          "selectedLotId": "latest"
+        },
+        {
+          "ingredientId": "ing-1794807251618",
+          "gramsPerBatch": 225,
+          "selectedLotId": "ilot-1794821464333"
+        },
+        {
+          "ingredientId": "ing-1794807241452",
+          "gramsPerBatch": 160,
+          "selectedLotId": "ilot-1794821527435"
+        },
+        {
+          "ingredientId": "ing-1794806919010",
+          "gramsPerBatch": 38,
+          "selectedLotId": "fifo"
+        },
+        {
+          "ingredientId": "ing-1794806908794",
+          "gramsPerBatch": 12,
+          "selectedLotId": "fifo"
+        },
+        {
+          "ingredientId": "ing-1794806957677",
+          "gramsPerBatch": 38,
+          "selectedLotId": "fifo"
+        }
+      ],
+      "productionRuns": [
+        {
+          "id": "run-grapest-1",
+          "runNumber": 1,
+          "date": "2026-11-06",
+          "label": "ครั้งที่ 1 (สูตรตั้งต้น 536.5g)",
+          "batchYieldGrams": 536.5,
+          "ingredients": [
+            {
+              "ingredientId": "ing-1794807194202",
+              "gramsPerBatch": 2.5,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806995061",
+              "gramsPerBatch": 23,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806948544",
+              "gramsPerBatch": 30,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806977594",
+              "gramsPerBatch": 30,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806988644",
+              "gramsPerBatch": 28,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794807017577",
+              "gramsPerBatch": 28,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-white-sugar",
+              "gramsPerBatch": 10,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794807251618",
+              "gramsPerBatch": 225,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794807241452",
+              "gramsPerBatch": 160,
+              "selectedLotId": "fifo"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rec-7",
+      "name": "Nutting to Prove",
+      "category": "Signature",
+      "image": "/images/nutting.png",
+      "mode": "per_batch",
+      "batchYieldCups": 8.9925,
+      "batchYieldGrams": 719.4,
+      "gramsPerCup": 100,
+      "gramsPerHalfCup": 50,
+      "halfScoopRatio": 0.625,
+      "ingredients": [
+        {
+          "ingredientId": "ing-1794806908794",
+          "gramsPerBatch": 500,
+          "selectedLotId": "ilot-1794820690197"
+        },
+        {
+          "ingredientId": "ing-1794806957677",
+          "gramsPerBatch": 24,
+          "selectedLotId": "ilot-1794820613380"
+        },
+        {
+          "ingredientId": "ing-1794807194202",
+          "gramsPerBatch": 3.4,
+          "selectedLotId": "fifo"
+        },
+        {
+          "ingredientId": "ing-1794806995061",
+          "gramsPerBatch": 14,
+          "selectedLotId": "fifo"
+        },
+        {
+          "ingredientId": "ing-1794806948544",
+          "gramsPerBatch": 20,
+          "selectedLotId": "fifo"
+        },
+        {
+          "ingredientId": "ing-1794806977594",
+          "gramsPerBatch": 30,
+          "selectedLotId": "fifo"
+        },
+        {
+          "ingredientId": "ing-1794806988644",
+          "gramsPerBatch": 32,
+          "selectedLotId": "fifo"
+        },
+        {
+          "ingredientId": "ing-1794807017577",
+          "gramsPerBatch": 30,
+          "selectedLotId": "fifo"
+        },
+        {
+          "ingredientId": "ing-white-sugar",
+          "gramsPerBatch": 6,
+          "selectedLotId": "fifo"
+        },
+        {
+          "ingredientId": "ing-1794806875795",
+          "gramsPerBatch": 60,
+          "selectedLotId": "ilot-1794819423182"
+        }
+      ],
+      "productionRuns": [
+        {
+          "id": "run-nutting-1",
+          "runNumber": 1,
+          "date": "2026-11-06",
+          "label": "ครั้งที่ 1 (สูตรตั้งต้น 719.4g)",
+          "batchYieldGrams": 719.4,
+          "ingredients": [
+            {
+              "ingredientId": "ing-1794806908794",
+              "gramsPerBatch": 500,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806957677",
+              "gramsPerBatch": 24,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794807194202",
+              "gramsPerBatch": 3.4,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806995061",
+              "gramsPerBatch": 14,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806948544",
+              "gramsPerBatch": 20,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806977594",
+              "gramsPerBatch": 30,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806988644",
+              "gramsPerBatch": 32,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794807017577",
+              "gramsPerBatch": 30,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-white-sugar",
+              "gramsPerBatch": 6,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806875795",
+              "gramsPerBatch": 60,
+              "selectedLotId": "ilot-1794819457081"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rec-8",
+      "name": "Matcha Snob",
+      "category": "Signature",
+      "image": "/images/matcha-snob.png",
+      "mode": "per_cup",
+      "batchYieldCups": 1,
+      "halfScoopRatio": 0.5,
+      "ingredients": []
+    },
+    {
+      "id": "rec-9",
+      "name": "Blush & Cheese",
+      "category": "Premium",
+      "image": "https://lh3.googleusercontent.com/d/1o-iHQCuJdp6XlHfeqSJ2b__tEpzlKjVz=w600",
+      "mode": "per_batch",
+      "batchYieldCups": 6.28125,
+      "batchYieldGrams": 502.5,
+      "gramsPerCup": 100,
+      "gramsPerHalfCup": 50,
+      "halfScoopRatio": 0.625,
+      "ingredients": [
+        {
+          "ingredientId": "ing-1794806908794",
+          "gramsPerBatch": 345,
+          "selectedLotId": "fifo"
+        },
+        {
+          "ingredientId": "ing-1794806919010",
+          "gramsPerBatch": 80,
+          "selectedLotId": "fifo"
+        },
+        {
+          "ingredientId": "ing-1794807194202",
+          "gramsPerBatch": 2.5,
+          "selectedLotId": "fifo"
+        },
+        {
+          "ingredientId": "ing-1794806995061",
+          "gramsPerBatch": 5,
+          "selectedLotId": "fifo"
+        },
+        {
+          "ingredientId": "ing-1794806948544",
+          "gramsPerBatch": 15,
+          "selectedLotId": "fifo"
+        },
+        {
+          "ingredientId": "ing-1794806977594",
+          "gramsPerBatch": 20,
+          "selectedLotId": "fifo"
+        },
+        {
+          "ingredientId": "ing-1794806988644",
+          "gramsPerBatch": 12,
+          "selectedLotId": "fifo"
+        },
+        {
+          "ingredientId": "ing-1794807017577",
+          "gramsPerBatch": 15,
+          "selectedLotId": "fifo"
+        },
+        {
+          "ingredientId": "ing-white-sugar",
+          "gramsPerBatch": 8,
+          "selectedLotId": "fifo"
+        }
+      ],
+      "productionRuns": [
+        {
+          "id": "run-blush-cheese-1",
+          "runNumber": 1,
+          "date": "2026-11-06",
+          "label": "ครั้งที่ 1 (สูตรตั้งต้น 502.5g)",
+          "batchYieldGrams": 502.5,
+          "ingredients": [
+            {
+              "ingredientId": "ing-1794806908794",
+              "gramsPerBatch": 345,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806919010",
+              "gramsPerBatch": 80,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794807194202",
+              "gramsPerBatch": 2.5,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806995061",
+              "gramsPerBatch": 5,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806948544",
+              "gramsPerBatch": 15,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806977594",
+              "gramsPerBatch": 20,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794806988644",
+              "gramsPerBatch": 12,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-1794807017577",
+              "gramsPerBatch": 15,
+              "selectedLotId": "fifo"
+            },
+            {
+              "ingredientId": "ing-white-sugar",
+              "gramsPerBatch": 8,
+              "selectedLotId": "fifo"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "events": [
+    {
+      "id": "ev-1794729697142",
+      "name": "Slow Combo",
+      "location": "Slow Combo Fl.1",
+      "startDate": "2026-11-06",
+      "endDate": "2026-11-08",
+      "startTime": "00:00",
+      "endTime": "23:59",
+      "status": "active",
+      "isLocked": false,
+      "recipeSnapshots": [
+        {
+          "id": "rec-1",
+          "name": "Holy Cow!",
+          "category": "Original",
+          "image": "/images/holy-cow.png",
+          "mode": "per_cup",
+          "batchYieldCups": 1,
+          "halfScoopRatio": 0.5,
+          "ingredients": []
+        },
+        {
+          "id": "rec-2",
+          "name": "Thai Tea",
+          "category": "Original",
+          "image": "/images/thai-tea.png",
+          "mode": "per_cup",
+          "batchYieldCups": 1,
+          "halfScoopRatio": 0.5,
+          "ingredients": []
+        },
+        {
+          "id": "rec-3",
+          "name": "Pecan't Sleep",
+          "category": "Premium",
+          "image": "/images/pecan-sleep.png",
+          "mode": "per_cup",
+          "batchYieldCups": 1,
+          "halfScoopRatio": 0.5,
+          "ingredients": []
+        },
+        {
+          "id": "rec-4",
+          "name": "70% Into Dark Side",
+          "category": "Premium",
+          "image": "/images/dark-side.png",
+          "mode": "per_cup",
+          "batchYieldCups": 1,
+          "halfScoopRatio": 0.5,
+          "ingredients": []
+        },
+        {
+          "id": "rec-5",
+          "name": "Weirdly Wonderful",
+          "category": "Signature",
+          "image": "/images/weirdly-wonderful.png",
+          "mode": "per_cup",
+          "batchYieldCups": 1,
+          "halfScoopRatio": 0.5,
+          "ingredients": []
+        },
+        {
+          "id": "rec-6",
+          "name": "Grapest of All Time",
+          "category": "Premium",
+          "image": "/images/grapest.png",
+          "mode": "per_cup",
+          "batchYieldCups": 1,
+          "halfScoopRatio": 0.5,
+          "ingredients": []
+        },
+        {
+          "id": "rec-7",
+          "name": "Nutting to Prove",
+          "category": "Signature",
+          "image": "/images/nutting.png",
+          "mode": "per_cup",
+          "batchYieldCups": 1,
+          "halfScoopRatio": 0.5,
+          "ingredients": []
+        },
+        {
+          "id": "rec-8",
+          "name": "Matcha Snob",
+          "category": "Signature",
+          "image": "/images/matcha-snob.png",
+          "mode": "per_cup",
+          "batchYieldCups": 1,
+          "halfScoopRatio": 0.5,
+          "ingredients": []
+        },
+        {
+          "id": "rec-9",
+          "name": "Blush & Cheese",
+          "category": "Premium",
+          "image": "https://lh3.googleusercontent.com/d/1o-iHQCuJdp6XlHfeqSJ2b__tEpzlKjVz=w600",
+          "mode": "per_cup",
+          "batchYieldCups": 1,
+          "halfScoopRatio": 0.5,
+          "ingredients": []
+        }
+      ],
+      "expenses": [
+        {
+          "id": "exp-1794729762608",
+          "category": "venue",
+          "title": "ค่าเช่าบูธ",
+          "amount": 1500,
+          "date": "2026-11-06"
+        },
+        {
+          "id": "exp-1794729821624",
+          "category": "transport",
+          "title": "ค่ารถขาไป",
+          "amount": 405,
+          "date": "2026-11-06"
+        },
+        {
+          "id": "exp-1794729852490",
+          "category": "transport",
+          "title": "ค่ารถขากลับ",
+          "amount": 282,
+          "date": "2026-11-06"
+        },
+        {
+          "id": "exp-1794729961007",
+          "category": "other",
+          "title": "Cheese Cake โรยหน้า",
+          "amount": 120,
+          "date": "2026-11-06"
+        }
+      ],
+      "posSales": [
+        {
+          "orderId": "261106-001",
+          "date": "2026-11-06",
+          "time": "13:53:35",
+          "type": "gelato",
+          "flavorsPerCup": 2,
+          "flavor1": "70% Into Dark Side",
+          "flavor2": "Blush & Cheese",
+          "category1": "Premium",
+          "category2": "Premium",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 90
+        },
+        {
+          "orderId": "261106-002",
+          "date": "2026-11-06",
+          "time": "14:16:18",
+          "type": "gelato",
+          "flavorsPerCup": 2,
+          "flavor1": "Blush & Cheese",
+          "flavor2": "Nutting to Prove",
+          "category1": "Premium",
+          "category2": "Signature",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 95
+        },
+        {
+          "orderId": "261106-002",
+          "date": "2026-11-06",
+          "time": "14:16:18",
+          "type": "gelato",
+          "flavorsPerCup": 2,
+          "flavor1": "Blush & Cheese",
+          "flavor2": "Nutting to Prove",
+          "category1": "Premium",
+          "category2": "Signature",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 95
+        },
+        {
+          "orderId": "261106-003",
+          "date": "2026-11-06",
+          "time": "14:45:20",
+          "type": "gelato",
+          "flavorsPerCup": 2,
+          "flavor1": "Nutting to Prove",
+          "flavor2": "Blush & Cheese",
+          "category1": "Signature",
+          "category2": "Premium",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 95
+        },
+        {
+          "orderId": "261106-004",
+          "date": "2026-11-06",
+          "time": "16:25:24",
+          "type": "gelato",
+          "flavorsPerCup": 2,
+          "flavor1": "70% Into Dark Side",
+          "flavor2": "Nutting to Prove",
+          "category1": "Premium",
+          "category2": "Signature",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 95
+        },
+        {
+          "orderId": "261106-004",
+          "date": "2026-11-06",
+          "time": "16:25:24",
+          "type": "gelato",
+          "flavorsPerCup": 2,
+          "flavor1": "Pecan't Sleep",
+          "flavor2": "Nutting to Prove",
+          "category1": "Premium",
+          "category2": "Signature",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 95
+        },
+        {
+          "orderId": "261106-004",
+          "date": "2026-11-06",
+          "time": "16:25:24",
+          "type": "gelato",
+          "flavorsPerCup": 1,
+          "flavor1": "Grapest of All Time",
+          "flavor2": "",
+          "category1": "Premium",
+          "category2": "",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 89
+        },
+        {
+          "orderId": "261106-005",
+          "date": "2026-11-06",
+          "time": "17:46:11",
+          "type": "gelato",
+          "flavorsPerCup": 1,
+          "flavor1": "Blush & Cheese",
+          "flavor2": "",
+          "category1": "Premium",
+          "category2": "",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 89
+        },
+        {
+          "orderId": "261106-006",
+          "date": "2026-11-06",
+          "time": "17:46:21",
+          "type": "gelato",
+          "flavorsPerCup": 2,
+          "flavor1": "Pecan't Sleep",
+          "flavor2": "Nutting to Prove",
+          "category1": "Premium",
+          "category2": "Signature",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 95
+        },
+        {
+          "orderId": "261106-007",
+          "date": "2026-11-06",
+          "time": "18:36:40",
+          "type": "gelato",
+          "flavorsPerCup": 1,
+          "flavor1": "Nutting to Prove",
+          "flavor2": "",
+          "category1": "Signature",
+          "category2": "",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 99
+        },
+        {
+          "orderId": "261106-008",
+          "date": "2026-11-06",
+          "time": "18:50:27",
+          "type": "gelato",
+          "flavorsPerCup": 2,
+          "flavor1": "Blush & Cheese",
+          "flavor2": "Nutting to Prove",
+          "category1": "Premium",
+          "category2": "Signature",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 95
+        },
+        {
+          "orderId": "261106-009",
+          "date": "2026-11-06",
+          "time": "18:52:00",
+          "type": "gelato",
+          "flavorsPerCup": 1,
+          "flavor1": "70% Into Dark Side",
+          "flavor2": "",
+          "category1": "Premium",
+          "category2": "",
+          "payment": "QR",
+          "promotion": "Shot & Post",
+          "discountAmount": 5,
+          "amount": 84
+        },
+        {
+          "orderId": "261106-010",
+          "date": "2026-11-06",
+          "time": "18:54:43",
+          "type": "gelato",
+          "flavorsPerCup": 1,
+          "flavor1": "Grapest of All Time",
+          "flavor2": "",
+          "category1": "Premium",
+          "category2": "",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 89
+        },
+        {
+          "orderId": "261106-011",
+          "date": "2026-11-06",
+          "time": "19:23:25",
+          "type": "gelato",
+          "flavorsPerCup": 2,
+          "flavor1": "Nutting to Prove",
+          "flavor2": "Weirdly Wonderful",
+          "category1": "Signature",
+          "category2": "Premium",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 95
+        },
+        {
+          "orderId": "261107-001",
+          "date": "2026-11-07",
+          "time": "12:39:31",
+          "type": "gelato",
+          "flavorsPerCup": 2,
+          "flavor1": "70% Into Dark Side",
+          "flavor2": "Weirdly Wonderful",
+          "category1": "Premium",
+          "category2": "Premium",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 90
+        },
+        {
+          "orderId": "261107-002",
+          "date": "2026-11-07",
+          "time": "13:13:57",
+          "type": "gelato",
+          "flavorsPerCup": 1,
+          "flavor1": "Nutting to Prove",
+          "flavor2": "",
+          "category1": "Signature",
+          "category2": "",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 99
+        },
+        {
+          "orderId": "261107-002",
+          "date": "2026-11-07",
+          "time": "13:13:57",
+          "type": "gelato",
+          "flavorsPerCup": 2,
+          "flavor1": "Grapest of All Time",
+          "flavor2": "Blush&Cheese",
+          "category1": "Premium",
+          "category2": "Premium",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 90
+        },
+        {
+          "orderId": "261107-003",
+          "date": "2026-11-07",
+          "time": "13:28:42",
+          "type": "gelato",
+          "flavorsPerCup": 2,
+          "flavor1": "Pecan't Sleep",
+          "flavor2": "Nutting to Prove",
+          "category1": "Premium",
+          "category2": "Signature",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 95
+        },
+        {
+          "orderId": "261107-004",
+          "date": "2026-11-07",
+          "time": "13:49:58",
+          "type": "gelato",
+          "flavorsPerCup": 2,
+          "flavor1": "Nutting to Prove",
+          "flavor2": "Blush&Cheese",
+          "category1": "Signature",
+          "category2": "Premium",
+          "payment": "QR",
+          "promotion": "Shot & Post",
+          "discountAmount": 5,
+          "amount": 90
+        },
+        {
+          "orderId": "261107-004",
+          "date": "2026-11-07",
+          "time": "13:49:58",
+          "type": "gelato",
+          "flavorsPerCup": 2,
+          "flavor1": "Nutting to Prove",
+          "flavor2": "Blush&Cheese",
+          "category1": "Signature",
+          "category2": "Premium",
+          "payment": "QR",
+          "promotion": "Shot & Post",
+          "discountAmount": 5,
+          "amount": 90
+        },
+        {
+          "orderId": "261107-005",
+          "date": "2026-11-07",
+          "time": "13:51:30",
+          "type": "gelato",
+          "flavorsPerCup": 1,
+          "flavor1": "70% Into Dark Side",
+          "flavor2": "",
+          "category1": "Premium",
+          "category2": "",
+          "payment": "QR",
+          "promotion": "Shot & Post",
+          "discountAmount": 5,
+          "amount": 84
+        },
+        {
+          "orderId": "261107-006",
+          "date": "2026-11-07",
+          "time": "15:15:12",
+          "type": "gelato",
+          "flavorsPerCup": 1,
+          "flavor1": "Blush&Cheese",
+          "flavor2": "",
+          "category1": "Premium",
+          "category2": "",
+          "payment": "QR",
+          "promotion": "Shot & Post",
+          "discountAmount": 5,
+          "amount": 84
+        },
+        {
+          "orderId": "261107-007",
+          "date": "2026-11-07",
+          "time": "15:16:16",
+          "type": "gelato",
+          "flavorsPerCup": 1,
+          "flavor1": "Nutting to Prove",
+          "flavor2": "",
+          "category1": "Signature",
+          "category2": "",
+          "payment": "QR",
+          "promotion": "Shot & Post",
+          "discountAmount": 5,
+          "amount": 94
+        },
+        {
+          "orderId": "261107-008",
+          "date": "2026-11-07",
+          "time": "15:57:29",
+          "type": "gelato",
+          "flavorsPerCup": 1,
+          "flavor1": "Nutting to Prove",
+          "flavor2": "",
+          "category1": "Signature",
+          "category2": "",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 99
+        },
+        {
+          "orderId": "261107-009",
+          "date": "2026-11-07",
+          "time": "16:29:46",
+          "type": "gelato",
+          "flavorsPerCup": 2,
+          "flavor1": "Blush&Cheese",
+          "flavor2": "70% Into Dark Side",
+          "category1": "Premium",
+          "category2": "Premium",
+          "payment": "QR",
+          "promotion": "Shot & Post",
+          "discountAmount": 5,
+          "amount": 85
+        },
+        {
+          "orderId": "261107-010",
+          "date": "2026-11-07",
+          "time": "17:13:05",
+          "type": "gelato",
+          "flavorsPerCup": 1,
+          "flavor1": "Nutting to Prove",
+          "flavor2": "",
+          "category1": "Signature",
+          "category2": "",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 99
+        },
+        {
+          "orderId": "261107-010",
+          "date": "2026-11-07",
+          "time": "17:13:05",
+          "type": "gelato",
+          "flavorsPerCup": 1,
+          "flavor1": "Nutting to Prove",
+          "flavor2": "",
+          "category1": "Signature",
+          "category2": "",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 99
+        },
+        {
+          "orderId": "261107-010",
+          "date": "2026-11-07",
+          "time": "17:13:05",
+          "type": "gelato",
+          "flavorsPerCup": 1,
+          "flavor1": "Blush&Cheese",
+          "flavor2": "",
+          "category1": "Premium",
+          "category2": "",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 89
+        },
+        {
+          "orderId": "261107-010",
+          "date": "2026-11-07",
+          "time": "17:13:05",
+          "type": "gelato",
+          "flavorsPerCup": 1,
+          "flavor1": "Blush&Cheese",
+          "flavor2": "",
+          "category1": "Premium",
+          "category2": "",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 89
+        },
+        {
+          "orderId": "261107-011",
+          "date": "2026-11-07",
+          "time": "17:34:04",
+          "type": "gelato",
+          "flavorsPerCup": 2,
+          "flavor1": "70% Into Dark Side",
+          "flavor2": "Weirdly Wonderful",
+          "category1": "Premium",
+          "category2": "Signature",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 95
+        },
+        {
+          "orderId": "261107-012",
+          "date": "2026-11-07",
+          "time": "17:57:46",
+          "type": "gelato",
+          "flavorsPerCup": 2,
+          "flavor1": "70% Into Dark Side",
+          "flavor2": "Nutting to Prove",
+          "category1": "Premium",
+          "category2": "Signature",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 95
+        },
+        {
+          "orderId": "261107-013",
+          "date": "2026-11-07",
+          "time": "17:59:24",
+          "type": "gelato",
+          "flavorsPerCup": 2,
+          "flavor1": "70% Into Dark Side",
+          "flavor2": "Nutting to Prove",
+          "category1": "Premium",
+          "category2": "Signature",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 95
+        },
+        {
+          "orderId": "261107-014",
+          "date": "2026-11-07",
+          "time": "19:01:41",
+          "type": "gelato",
+          "flavorsPerCup": 1,
+          "flavor1": "70% Into Dark Side",
+          "flavor2": "",
+          "category1": "Premium",
+          "category2": "",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 89
+        },
+        {
+          "orderId": "261107-015",
+          "date": "2026-11-07",
+          "time": "19:15:27",
+          "type": "gelato",
+          "flavorsPerCup": 1,
+          "flavor1": "Weirdly Wonderful",
+          "flavor2": "",
+          "category1": "Signature",
+          "category2": "",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 99
+        },
+        {
+          "orderId": "261108-001",
+          "date": "2026-11-08",
+          "time": "12:51:41",
+          "type": "gelato",
+          "flavorsPerCup": 1,
+          "flavor1": "Nutting to Prove",
+          "flavor2": "",
+          "category1": "Signature",
+          "category2": "",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 99
+        },
+        {
+          "orderId": "261108-002",
+          "date": "2026-11-08",
+          "time": "13:45:22",
+          "type": "gelato",
+          "flavorsPerCup": 2,
+          "flavor1": "Blush&Cheese",
+          "flavor2": "Weirdly Wonderful",
+          "category1": "Premium",
+          "category2": "Signature",
+          "payment": "QR",
+          "promotion": "Shot & Post",
+          "discountAmount": 5,
+          "amount": 90
+        },
+        {
+          "orderId": "261108-002",
+          "date": "2026-11-08",
+          "time": "13:45:22",
+          "type": "gelato",
+          "flavorsPerCup": 2,
+          "flavor1": "Grapest of All Time",
+          "flavor2": "Blush&Cheese",
+          "category1": "Premium",
+          "category2": "Premium",
+          "payment": "QR",
+          "promotion": "Shot & Post",
+          "discountAmount": 5,
+          "amount": 85
+        },
+        {
+          "orderId": "261108-003",
+          "date": "2026-11-08",
+          "time": "13:57:52",
+          "type": "gelato",
+          "flavorsPerCup": 1,
+          "flavor1": "Blush&Cheese",
+          "flavor2": "",
+          "category1": "Premium",
+          "category2": "",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 89
+        },
+        {
+          "orderId": "261108-004",
+          "date": "2026-11-08",
+          "time": "13:59:04",
+          "type": "gelato",
+          "flavorsPerCup": 1,
+          "flavor1": "Blush&Cheese",
+          "flavor2": "",
+          "category1": "Premium",
+          "category2": "",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 89
+        },
+        {
+          "orderId": "261108-005",
+          "date": "2026-11-08",
+          "time": "14:05:58",
+          "type": "gelato",
+          "flavorsPerCup": 2,
+          "flavor1": "Blush&Cheese",
+          "flavor2": "Weirdly Wonderful",
+          "category1": "Premium",
+          "category2": "Signature",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 95
+        },
+        {
+          "orderId": "261108-006",
+          "date": "2026-11-08",
+          "time": "14:47:45",
+          "type": "gelato",
+          "flavorsPerCup": 1,
+          "flavor1": "Blush&Cheese",
+          "flavor2": "",
+          "category1": "Premium",
+          "category2": "",
+          "payment": "QR",
+          "promotion": "Price Adjust",
+          "discountAmount": 44,
+          "amount": 45
+        },
+        {
+          "orderId": "261108-007",
+          "date": "2026-11-08",
+          "time": "15:36:46",
+          "type": "gelato",
+          "flavorsPerCup": 2,
+          "flavor1": "Blush&Cheese",
+          "flavor2": "Nutting to Prove",
+          "category1": "Premium",
+          "category2": "Signature",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 95
+        },
+        {
+          "orderId": "261108-008",
+          "date": "2026-11-08",
+          "time": "15:58:07",
+          "type": "gelato",
+          "flavorsPerCup": 1,
+          "flavor1": "Nutting to Prove",
+          "flavor2": "",
+          "category1": "Signature",
+          "category2": "",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 99
+        },
+        {
+          "orderId": "261108-009",
+          "date": "2026-11-08",
+          "time": "17:48:23",
+          "type": "gelato",
+          "flavorsPerCup": 2,
+          "flavor1": "Nutting to Prove",
+          "flavor2": "Pecan't Sleep",
+          "category1": "Signature",
+          "category2": "Premium",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 95
+        },
+        {
+          "orderId": "261108-010",
+          "date": "2026-11-08",
+          "time": "17:50:16",
+          "type": "gelato",
+          "flavorsPerCup": 2,
+          "flavor1": "70% Into Dark Side",
+          "flavor2": "Grapest of All Time",
+          "category1": "Premium",
+          "category2": "Premium",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 90
+        },
+        {
+          "orderId": "261108-011",
+          "date": "2026-11-08",
+          "time": "18:02:34",
+          "type": "gelato",
+          "flavorsPerCup": 2,
+          "flavor1": "Pecan't Sleep",
+          "flavor2": "Nutting to Prove",
+          "category1": "Premium",
+          "category2": "Signature",
+          "payment": "QR",
+          "promotion": "",
+          "discountAmount": 0,
+          "amount": 95
+        }
+      ],
+      "lastSyncedAt": "15/11/2569 15:01:37",
+      "ingredientLotOverrides": {},
+      "extraPackagingUsage": {
+        "pkg-cup": 0,
+        "pkg-spoon": 0
+      },
+      "packagingLotAllocations": {
+        "pkg-cup": [
+          {
+            "id": "alloc-default-pkg-cup",
+            "lotId": "lot-pkg-1794806460329",
+            "quantity": 46,
+            "autoFillTotal": true
+          }
+        ]
+      },
+      "ingredientCostMode": "produced_batches",
+      "flavorProductionUsages": [
+        {
+          "id": "fpu-rec-3-1",
+          "recipeId": "rec-3",
+          "runId": "master",
+          "batchesUsed": 1
+        },
+        {
+          "id": "fpu-rec-4-1",
+          "recipeId": "rec-4",
+          "runId": "master",
+          "batchesUsed": 1
+        },
+        {
+          "id": "fpu-rec-5-1",
+          "recipeId": "rec-5",
+          "runId": "master",
+          "batchesUsed": 1
+        },
+        {
+          "id": "fpu-rec-6-1",
+          "recipeId": "rec-6",
+          "runId": "master",
+          "batchesUsed": 1
+        },
+        {
+          "id": "fpu-rec-7-1",
+          "recipeId": "rec-7",
+          "runId": "master",
+          "batchesUsed": 1
+        },
+        {
+          "id": "fpu-rec-9-1",
+          "recipeId": "rec-9",
+          "runId": "master",
+          "batchesUsed": 1
+        },
+        {
+          "id": "fpu-1794811738904-766",
+          "recipeId": "rec-4",
+          "runId": "run-dark-side-1",
+          "batchesUsed": 1
+        },
+        {
+          "id": "fpu-1794811748554-125",
+          "recipeId": "rec-7",
+          "runId": "run-nutting-1",
+          "batchesUsed": 1
+        },
+        {
+          "id": "fpu-1794811749037-427",
+          "recipeId": "rec-7",
+          "runId": "run-nutting-1",
+          "batchesUsed": 1
+        },
+        {
+          "id": "fpu-1794811756271-195",
+          "recipeId": "rec-9",
+          "runId": "run-blush-cheese-1",
+          "batchesUsed": 1
+        },
+        {
+          "id": "fpu-1794811756454-82",
+          "recipeId": "rec-9",
+          "runId": "run-blush-cheese-1",
+          "batchesUsed": 1
+        }
+      ],
+      "ingredientLotAllocations": {
+        "ing-1794806875795": [
+          {
+            "id": "ing-alloc-default-ing-1794806875795",
+            "lotId": "ilot-1794819423182",
+            "gramsUsed": 105,
+            "autoFillTotal": false
+          },
+          {
+            "id": "ing-alloc-1794823659846-340",
+            "lotId": "ilot-1794819457081",
+            "gramsUsed": 75,
+            "autoFillTotal": false
+          }
+        ]
+      },
+      "boothBatches": [
+        {
+          "id": "bb-init-0",
+          "recipeId": "rec-3",
+          "batchNumber": 1,
+          "label": "รอบที่ 1 (เตรียมเปิดบูธ)",
+          "ingredients": [
+            {
+              "id": "bi-1794827160187-2296-0.48962537784450033",
+              "ingredientId": "ing-1794806896561",
+              "lotId": "ilot-1794820732897",
+              "grams": 32
+            },
+            {
+              "id": "bi-1794827160187-4622-0.6763181268165827",
+              "ingredientId": "ing-1794806957677",
+              "lotId": "ilot-1794820613380",
+              "grams": 76
+            },
+            {
+              "id": "bi-1794827160187-9326-0.6592277191291289",
+              "ingredientId": "ing-1794807194202",
+              "lotId": "ilot-1794821160215",
+              "grams": 2.5
+            },
+            {
+              "id": "bi-1794827160187-2633-0.4788150271522882",
+              "ingredientId": "ing-1794806995061",
+              "lotId": "ilot-1794820018667",
+              "grams": 25
+            },
+            {
+              "id": "bi-1794827160187-5932-0.7318844004475146",
+              "ingredientId": "ing-1794806948544",
+              "lotId": "ilot-1794819715901",
+              "grams": 20
+            },
+            {
+              "id": "bi-1794827160187-9905-0.4090285517709449",
+              "ingredientId": "ing-1794806977594",
+              "lotId": "ilot-1794821297132",
+              "grams": 21
+            },
+            {
+              "id": "bi-1794827160187-39-0.043903873561073725",
+              "ingredientId": "ing-1794806988644",
+              "lotId": "fifo",
+              "grams": 21
+            },
+            {
+              "id": "bi-1794827160187-710-0.38041036968344966",
+              "ingredientId": "ing-1794807017577",
+              "lotId": "fifo",
+              "grams": 21
+            },
+            {
+              "id": "bi-1794827160187-8108-0.41525396925175984",
+              "ingredientId": "ing-white-sugar",
+              "lotId": "fifo",
+              "grams": 3
+            },
+            {
+              "id": "bi-1794827160187-9748-0.165835109384187",
+              "ingredientId": "ing-1794807066727",
+              "lotId": "fifo",
+              "grams": 30
+            },
+            {
+              "id": "bi-1794827160187-5344-0.9045839631966873",
+              "ingredientId": "ing-1794806908794",
+              "lotId": "fifo",
+              "grams": 278.5
+            },
+            {
+              "id": "bi-1794827160187-2650-0.11242028723836184",
+              "ingredientId": "ing-1794807056577",
+              "lotId": "ilot-1794820212150",
+              "grams": 55
+            }
+          ]
+        },
+        {
+          "id": "bb-init-1",
+          "recipeId": "rec-4",
+          "batchNumber": 1,
+          "label": "รอบที่ 1 (เตรียมเปิดบูธ)",
+          "ingredients": [
+            {
+              "id": "bi-1794827160187-299-0.5339886638544962",
+              "ingredientId": "ing-1794806908794",
+              "lotId": "ilot-1794820666181",
+              "grams": 380
+            },
+            {
+              "id": "bi-1794827160187-9047-0.7815100733387444",
+              "ingredientId": "ing-1794806957677",
+              "lotId": "ilot-1794820618897",
+              "grams": 12
+            },
+            {
+              "id": "bi-1794827160187-1668-0.5590906653203317",
+              "ingredientId": "ing-1794807194202",
+              "lotId": "ilot-1794819298833",
+              "grams": 2.454
+            },
+            {
+              "id": "bi-1794827160187-7753-0.7770199252839348",
+              "ingredientId": "ing-1794806995061",
+              "lotId": "ilot-1794820018667",
+              "grams": 13
+            },
+            {
+              "id": "bi-1794827160187-2531-0.8620983783977476",
+              "ingredientId": "ing-1794806948544",
+              "lotId": "ilot-1794819715901",
+              "grams": 12.272
+            },
+            {
+              "id": "bi-1794827160187-4362-0.2290324614146032",
+              "ingredientId": "ing-1794806977594",
+              "lotId": "ilot-1794819940767",
+              "grams": 19.285
+            },
+            {
+              "id": "bi-1794827160187-587-0.08595992795007978",
+              "ingredientId": "ing-1794806988644",
+              "lotId": "ilot-1794819920550",
+              "grams": 15
+            },
+            {
+              "id": "bi-1794827160187-8885-0.9499669104233649",
+              "ingredientId": "ing-1794807017577",
+              "lotId": "ilot-1794819954600",
+              "grams": 17.532
+            },
+            {
+              "id": "bi-1794827160187-8687-0.20020510167557293",
+              "ingredientId": "ing-1794807046427",
+              "lotId": "ilot-1794819986817",
+              "grams": 63
+            }
+          ]
+        },
+        {
+          "id": "bb-init-2",
+          "recipeId": "rec-5",
+          "batchNumber": 1,
+          "label": "รอบที่ 1 (เตรียมเปิดบูธ)",
+          "ingredients": [
+            {
+              "id": "bi-1794827160187-5902-0.39935621729837056",
+              "ingredientId": "ing-1794806896561",
+              "lotId": "ilot-1794820732897",
+              "grams": 70
+            },
+            {
+              "id": "bi-1794827160187-2411-0.707380286681968",
+              "ingredientId": "ing-1794806908794",
+              "lotId": "ilot-1794820690197",
+              "grams": 200
+            },
+            {
+              "id": "bi-1794827160187-6314-0.3881912789399924",
+              "ingredientId": "ing-1794806957677",
+              "lotId": "ilot-1794820618897",
+              "grams": 70
+            },
+            {
+              "id": "bi-1794827160187-2855-0.6241502416051767",
+              "ingredientId": "ing-1794807194202",
+              "lotId": "ilot-1794821160215",
+              "grams": 2.018
+            },
+            {
+              "id": "bi-1794827160187-5197-0.44948678176965273",
+              "ingredientId": "ing-1794806995061",
+              "lotId": "ilot-1794820018667",
+              "grams": 11
+            },
+            {
+              "id": "bi-1794827160187-3119-0.6837855073527446",
+              "ingredientId": "ing-1794806948544",
+              "lotId": "ilot-1794819715901",
+              "grams": 15
+            },
+            {
+              "id": "bi-1794827160187-829-0.7792589055814798",
+              "ingredientId": "ing-1794806977594",
+              "lotId": "ilot-1794819940767",
+              "grams": 22.8
+            },
+            {
+              "id": "bi-1794827160187-9744-0.8049472496283019",
+              "ingredientId": "ing-1794806988644",
+              "lotId": "ilot-1794819920550",
+              "grams": 25
+            },
+            {
+              "id": "bi-1794827160187-2669-0.5290588202011163",
+              "ingredientId": "ing-1794807017577",
+              "lotId": "ilot-1794819954600",
+              "grams": 20
+            },
+            {
+              "id": "bi-1794827160187-7110-0.6862973714161552",
+              "ingredientId": "ing-1794807046427",
+              "lotId": "ilot-1794819986817",
+              "grams": 50
+            },
+            {
+              "id": "bi-1794827160187-168-0.02392788872005036",
+              "ingredientId": "ing-1794807117827",
+              "lotId": "ilot-1794821261781",
+              "grams": 10
+            },
+            {
+              "id": "bi-1794827160187-5501-0.5490107776634696",
+              "ingredientId": "ing-1794807273385",
+              "lotId": "ilot-1794821605186",
+              "grams": 30
+            },
+            {
+              "id": "bi-1794827160187-4577-0.09241663573697856",
+              "ingredientId": "ing-1794807134364",
+              "lotId": "fifo",
+              "grams": 5
+            }
+          ]
+        },
+        {
+          "id": "bb-init-3",
+          "recipeId": "rec-6",
+          "batchNumber": 1,
+          "label": "รอบที่ 1 (เตรียมเปิดบูธ)",
+          "ingredients": [
+            {
+              "id": "bi-1794827160187-7280-0.25206815326184173",
+              "ingredientId": "ing-1794807194202",
+              "lotId": "ilot-1794821160215",
+              "grams": 2.5
+            },
+            {
+              "id": "bi-1794827160187-6381-0.05357658039487079",
+              "ingredientId": "ing-1794806995061",
+              "lotId": "ilot-1794820018667",
+              "grams": 23
+            },
+            {
+              "id": "bi-1794827160187-2421-0.23098898466266438",
+              "ingredientId": "ing-1794806948544",
+              "lotId": "ilot-1794819715901",
+              "grams": 30
+            },
+            {
+              "id": "bi-1794827160187-74-0.521745413229482",
+              "ingredientId": "ing-1794806977594",
+              "lotId": "ilot-1794819940767",
+              "grams": 30
+            },
+            {
+              "id": "bi-1794827160187-9859-0.97866434019487",
+              "ingredientId": "ing-1794806988644",
+              "lotId": "ilot-1794819920550",
+              "grams": 28
+            },
+            {
+              "id": "bi-1794827160187-4380-0.9733212532109708",
+              "ingredientId": "ing-1794807017577",
+              "lotId": "ilot-1794819954600",
+              "grams": 28
+            },
+            {
+              "id": "bi-1794827160187-7605-0.7847601117089795",
+              "ingredientId": "ing-white-sugar",
+              "lotId": "latest",
+              "grams": 10
+            },
+            {
+              "id": "bi-1794827160187-7435-0.2362283816455133",
+              "ingredientId": "ing-1794807251618",
+              "lotId": "ilot-1794821464333",
+              "grams": 225
+            },
+            {
+              "id": "bi-1794827160187-9644-0.9648268503984486",
+              "ingredientId": "ing-1794807241452",
+              "lotId": "ilot-1794821527435",
+              "grams": 160
+            },
+            {
+              "id": "bi-1794827160187-7292-0.8857165197523665",
+              "ingredientId": "ing-1794806919010",
+              "lotId": "fifo",
+              "grams": 38
+            },
+            {
+              "id": "bi-1794827160187-5208-0.10631972403198942",
+              "ingredientId": "ing-1794806908794",
+              "lotId": "fifo",
+              "grams": 12
+            },
+            {
+              "id": "bi-1794827160187-6024-0.6497805301702194",
+              "ingredientId": "ing-1794806957677",
+              "lotId": "fifo",
+              "grams": 38
+            }
+          ]
+        },
+        {
+          "id": "bb-init-4",
+          "recipeId": "rec-7",
+          "batchNumber": 1,
+          "label": "รอบที่ 1 (เตรียมเปิดบูธ)",
+          "ingredients": [
+            {
+              "id": "bi-1794827160187-6679-0.4799410656429185",
+              "ingredientId": "ing-1794806908794",
+              "lotId": "ilot-1794820690197",
+              "grams": 500
+            },
+            {
+              "id": "bi-1794827160187-2422-0.38066615427872175",
+              "ingredientId": "ing-1794806957677",
+              "lotId": "ilot-1794820613380",
+              "grams": 24
+            },
+            {
+              "id": "bi-1794827160187-468-0.5418563933268984",
+              "ingredientId": "ing-1794807194202",
+              "lotId": "fifo",
+              "grams": 3.4
+            },
+            {
+              "id": "bi-1794827160187-3826-0.3657983200996201",
+              "ingredientId": "ing-1794806995061",
+              "lotId": "fifo",
+              "grams": 14
+            },
+            {
+              "id": "bi-1794827160187-2570-0.9003753634548578",
+              "ingredientId": "ing-1794806948544",
+              "lotId": "fifo",
+              "grams": 20
+            },
+            {
+              "id": "bi-1794827160187-9326-0.41888754255633365",
+              "ingredientId": "ing-1794806977594",
+              "lotId": "fifo",
+              "grams": 30
+            },
+            {
+              "id": "bi-1794827160187-7301-0.8044141662526006",
+              "ingredientId": "ing-1794806988644",
+              "lotId": "fifo",
+              "grams": 32
+            },
+            {
+              "id": "bi-1794827160187-2324-0.3889283640267869",
+              "ingredientId": "ing-1794807017577",
+              "lotId": "fifo",
+              "grams": 30
+            },
+            {
+              "id": "bi-1794827160187-9127-0.548492672998985",
+              "ingredientId": "ing-white-sugar",
+              "lotId": "fifo",
+              "grams": 6
+            },
+            {
+              "id": "bi-1794827160187-6982-0.8932972971722628",
+              "ingredientId": "ing-1794806875795",
+              "lotId": "ilot-1794819423182",
+              "grams": 60
+            }
+          ]
+        },
+        {
+          "id": "bb-init-5",
+          "recipeId": "rec-9",
+          "batchNumber": 1,
+          "label": "รอบที่ 1 (เตรียมเปิดบูธ)",
+          "ingredients": [
+            {
+              "id": "bi-1794827160187-960-0.03176986617263",
+              "ingredientId": "ing-1794806908794",
+              "lotId": "fifo",
+              "grams": 345
+            },
+            {
+              "id": "bi-1794827160187-5651-0.42179607761014937",
+              "ingredientId": "ing-1794806919010",
+              "lotId": "fifo",
+              "grams": 80
+            },
+            {
+              "id": "bi-1794827160187-2395-0.9819266414006649",
+              "ingredientId": "ing-1794807194202",
+              "lotId": "fifo",
+              "grams": 2.5
+            },
+            {
+              "id": "bi-1794827160187-2960-0.017865980057773623",
+              "ingredientId": "ing-1794806995061",
+              "lotId": "fifo",
+              "grams": 5
+            },
+            {
+              "id": "bi-1794827160187-3997-0.68140957352196",
+              "ingredientId": "ing-1794806948544",
+              "lotId": "fifo",
+              "grams": 15
+            },
+            {
+              "id": "bi-1794827160187-2413-0.4434019188547921",
+              "ingredientId": "ing-1794806977594",
+              "lotId": "fifo",
+              "grams": 20
+            },
+            {
+              "id": "bi-1794827160187-1863-0.6668895429743313",
+              "ingredientId": "ing-1794806988644",
+              "lotId": "fifo",
+              "grams": 12
+            },
+            {
+              "id": "bi-1794827160187-8728-0.10548119935435318",
+              "ingredientId": "ing-1794807017577",
+              "lotId": "fifo",
+              "grams": 15
+            },
+            {
+              "id": "bi-1794827160187-1591-0.5205014134562853",
+              "ingredientId": "ing-white-sugar",
+              "lotId": "fifo",
+              "grams": 8
+            }
+          ]
+        },
+        {
+          "id": "bb-init-6",
+          "recipeId": "rec-4",
+          "batchNumber": 2,
+          "label": "รอบที่ 2 (ปั่นเติม Stock)",
+          "ingredients": [
+            {
+              "id": "bi-1794827160187-56-0.22387465700696418",
+              "ingredientId": "ing-1794806908794",
+              "lotId": "fifo",
+              "grams": 380
+            },
+            {
+              "id": "bi-1794827160187-7057-0.8023393454581099",
+              "ingredientId": "ing-1794806957677",
+              "lotId": "fifo",
+              "grams": 12
+            },
+            {
+              "id": "bi-1794827160187-2641-0.6073908907031557",
+              "ingredientId": "ing-1794807194202",
+              "lotId": "fifo",
+              "grams": 2.454
+            },
+            {
+              "id": "bi-1794827160187-9845-0.5622525106229702",
+              "ingredientId": "ing-1794806995061",
+              "lotId": "fifo",
+              "grams": 13
+            },
+            {
+              "id": "bi-1794827160187-4245-0.4738943102184363",
+              "ingredientId": "ing-1794806948544",
+              "lotId": "fifo",
+              "grams": 12.272
+            },
+            {
+              "id": "bi-1794827160187-599-0.6024980452986017",
+              "ingredientId": "ing-1794806977594",
+              "lotId": "fifo",
+              "grams": 19.285
+            },
+            {
+              "id": "bi-1794827160187-181-0.31947944282478713",
+              "ingredientId": "ing-1794806988644",
+              "lotId": "fifo",
+              "grams": 15
+            },
+            {
+              "id": "bi-1794827160187-5347-0.016030772230857138",
+              "ingredientId": "ing-1794807017577",
+              "lotId": "fifo",
+              "grams": 17.532
+            },
+            {
+              "id": "bi-1794827160187-6439-0.5511555885188952",
+              "ingredientId": "ing-1794807046427",
+              "lotId": "ilot-1794819986817",
+              "grams": 63
+            }
+          ]
+        },
+        {
+          "id": "bb-init-7",
+          "recipeId": "rec-7",
+          "batchNumber": 2,
+          "label": "รอบที่ 2 (ปั่นเติม Stock)",
+          "ingredients": [
+            {
+              "id": "bi-1794827160187-327-0.3462747176410311",
+              "ingredientId": "ing-1794806908794",
+              "lotId": "fifo",
+              "grams": 500
+            },
+            {
+              "id": "bi-1794827160187-7933-0.5166186205804826",
+              "ingredientId": "ing-1794806957677",
+              "lotId": "fifo",
+              "grams": 24
+            },
+            {
+              "id": "bi-1794827160187-2819-0.5410360428205403",
+              "ingredientId": "ing-1794807194202",
+              "lotId": "fifo",
+              "grams": 3.4
+            },
+            {
+              "id": "bi-1794827160187-5128-0.352960744680192",
+              "ingredientId": "ing-1794806995061",
+              "lotId": "fifo",
+              "grams": 14
+            },
+            {
+              "id": "bi-1794827160187-1108-0.7599548719432166",
+              "ingredientId": "ing-1794806948544",
+              "lotId": "fifo",
+              "grams": 20
+            },
+            {
+              "id": "bi-1794827160188-8920-0.04140736734590045",
+              "ingredientId": "ing-1794806977594",
+              "lotId": "fifo",
+              "grams": 30
+            },
+            {
+              "id": "bi-1794827160188-7759-0.40451939948607274",
+              "ingredientId": "ing-1794806988644",
+              "lotId": "fifo",
+              "grams": 32
+            },
+            {
+              "id": "bi-1794827160188-2852-0.19655765446925888",
+              "ingredientId": "ing-1794807017577",
+              "lotId": "fifo",
+              "grams": 30
+            },
+            {
+              "id": "bi-1794827160188-6600-0.8407869700167827",
+              "ingredientId": "ing-white-sugar",
+              "lotId": "fifo",
+              "grams": 6
+            },
+            {
+              "id": "bi-1794827160188-8873-0.6219936214270857",
+              "ingredientId": "ing-1794806875795",
+              "lotId": "ilot-1794819457081",
+              "grams": 60
+            }
+          ]
+        },
+        {
+          "id": "bb-init-8",
+          "recipeId": "rec-7",
+          "batchNumber": 3,
+          "label": "รอบที่ 3 (ปั่นเติม Stock)",
+          "ingredients": [
+            {
+              "id": "bi-1794827160188-3492-0.4560324786825395",
+              "ingredientId": "ing-1794806908794",
+              "lotId": "fifo",
+              "grams": 500
+            },
+            {
+              "id": "bi-1794827160188-9327-0.4002083521394588",
+              "ingredientId": "ing-1794806957677",
+              "lotId": "fifo",
+              "grams": 24
+            },
+            {
+              "id": "bi-1794827160188-2735-0.8099964778647687",
+              "ingredientId": "ing-1794807194202",
+              "lotId": "fifo",
+              "grams": 3.4
+            },
+            {
+              "id": "bi-1794827160188-819-0.41142138230958614",
+              "ingredientId": "ing-1794806995061",
+              "lotId": "fifo",
+              "grams": 14
+            },
+            {
+              "id": "bi-1794827160188-4658-0.15305140299014452",
+              "ingredientId": "ing-1794806948544",
+              "lotId": "fifo",
+              "grams": 20
+            },
+            {
+              "id": "bi-1794827160188-2908-0.9799911490341474",
+              "ingredientId": "ing-1794806977594",
+              "lotId": "fifo",
+              "grams": 30
+            },
+            {
+              "id": "bi-1794827160188-4502-0.11242658896278568",
+              "ingredientId": "ing-1794806988644",
+              "lotId": "fifo",
+              "grams": 32
+            },
+            {
+              "id": "bi-1794827160188-7589-0.8588110233328553",
+              "ingredientId": "ing-1794807017577",
+              "lotId": "fifo",
+              "grams": 30
+            },
+            {
+              "id": "bi-1794827160188-2101-0.07843887526693027",
+              "ingredientId": "ing-white-sugar",
+              "lotId": "fifo",
+              "grams": 6
+            },
+            {
+              "id": "bi-1794827160188-7323-0.7589830668406385",
+              "ingredientId": "ing-1794806875795",
+              "lotId": "ilot-1794819457081",
+              "grams": 60
+            }
+          ]
+        },
+        {
+          "id": "bb-init-9",
+          "recipeId": "rec-9",
+          "batchNumber": 2,
+          "label": "รอบที่ 2 (ปั่นเติม Stock)",
+          "ingredients": [
+            {
+              "id": "bi-1794827160188-5662-0.47843708506000926",
+              "ingredientId": "ing-1794806908794",
+              "lotId": "fifo",
+              "grams": 345
+            },
+            {
+              "id": "bi-1794827160188-680-0.20226661527494083",
+              "ingredientId": "ing-1794806919010",
+              "lotId": "fifo",
+              "grams": 80
+            },
+            {
+              "id": "bi-1794827160188-1359-0.6416487216845527",
+              "ingredientId": "ing-1794807194202",
+              "lotId": "fifo",
+              "grams": 2.5
+            },
+            {
+              "id": "bi-1794827160188-6600-0.4366887078804912",
+              "ingredientId": "ing-1794806995061",
+              "lotId": "fifo",
+              "grams": 5
+            },
+            {
+              "id": "bi-1794827160188-7008-0.3914066220543839",
+              "ingredientId": "ing-1794806948544",
+              "lotId": "fifo",
+              "grams": 15
+            },
+            {
+              "id": "bi-1794827160188-7946-0.8715212868392415",
+              "ingredientId": "ing-1794806977594",
+              "lotId": "fifo",
+              "grams": 20
+            },
+            {
+              "id": "bi-1794827160188-110-0.61428001548956",
+              "ingredientId": "ing-1794806988644",
+              "lotId": "fifo",
+              "grams": 12
+            },
+            {
+              "id": "bi-1794827160188-812-0.1240562900423503",
+              "ingredientId": "ing-1794807017577",
+              "lotId": "fifo",
+              "grams": 15
+            },
+            {
+              "id": "bi-1794827160188-8482-0.455147826291584",
+              "ingredientId": "ing-white-sugar",
+              "lotId": "fifo",
+              "grams": 8
+            }
+          ]
+        },
+        {
+          "id": "bb-init-10",
+          "recipeId": "rec-9",
+          "batchNumber": 3,
+          "label": "รอบที่ 3 (ปั่นเติม Stock)",
+          "ingredients": [
+            {
+              "id": "bi-1794827160188-3330-0.6245343378404379",
+              "ingredientId": "ing-1794806908794",
+              "lotId": "fifo",
+              "grams": 345
+            },
+            {
+              "id": "bi-1794827160188-9634-0.3520117045151493",
+              "ingredientId": "ing-1794806919010",
+              "lotId": "fifo",
+              "grams": 80
+            },
+            {
+              "id": "bi-1794827160188-2032-0.7737413235185856",
+              "ingredientId": "ing-1794807194202",
+              "lotId": "fifo",
+              "grams": 2.5
+            },
+            {
+              "id": "bi-1794827160188-6801-0.5887453550045778",
+              "ingredientId": "ing-1794806995061",
+              "lotId": "fifo",
+              "grams": 5
+            },
+            {
+              "id": "bi-1794827160188-35-0.09132438955932987",
+              "ingredientId": "ing-1794806948544",
+              "lotId": "fifo",
+              "grams": 15
+            },
+            {
+              "id": "bi-1794827160188-1749-0.08949603758171731",
+              "ingredientId": "ing-1794806977594",
+              "lotId": "fifo",
+              "grams": 20
+            },
+            {
+              "id": "bi-1794827160188-7234-0.5146970954259499",
+              "ingredientId": "ing-1794806988644",
+              "lotId": "fifo",
+              "grams": 12
+            },
+            {
+              "id": "bi-1794827160188-5686-0.5042857617540274",
+              "ingredientId": "ing-1794807017577",
+              "lotId": "fifo",
+              "grams": 15
+            },
+            {
+              "id": "bi-1794827160188-4388-0.2046187841959779",
+              "ingredientId": "ing-white-sugar",
+              "lotId": "fifo",
+              "grams": 8
+            }
+          ]
+        }
+      ]
+    }
+  ]
+};
 
 export function createInitialSeedState(): AppDatabaseState {
-  return {
-    settings: { ...DEFAULT_REFV_POS_SETTINGS },
-    packagingItems: [],
-    packagingLots: [],
-    ingredients: [],
-    ingredientLots: [],
-    recipes: [],
-    events: [],
-  };
+  return JSON.parse(JSON.stringify(MIGRATED_REFV_DATA));
 }
