@@ -1,6 +1,7 @@
 import { AppDatabaseState, IngredientLot, PackagingLot, PosConnectionSettings } from '../types';
 import { fetchSheetGvizRows } from './posSync';
 import { createInitialSeedState } from './seedData';
+import { pullStateFromSupabase, pushStateToSupabase } from './supabase';
 
 const STORAGE_KEY = 'boothbook_db_v1';
 try {
@@ -161,92 +162,26 @@ export async function saveToDiskFile(state: AppDatabaseState): Promise<boolean> 
   }
 }
 
-/**
- * ส่งข้อมูลทั้งหมดขึ้นไปบันทึกบน Google Sheets (แท็บ Tax_DB_State, Tax_Recipes, Tax_Packaging_Lots, Tax_Ingredient_Lots, Tax_Events)
- */
+/** ส่งข้อมูลขึ้น Supabase (ตารางของผู้ใช้ที่ล็อกอินอยู่) */
 export async function pushDatabaseToGoogleSheets(state: AppDatabaseState): Promise<boolean> {
-  const url = (state.settings?.appsScriptUrl || '').trim();
-  if (!url || !url.includes('script.google.com')) return false;
-
-  const payload = JSON.stringify({
-    type: 'save_tax_state',
-    state,
-  });
-
   try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: payload,
-    });
-    const text = (await res.text()).trim();
-    if (text.startsWith('ok')) return true;
+    return await pushStateToSupabase(state);
   } catch {
-    try {
-      await fetch(url, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: payload,
-      });
-      return true;
-    } catch {
-      return false;
-    }
+    return false;
   }
-  return false;
 }
 
-/**
- * ดึงข้อมูลจาก Google Sheets:
- * 1. อ่านก้อนข้อมูลหลักจากแท็บ Tax_DB_State (รองรับทั้งแบบบรรทัดเดียวและแบบแบ่ง Chunk)
- * 2. อ่านตาราง Tax_Recipes, Tax_Packaging_Lots, Tax_Ingredient_Lots เผื่อผู้ใช้แก้ตัวเลขใน Google Sheet โดยตรง
- */
+/** ดึงข้อมูลจาก Supabase ของผู้ใช้ที่ล็อกอินอยู่ (ชื่อฟังก์ชันคงเดิมเพื่อไม่ให้แก้หลายจุด) */
 export async function pullDatabaseFromGoogleSheets(
-  settings: PosConnectionSettings
+  _settings: PosConnectionSettings
 ): Promise<AppDatabaseState | null> {
-  if (!settings.sheetId) return null;
-
-  let baseState: AppDatabaseState | null = null;
-
-  // 1. อ่านจากแท็บ Tax_DB_State ผ่าน GViz
   try {
-    const rows = await fetchSheetGvizRows(settings.sheetId, 'Tax_DB_State');
-    if (rows && rows.length > 0) {
-      const chunks: { idx: number; text: string }[] = [];
-      for (const r of rows) {
-        const c0 = String(r[0] || '').trim();
-        const c1 = String(r[1] || '').trim();
-        if (c0 === 'CHUNK_INDEX' || c0 === 'JSON_STATE') continue;
-        if (c0.startsWith('{') && c0.includes('"recipes"')) {
-          chunks.push({ idx: 0, text: c0 });
-        } else if (c1) {
-          chunks.push({ idx: Number(c0) || 0, text: c1 });
-        }
-      }
-      if (chunks.length > 0) {
-        chunks.sort((a, b) => a.idx - b.idx);
-        const fullJson = chunks.map((c) => c.text).join('');
-        const parsed = JSON.parse(fullJson) as AppDatabaseState;
-        if (parsed && Array.isArray(parsed.recipes)) {
-          baseState = parsed;
-        }
-      }
-    }
+    const st = await pullStateFromSupabase();
+    return st && Array.isArray(st.recipes) ? ensureEventSnapshots(st) : null;
   } catch {
-    // fallback ต่อ
+    return null;
   }
-
-  // 2. ถ้าดึง Tax_DB_State ได้แล้ว ให้ใช้ข้อมูลก้อนนี้เป็นหลัก 100% เพราะมีข้อมูลครบถ้วนที่สุด
-  // (ทั้งการเลือกล็อต, รอบการผลิต Production Runs, Event Usages)
-  // หากดึง Tax_DB_State ไม่สำเร็จ จึงค่อย fallback ไปอ่านจากแท็บตารางย่อย
-  if (!baseState) {
-    // fallback ต่อ
-  }
-
-  return baseState ? ensureEventSnapshots(baseState) : null;
 }
-
 
 export function saveAppState(
   state: AppDatabaseState,
@@ -282,7 +217,7 @@ export function saveAppState(
         cloudSynced: cloudOk,
         lastSavedAt: new Date().toLocaleTimeString('th-TH'),
         message: cloudOk
-          ? `บันทึกครบทั้งไฟล์ในเครื่อง + Google Sheets (${new Date().toLocaleTimeString('th-TH')})`
+          ? `บันทึกครบทั้งไฟล์ในเครื่อง + Supabase (${new Date().toLocaleTimeString('th-TH')})`
           : `บันทึกลงไฟล์ data/database.json ในเครื่องแล้ว (${timeStr})`,
       });
     }

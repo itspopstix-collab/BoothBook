@@ -43,7 +43,7 @@ export const App: React.FC = () => {
   });
   const [cloudBusy, setCloudBusy] = useState(false);
 
-  // โหลดข้อมูลจากไฟล์จริงในเครื่อง (data/database.json) หรือดึงจาก Google Sheets ตอนเปิดแอป
+  // โหลดข้อมูลจากไฟล์จริงในเครื่อง (data/database.json) หรือดึงจาก Supabase ตอนเปิดแอป
   useEffect(() => {
     let mounted = true;
     loadStateFromDiskOrCloud(state).then(({ state: loadedState, source }) => {
@@ -62,7 +62,7 @@ export const App: React.FC = () => {
           diskSaved: true,
           cloudSynced: true,
           lastSavedAt: t,
-          message: `ดึงข้อมูลล่าสุดจาก Google Sheets ลงเครื่องสำเร็จ (${t})`,
+          message: `ดึงข้อมูลล่าสุดจาก Supabase ลงเครื่องสำเร็จ (${t})`,
         });
       }
     });
@@ -91,7 +91,7 @@ export const App: React.FC = () => {
         cloudSynced: ok,
         lastSavedAt: t,
         message: ok
-          ? `ส่งข้อมูลทั้งหมดขึ้น Google Sheets สำเร็จ (${t})`
+          ? `ส่งข้อมูลทั้งหมดขึ้น Supabase สำเร็จ (${t})`
           : `เซฟลงไฟล์ data/database.json แล้ว (หากต้องการเก็บขึ้นชีท กรุณาอัปเดต google-apps-script.gs ในชีท)`,
       });
     } finally {
@@ -111,14 +111,14 @@ export const App: React.FC = () => {
           diskSaved: true,
           cloudSynced: true,
           lastSavedAt: t,
-          message: `ดึงข้อมูลล่าสุดจาก Google Sheets ลงเครื่องสำเร็จ (${t})`,
+          message: `ดึงข้อมูลล่าสุดจาก Supabase ลงเครื่องสำเร็จ (${t})`,
         });
       } else {
         setSyncStatus({
           diskSaved: true,
           cloudSynced: false,
           lastSavedAt: t,
-          message: `ยังไม่มีข้อมูล Tax_DB_State บน Google Sheets (กดปุ่ม "ส่งขึ้นชีท" ครั้งแรกเพื่อสร้างแท็บได้เลย)`,
+          message: `ยังไม่มีข้อมูลบน Supabase (กดปุ่ม "ส่งขึ้นคลาวด์" ครั้งแรกเพื่อสร้างแท็บได้เลย)`,
         });
       }
     } finally {
@@ -159,7 +159,7 @@ export const App: React.FC = () => {
                   {state.settings.shopName} — Cost & Event P&L
                 </h1>
                 <span className="px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-[#90d4ec]/40 text-[#0d3a57]">
-                  Disk File + Google Sheets Sync
+                  Disk File + Supabase Sync
                 </span>
               </div>
               <p className="text-xs text-[#6b8799] font-medium flex items-center gap-1.5">
@@ -250,16 +250,16 @@ export const App: React.FC = () => {
               onClick={handleManualCloudPush}
               disabled={cloudBusy}
               className="inline-flex items-center gap-1 bg-[#118cd1]/10 hover:bg-[#118cd1]/20 text-[#118cd1] font-bold px-2.5 py-1 rounded-lg transition cursor-pointer"
-              title="ส่งสูตร สต็อก และงานออกบูธทั้งหมดไปเก็บบน Google Sheets"
+              title="ส่งสูตร สต็อก และงานออกบูธทั้งหมดไปเก็บบน Supabase"
             >
               <CloudUpload className="w-3.5 h-3.5" />
-              ส่งขึ้นชีท
+              ส่งขึ้นคลาวด์
             </button>
             <button
               onClick={handleManualCloudPull}
               disabled={cloudBusy}
               className="inline-flex items-center gap-1 bg-[#90d4ec]/30 hover:bg-[#90d4ec]/50 text-[#0d3a57] font-bold px-2.5 py-1 rounded-lg transition cursor-pointer"
-              title="ดึงสูตร สต็อก และงานออกบูธล่าสุดจาก Google Sheets ลงเครื่องนี้"
+              title="ดึงสูตร สต็อก และงานออกบูธล่าสุดจาก Supabase ลงเครื่องนี้"
             >
               <CloudDownload className="w-3.5 h-3.5" />
               ดึงจากชีท
