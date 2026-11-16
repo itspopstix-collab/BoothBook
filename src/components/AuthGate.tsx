@@ -67,7 +67,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
         ) : (
           <>
             <p className="text-xs text-[#6b8799]">{mode === 'login' ? 'เข้าสู่ระบบ' : 'สมัครใช้งาน'}</p>
-            <input className={box} placeholder="username (a-z, 0-9)" value={username} onChange={(e) => setUsername(e.target.value)} required />
+            <input className={box} placeholder="Email หรือ Username" value={username} onChange={(e) => setUsername(e.target.value)} required />
             <input className={box} type="password" placeholder="password (อย่างน้อย 6 ตัว)" value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} required />
           </>
         )}

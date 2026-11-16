@@ -35,8 +35,11 @@ export function getClient(): SupabaseClient | null {
   return client;
 }
 
-const toEmail = (username: string) =>
-  `${username.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '')}@boothbook.app`;
+const toEmail = (usernameOrEmail: string) => {
+  const trimmed = usernameOrEmail.trim().toLowerCase();
+  if (trimmed.includes('@')) return trimmed;
+  return `${trimmed.replace(/[^a-z0-9._-]/g, '')}@boothbook.app`;
+};
 
 export async function signUp(username: string, password: string) {
   const c = getClient();
