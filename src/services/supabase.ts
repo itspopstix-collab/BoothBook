@@ -86,8 +86,44 @@ export async function pushStateToSupabase(state: AppDatabaseState): Promise<bool
   const c = getClient();
   const user = await getSessionUser();
   if (!c || !user) return false;
+
+  // 1. บันทึกลง app_state สำรองไว้เสมอ
   const { error } = await c
     .from('app_state')
     .upsert({ user_id: user.id, state, updated_at: new Date().toISOString() });
+
+  // 2. ซิงค์ตารางย่อย pos_sales ไปด้วยในตัว
+  try {
+    for (const ev of state.events || []) {
+      for (let i = 0; i < (ev.posSales || []).length; i++) {
+        const pos = ev.posSales[i];
+        const posId = pos.id || `pos-${ev.id}-${pos.orderId || i}`;
+        const lineItem = pos.flavor2
+          ? `${pos.flavor1} + ${pos.flavor2}`
+          : (pos.flavor1 || pos.type || 'Gelato');
+
+        await c.from('pos_sales').upsert({
+          id: posId,
+          event_id: ev.id,
+          user_id: user.id,
+          receipt_no: pos.orderId || `R-${i + 1}`,
+          timestamp: `${pos.date} ${pos.time}`,
+          line_item_name: lineItem,
+          cups: 1,
+          total_price: pos.amount || 0,
+          payment_method: pos.payment || 'QR',
+          discount: pos.discountAmount || 0,
+          flavor_splits: [
+            ...(pos.flavor1 ? [{ flavor: pos.flavor1, category: pos.category1 }] : []),
+            ...(pos.flavor2 ? [{ flavor: pos.flavor2, category: pos.category2 }] : []),
+          ],
+          raw_payload: pos,
+        });
+      }
+    }
+  } catch (err) {
+    console.warn('Sync pos_sales to relational table error:', err);
+  }
+
   return !error;
 }
