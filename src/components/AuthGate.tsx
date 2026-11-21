@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
+  clearSupabaseCfg,
   getClient,
   getSessionUser,
   getSupabaseCfg,
@@ -16,7 +17,7 @@ export const AuthGate: React.FC<{ children: (profile: UserProfile | null) => Rea
   const [ready, setReady] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [configured, setConfigured] = useState(!!getSupabaseCfg());
-  const [url, setUrl] = useState('');
+  const [url, setUrl] = useState('https://btnflwrebpnaafafisgc.supabase.co');
   const [key, setKey] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -27,19 +28,29 @@ export const AuthGate: React.FC<{ children: (profile: UserProfile | null) => Rea
 
   useEffect(() => {
     (async () => {
-      const c = getClient();
-      if (!c) return setReady(true);
-      const sessionUser = await getSessionUser();
-      if (sessionUser) {
-        setUserProfile(getUserProfile(sessionUser));
-      } else {
-        setUserProfile(null);
+      try {
+        const c = getClient();
+        if (!c) {
+          setConfigured(false);
+          setReady(true);
+          return;
+        }
+        const sessionUser = await getSessionUser();
+        if (sessionUser) {
+          setUserProfile(getUserProfile(sessionUser));
+        } else {
+          setUserProfile(null);
+        }
+        c.auth.onAuthStateChange((_e, s) => {
+          if (s?.user) setUserProfile(getUserProfile(s.user));
+          else setUserProfile(null);
+        });
+      } catch {
+        clearSupabaseCfg();
+        setConfigured(false);
+      } finally {
+        setReady(true);
       }
-      c.auth.onAuthStateChange((_e, s) => {
-        if (s?.user) setUserProfile(getUserProfile(s.user));
-        else setUserProfile(null);
-      });
-      setReady(true);
     })();
   }, [configured]);
 
@@ -210,16 +221,29 @@ export const AuthGate: React.FC<{ children: (profile: UserProfile | null) => Rea
         </button>
 
         {configured && (
-          <div className="text-center pt-2">
-            <span className="text-xs text-[#6b8799]">
-              {mode === 'login' ? 'เจ้าของร้านหรือพนักงานใหม่? ' : 'มีบัญชีอยู่แล้ว? '}
-            </span>
+          <div className="text-center pt-2 space-y-2">
+            <div>
+              <span className="text-xs text-[#6b8799]">
+                {mode === 'login' ? 'เจ้าของร้านหรือพนักงานใหม่? ' : 'มีบัญชีอยู่แล้ว? '}
+              </span>
+              <button
+                type="button"
+                onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+                className="text-xs font-bold text-[#118cd1] hover:underline cursor-pointer"
+              >
+                {mode === 'login' ? 'สมัครบัญชีใหม่' : 'เข้าสู่ระบบ'}
+              </button>
+            </div>
             <button
               type="button"
-              onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
-              className="text-xs font-bold text-[#118cd1] hover:underline cursor-pointer"
+              onClick={() => {
+                clearSupabaseCfg();
+                setConfigured(false);
+                setMsg('');
+              }}
+              className="text-[11px] text-[#6b8799] hover:text-[#0d3a57] underline cursor-pointer"
             >
-              {mode === 'login' ? 'สมัครบัญชีใหม่' : 'เข้าสู่ระบบ'}
+              เปลี่ยนการตั้งค่า Supabase (URL / Key)
             </button>
           </div>
         )}

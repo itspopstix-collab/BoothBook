@@ -5,22 +5,63 @@ const CFG_KEY = 'boothbook_supabase_cfg';
 
 export type SupabaseCfg = { url: string; anonKey: string };
 
+export function normalizeSupabaseUrl(raw: string): string {
+  let u = (raw || '').trim();
+  if (!u) throw new Error('กรุณากรอก Project URL');
+  // หากกรอกเฉพาะ Project ID เช่น btnflwrebpnaafafisgc
+  if (/^[a-z0-9-]+$/i.test(u)) {
+    u = `https://${u}.supabase.co`;
+  } else if (!/^https?:\/\//i.test(u)) {
+    u = `https://${u}`;
+  }
+  try {
+    const parsed = new URL(u);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new Error('URL ต้องขึ้นต้นด้วย https://');
+    }
+    return parsed.origin;
+  } catch {
+    throw new Error('รูปแบบ Project URL ไม่ถูกต้อง (ตัวอย่าง: https://btnflwrebpnaafafisgc.supabase.co)');
+  }
+}
+
+export function clearSupabaseCfg() {
+  try {
+    localStorage.removeItem(CFG_KEY);
+  } catch {
+    // ignore
+  }
+  client = null;
+}
+
 export function getSupabaseCfg(): SupabaseCfg | null {
   const envUrl = (import.meta as any).env?.VITE_SUPABASE_URL as string | undefined;
   const envKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY as string | undefined;
-  if (envUrl && envKey) return { url: envUrl, anonKey: envKey };
+  if (envUrl && envKey) {
+    try {
+      return { url: normalizeSupabaseUrl(envUrl), anonKey: envKey.trim() };
+    } catch {
+      // fall through
+    }
+  }
   try {
     const raw = localStorage.getItem(CFG_KEY);
     if (!raw) return null;
     const c = JSON.parse(raw) as SupabaseCfg;
-    return c.url && c.anonKey ? c : null;
+    if (!c.url || !c.anonKey) return null;
+    const validUrl = normalizeSupabaseUrl(c.url);
+    return { url: validUrl, anonKey: c.anonKey.trim() };
   } catch {
+    clearSupabaseCfg();
     return null;
   }
 }
 
 export function saveSupabaseCfg(cfg: SupabaseCfg) {
-  localStorage.setItem(CFG_KEY, JSON.stringify({ url: cfg.url.trim(), anonKey: cfg.anonKey.trim() }));
+  const validUrl = normalizeSupabaseUrl(cfg.url);
+  const anonKey = (cfg.anonKey || '').trim();
+  if (!anonKey) throw new Error('กรุณากรอก Publishable key');
+  localStorage.setItem(CFG_KEY, JSON.stringify({ url: validUrl, anonKey }));
   client = null;
 }
 
@@ -29,10 +70,15 @@ export function getClient(): SupabaseClient | null {
   if (client) return client;
   const cfg = getSupabaseCfg();
   if (!cfg) return null;
-  client = createClient(cfg.url, cfg.anonKey, {
-    auth: { persistSession: true, autoRefreshToken: true },
-  });
-  return client;
+  try {
+    client = createClient(cfg.url, cfg.anonKey, {
+      auth: { persistSession: true, autoRefreshToken: true },
+    });
+    return client;
+  } catch {
+    clearSupabaseCfg();
+    return null;
+  }
 }
 
 const toEmail = (usernameOrEmail: string) => {
