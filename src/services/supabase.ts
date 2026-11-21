@@ -8,6 +8,9 @@ export type SupabaseCfg = { url: string; anonKey: string };
 export function normalizeSupabaseUrl(raw: string): string {
   let u = (raw || '').trim();
   if (!u) throw new Error('กรุณากรอก Project URL');
+  if (/^(sb_|eyJ)/i.test(u)) {
+    throw new Error('ช่องนี้ต้องใส่ Project URL (https://xxxx.supabase.co) ไม่ใช่ API Key ครับ');
+  }
   // หากกรอกเฉพาะ Project ID เช่น btnflwrebpnaafafisgc
   if (/^[a-z0-9-]+$/i.test(u)) {
     u = `https://${u}.supabase.co`;
@@ -18,6 +21,9 @@ export function normalizeSupabaseUrl(raw: string): string {
     const parsed = new URL(u);
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
       throw new Error('URL ต้องขึ้นต้นด้วย https://');
+    }
+    if (!parsed.hostname.includes('.')) {
+      throw new Error('Hostname ไม่ถูกต้อง');
     }
     return parsed.origin;
   } catch {
@@ -61,6 +67,12 @@ export function saveSupabaseCfg(cfg: SupabaseCfg) {
   const validUrl = normalizeSupabaseUrl(cfg.url);
   const anonKey = (cfg.anonKey || '').trim();
   if (!anonKey) throw new Error('กรุณากรอก Publishable key');
+  if (/^https?:\/\//i.test(anonKey)) {
+    throw new Error('ช่องนี้ต้องใส่ Publishable key (sb_publishable_...) ไม่ใช่ URL ครับ');
+  }
+  if (/^sb_secret_/i.test(anonKey)) {
+    throw new Error('ห้ามใช้ Secret key ในหน้าเว็บครับ กรุณาใช้ Publishable key (sb_publishable_...)');
+  }
   localStorage.setItem(CFG_KEY, JSON.stringify({ url: validUrl, anonKey }));
   client = null;
 }

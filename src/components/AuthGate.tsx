@@ -77,7 +77,15 @@ export const AuthGate: React.FC<{ children: (profile: UserProfile | null) => Rea
       const u = await getSessionUser();
       if (u) setUserProfile(getUserProfile(u));
     } catch (err: any) {
-      setMsg(err?.message || String(err));
+      const rawMsg = err?.message || String(err);
+      if (/load failed|failed to fetch|networkerror/i.test(rawMsg)) {
+        const cur = getSupabaseCfg();
+        setMsg(
+          `เชื่อมต่อ Supabase ไม่สำเร็จ (${cur?.url || 'ไม่พบ URL'}) — กรุณากด "เปลี่ยนการตั้งค่า Supabase" ด้านล่างแล้วตรวจสอบ URL และ Publishable key อีกครั้ง`
+        );
+      } else {
+        setMsg(rawMsg);
+      }
     } finally {
       setBusy(false);
     }
