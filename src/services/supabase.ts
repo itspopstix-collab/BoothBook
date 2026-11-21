@@ -2,12 +2,16 @@ import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
 import { AppDatabaseState, PosSaleRow, UserProfile, UserRole } from '../types';
 
 const CFG_KEY = 'boothbook_supabase_cfg';
+const DEFAULT_SUPABASE_URL = 'https://btnflwrebpnaafafisgc.supabase.co';
 
 export type SupabaseCfg = { url: string; anonKey: string };
 
 export function normalizeSupabaseUrl(raw: string): string {
   let u = (raw || '').trim();
   if (!u) throw new Error('กรุณากรอก Project URL');
+  if (u.includes('@')) {
+    throw new Error('ช่องนี้ต้องใส่ Project URL (https://btnflwrebpnaafafisgc.supabase.co) ไม่ใช่อีเมลครับ');
+  }
   if (/^(sb_|eyJ)/i.test(u)) {
     throw new Error('ช่องนี้ต้องใส่ Project URL (https://xxxx.supabase.co) ไม่ใช่ API Key ครับ');
   }
@@ -54,9 +58,25 @@ export function getSupabaseCfg(): SupabaseCfg | null {
     const raw = localStorage.getItem(CFG_KEY);
     if (!raw) return null;
     const c = JSON.parse(raw) as SupabaseCfg;
-    if (!c.url || !c.anonKey) return null;
-    const validUrl = normalizeSupabaseUrl(c.url);
-    return { url: validUrl, anonKey: c.anonKey.trim() };
+    const anonKey = (c.anonKey || '').trim();
+    if (!anonKey || !/^(sb_publishable_|eyJ)/i.test(anonKey)) {
+      clearSupabaseCfg();
+      return null;
+    }
+    let validUrl: string;
+    try {
+      validUrl = normalizeSupabaseUrl(c.url || '');
+      if (!validUrl.includes('supabase.co') && !validUrl.includes('localhost')) {
+        validUrl = DEFAULT_SUPABASE_URL;
+      }
+    } catch {
+      // หากมี Publishable key ถูกต้องอยู่แล้ว แต่ URL ผิด (เช่น เผลอใส่อีเมล) ให้ซ่อมเป็น URL ของโปรเจกต์ให้อัตโนมัติ
+      validUrl = DEFAULT_SUPABASE_URL;
+    }
+    if (validUrl !== c.url) {
+      localStorage.setItem(CFG_KEY, JSON.stringify({ url: validUrl, anonKey }));
+    }
+    return { url: validUrl, anonKey };
   } catch {
     clearSupabaseCfg();
     return null;
