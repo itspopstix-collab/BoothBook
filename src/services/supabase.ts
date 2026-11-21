@@ -1,5 +1,5 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { AppDatabaseState } from '../types';
+import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
+import { AppDatabaseState, PosSaleRow, UserProfile, UserRole } from '../types';
 
 const CFG_KEY = 'boothbook_supabase_cfg';
 
@@ -41,13 +41,22 @@ const toEmail = (usernameOrEmail: string) => {
   return `${trimmed.replace(/[^a-z0-9._-]/g, '')}@boothbook.app`;
 };
 
-export async function signUp(username: string, password: string) {
+export async function signUp(username: string, password: string, role: UserRole = 'owner') {
   const c = getClient();
   if (!c) throw new Error('ยังไม่ได้ตั้งค่า Supabase');
-  const { data, error } = await c.auth.signUp({ email: toEmail(username), password });
+  const { data, error } = await c.auth.signUp({
+    email: toEmail(username),
+    password,
+    options: {
+      data: {
+        username,
+        role,
+      },
+    },
+  });
   if (error) throw error;
   if (!data.session) {
-    throw new Error('สมัครแล้ว แต่ต้องปิด "Confirm email" ใน Supabase (Authentication > Providers > Email) ก่อนจึงเข้าสู่ระบบได้');
+    throw new Error('สมัครแล้ว แต่ต้องปิด "Confirm email" ใน Supabase ก่อนจึงเข้าสู่ระบบได้');
   }
 }
 
@@ -62,22 +71,40 @@ export async function signOut() {
   await getClient()?.auth.signOut();
 }
 
-export async function getSessionUser() {
+export async function getSessionUser(): Promise<User | null> {
   const c = getClient();
   if (!c) return null;
   const { data } = await c.auth.getSession();
   return data.session?.user ?? null;
 }
 
+export function getUserProfile(user: User): UserProfile {
+  const role = (user.user_metadata?.role as UserRole) || 'owner';
+  const username = user.user_metadata?.username || user.email?.split('@')[0] || 'User';
+  const ownerId = user.user_metadata?.owner_id || user.id;
+  return {
+    id: user.id,
+    email: user.email || '',
+    username,
+    role,
+    ownerId,
+  };
+}
+
 export async function pullStateFromSupabase(): Promise<AppDatabaseState | null> {
   const c = getClient();
   const user = await getSessionUser();
   if (!c || !user) return null;
+
+  const profile = getUserProfile(user);
+  const targetUserId = profile.role === 'staff' ? (profile.ownerId || user.id) : user.id;
+
   const { data, error } = await c
     .from('app_state')
     .select('state')
-    .eq('user_id', user.id)
+    .eq('user_id', targetUserId)
     .maybeSingle();
+
   if (error) throw error;
   return (data?.state as AppDatabaseState) ?? null;
 }
@@ -87,12 +114,15 @@ export async function pushStateToSupabase(state: AppDatabaseState): Promise<bool
   const user = await getSessionUser();
   if (!c || !user) return false;
 
-  // 1. บันทึกลง app_state สำรองไว้เสมอ
+  const profile = getUserProfile(user);
+  const targetUserId = profile.role === 'staff' ? (profile.ownerId || user.id) : user.id;
+
+  // 1. บันทึกลง app_state
   const { error } = await c
     .from('app_state')
-    .upsert({ user_id: user.id, state, updated_at: new Date().toISOString() });
+    .upsert({ user_id: targetUserId, state, updated_at: new Date().toISOString() });
 
-  // 2. ซิงค์ตารางย่อย pos_sales ไปด้วยในตัว
+  // 2. ซิงค์ตารางย่อย pos_sales
   try {
     for (const ev of state.events || []) {
       for (let i = 0; i < (ev.posSales || []).length; i++) {
@@ -105,7 +135,7 @@ export async function pushStateToSupabase(state: AppDatabaseState): Promise<bool
         await c.from('pos_sales').upsert({
           id: posId,
           event_id: ev.id,
-          user_id: user.id,
+          user_id: targetUserId,
           receipt_no: pos.orderId || `R-${i + 1}`,
           timestamp: `${pos.date} ${pos.time}`,
           line_item_name: lineItem,
@@ -122,8 +152,45 @@ export async function pushStateToSupabase(state: AppDatabaseState): Promise<bool
       }
     }
   } catch (err) {
-    console.warn('Sync pos_sales to relational table error:', err);
+    console.warn('Sync pos_sales error:', err);
   }
+
+  return !error;
+}
+
+/** บันทึกบิลการขายใหม่จากหน้า POS เข้าสู่ Supabase โดยตรงทันที */
+export async function recordPosSaleToSupabase(
+  sale: PosSaleRow,
+  activeEventId?: string
+): Promise<boolean> {
+  const c = getClient();
+  const user = await getSessionUser();
+  if (!c || !user) return false;
+
+  const profile = getUserProfile(user);
+  const targetUserId = profile.role === 'staff' ? (profile.ownerId || user.id) : user.id;
+
+  const lineItem = sale.flavor2
+    ? `${sale.flavor1} + ${sale.flavor2}`
+    : (sale.flavor1 || sale.type || 'Gelato');
+
+  const { error } = await c.from('pos_sales').upsert({
+    id: sale.id || `pos-${Date.now()}-${sale.orderId || Math.random().toString(36).slice(2, 7)}`,
+    event_id: activeEventId || 'ev-default',
+    user_id: targetUserId,
+    receipt_no: sale.orderId,
+    timestamp: `${sale.date} ${sale.time}`,
+    line_item_name: lineItem,
+    cups: 1,
+    total_price: sale.amount || 0,
+    payment_method: sale.payment || 'QR',
+    discount: sale.discountAmount || 0,
+    flavor_splits: [
+      ...(sale.flavor1 ? [{ flavor: sale.flavor1, category: sale.category1 }] : []),
+      ...(sale.flavor2 ? [{ flavor: sale.flavor2, category: sale.category2 }] : []),
+    ],
+    raw_payload: sale,
+  });
 
   return !error;
 }

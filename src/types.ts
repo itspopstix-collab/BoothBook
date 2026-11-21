@@ -287,6 +287,17 @@ export interface PosConnectionSettings {
   appsScriptUrl: string;
   shopName: string;
   branchName: string;
+  promptPayNumber?: string;
+}
+
+export type UserRole = 'owner' | 'staff';
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  username: string;
+  role: UserRole;
+  ownerId?: string;
 }
 
 export interface AppDatabaseState {

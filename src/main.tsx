@@ -7,7 +7,7 @@ import './index.css';
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <AuthGate>
-      <App />
+      {(profile) => <App userProfile={profile} />}
     </AuthGate>
   </React.StrictMode>
 );
