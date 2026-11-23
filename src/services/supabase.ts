@@ -3,6 +3,7 @@ import { AppDatabaseState, PosSaleRow, UserProfile, UserRole } from '../types';
 
 const CFG_KEY = 'boothbook_supabase_cfg';
 const DEFAULT_SUPABASE_URL = 'https://btnflwrebpnaafafisgc.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_laeU9dkVK9tl6Jvt2SVmog_UUpeD1Rn';
 
 export type SupabaseCfg = { url: string; anonKey: string };
 
@@ -56,12 +57,14 @@ export function getSupabaseCfg(): SupabaseCfg | null {
   }
   try {
     const raw = localStorage.getItem(CFG_KEY);
-    if (!raw) return null;
+    if (!raw) {
+      return { url: DEFAULT_SUPABASE_URL, anonKey: DEFAULT_SUPABASE_ANON_KEY };
+    }
     const c = JSON.parse(raw) as SupabaseCfg;
     const anonKey = (c.anonKey || '').trim();
     if (!anonKey || !/^(sb_publishable_|eyJ)/i.test(anonKey)) {
       clearSupabaseCfg();
-      return null;
+      return { url: DEFAULT_SUPABASE_URL, anonKey: DEFAULT_SUPABASE_ANON_KEY };
     }
     let validUrl: string;
     try {
@@ -70,7 +73,6 @@ export function getSupabaseCfg(): SupabaseCfg | null {
         validUrl = DEFAULT_SUPABASE_URL;
       }
     } catch {
-      // หากมี Publishable key ถูกต้องอยู่แล้ว แต่ URL ผิด (เช่น เผลอใส่อีเมล) ให้ซ่อมเป็น URL ของโปรเจกต์ให้อัตโนมัติ
       validUrl = DEFAULT_SUPABASE_URL;
     }
     if (validUrl !== c.url) {
@@ -79,7 +81,7 @@ export function getSupabaseCfg(): SupabaseCfg | null {
     return { url: validUrl, anonKey };
   } catch {
     clearSupabaseCfg();
-    return null;
+    return { url: DEFAULT_SUPABASE_URL, anonKey: DEFAULT_SUPABASE_ANON_KEY };
   }
 }
 
@@ -184,7 +186,50 @@ export async function pullStateFromSupabase(): Promise<AppDatabaseState | null> 
     .maybeSingle();
 
   if (error) throw error;
-  return (data?.state as AppDatabaseState) ?? null;
+  const state = (data?.state as AppDatabaseState) ?? null;
+  if (!state) return null;
+
+  // ผสานยอดขายล่าสุดจากตาราง pos_sales (เช่น รายการที่แคชเชียร์ Staff ขายเข้ามาใหม่)
+  try {
+    const { data: salesRows } = await c
+      .from('pos_sales')
+      .select('id, event_id, raw_payload')
+      .eq('user_id', targetUserId);
+
+    if (Array.isArray(salesRows) && salesRows.length > 0 && Array.isArray(state.events)) {
+      const byEvent = new Map<string, PosSaleRow[]>();
+      for (const row of salesRows) {
+        const raw = row.raw_payload as PosSaleRow | null;
+        if (!raw || !row.event_id) continue;
+        const list = byEvent.get(row.event_id) || [];
+        list.push({ ...raw, id: raw.id || row.id });
+        byEvent.set(row.event_id, list);
+      }
+
+      state.events = state.events.map((ev) => {
+        const incoming = byEvent.get(ev.id);
+        if (!incoming || incoming.length === 0) return ev;
+        const existing = ev.posSales || [];
+        const seen = new Set(
+          existing.map((s) => s.id || `${s.orderId}|${s.date}|${s.time}|${s.flavor1}|${s.amount}`)
+        );
+        const added: PosSaleRow[] = [];
+        for (const s of incoming) {
+          const key1 = s.id || '';
+          const key2 = `${s.orderId}|${s.date}|${s.time}|${s.flavor1}|${s.amount}`;
+          if ((key1 && seen.has(key1)) || seen.has(key2)) continue;
+          seen.add(key2);
+          if (key1) seen.add(key1);
+          added.push(s);
+        }
+        return added.length > 0 ? { ...ev, posSales: [...existing, ...added] } : ev;
+      });
+    }
+  } catch (err) {
+    console.warn('Merge pos_sales error:', err);
+  }
+
+  return state;
 }
 
 export async function pushStateToSupabase(state: AppDatabaseState): Promise<boolean> {
@@ -195,10 +240,14 @@ export async function pushStateToSupabase(state: AppDatabaseState): Promise<bool
   const profile = getUserProfile(user);
   const targetUserId = profile.role === 'staff' ? (profile.ownerId || user.id) : user.id;
 
-  // 1. บันทึกลง app_state
-  const { error } = await c
-    .from('app_state')
-    .upsert({ user_id: targetUserId, state, updated_at: new Date().toISOString() });
+  // 1. บันทึกลง app_state (เฉพาะ Owner เพื่อไม่ให้ Staff แก้ไขข้อมูลหลังบ้าน)
+  let error: any = null;
+  if (profile.role !== 'staff') {
+    const res = await c
+      .from('app_state')
+      .upsert({ user_id: targetUserId, state, updated_at: new Date().toISOString() });
+    error = res.error;
+  }
 
   // 2. ซิงค์ตารางย่อย pos_sales
   try {
