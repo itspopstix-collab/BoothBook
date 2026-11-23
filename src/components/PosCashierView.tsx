@@ -58,8 +58,8 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
   // Active event
   const activeEvent = useMemo(() => {
     return (
-      state.events.find((e) => e.status === 'in_progress') ||
-      state.events[0] || { id: 'ev-default', name: 'หน้าบูธทั่วไป' }
+      state.events.find((e) => e.status === 'active') ||
+      state.events[0] || { id: 'ev-default', name: 'หน้าบูธทั่วไป', posSales: [] }
     );
   }, [state.events]);
 

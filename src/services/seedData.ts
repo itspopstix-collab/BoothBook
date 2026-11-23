@@ -1,15 +1,15 @@
 import { AppDatabaseState, FlavorCategory } from '../types';
 
 export const REFV_BASE_FLAVORS: { name: string; category: FlavorCategory; image: string }[] = [
-  { name: 'Plain Choco', category: 'Classic', image: '🍫' },
-  { name: 'Dark Choco', category: 'Classic', image: '🍫' },
-  { name: 'White Choco', category: 'Classic', image: '🤍' },
-  { name: 'Strawberry Choco', category: 'Classic', image: '🍓' },
-  { name: 'Matcha Choco', category: 'Classic', image: '🍵' },
-  { name: 'Banoffee Pop', category: 'Special', image: '🍌' },
-  { name: 'Berry Pop', category: 'Special', image: '🫐' },
-  { name: 'Cookie & Cream Pop', category: 'Special', image: '🍪' },
-  { name: 'Pistachio Dubai Pop', category: 'Special', image: '🥜' },
+  { name: 'Holy Cow!', category: 'Original', image: './images/g6.jpg' },
+  { name: 'Thai Tea', category: 'Original', image: './images/thai-tea.jpg' },
+  { name: "Pecan't Sleep", category: 'Premium', image: './images/g5.jpg' },
+  { name: '70% Into Dark Side', category: 'Premium', image: './images/g1.jpg' },
+  { name: 'Weirdly Wonderful', category: 'Premium', image: './images/g4.jpg' },
+  { name: 'Grapest of All Time', category: 'Premium', image: './images/g3.jpg' },
+  { name: 'Blush & Cheese', category: 'Premium', image: './images/g1.jpg' },
+  { name: 'Nutting to Prove', category: 'Signature', image: './images/nutting.jpg' },
+  { name: 'Matcha Snob', category: 'Signature', image: './images/g2.jpg' },
 ];
 
 export const MIGRATED_REFV_DATA: AppDatabaseState = {

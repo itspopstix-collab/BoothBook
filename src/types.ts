@@ -103,6 +103,7 @@ export interface EventExpense {
 }
 
 export interface PosSaleRow {
+  id?: string;
   orderId: string;
   date: string; // YYYY-MM-DD
   time: string; // HH:MM:SS
@@ -113,7 +114,7 @@ export interface PosSaleRow {
   category1: string;
   category2: string;
   payment: 'QR' | 'Cash' | string;
-  promotion: string;
+  promotion?: string;
   discountAmount: number;
   amount: number; // ยอดสุทธิต่อถ้วย (บาท)
 }

@@ -86,7 +86,7 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
   // รับบิลใหม่จากหน้า POS Cashier
   const handleRecordPosSale = (newSale: PosSaleRow) => {
     handleUpdateState((prev) => {
-      const activeEventIdx = prev.events.findIndex((e) => e.status === 'in_progress');
+      const activeEventIdx = prev.events.findIndex((e) => e.status === 'active');
       const targetIdx = activeEventIdx >= 0 ? activeEventIdx : 0;
 
       const events = [...(prev.events || [])];
@@ -343,7 +343,7 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
         {isOwner && activeTab === 'events' && (
           <EventPnLView
             state={state}
-            simulation={sim}
+            sim={sim}
             onUpdateState={handleUpdateState}
           />
         )}
@@ -351,7 +351,7 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
         {isOwner && activeTab === 'inventory' && (
           <FifoInventoryView
             state={state}
-            simulation={sim}
+            sim={sim}
             onUpdateState={handleUpdateState}
           />
         )}
@@ -359,7 +359,7 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
         {isOwner && activeTab === 'recipes' && (
           <RecipeCostView
             state={state}
-            simulation={sim}
+            sim={sim}
             onUpdateState={handleUpdateState}
           />
         )}
@@ -368,7 +368,9 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
           <SettingsView
             state={state}
             onUpdateState={handleUpdateState}
-            onReloadFromCloud={handleManualCloudPull}
+            onPushCloud={handleManualCloudPush}
+            onPullCloud={handleManualCloudPull}
+            cloudBusy={cloudBusy}
           />
         )}
 
