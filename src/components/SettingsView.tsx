@@ -135,15 +135,6 @@ export const SettingsView: React.FC<Props> = ({
     setShowPackageModal(false);
   };
 
-  const handleResetMockPackage = () => {
-    setPurchasedPackage(null);
-    try {
-      localStorage.removeItem('boothbook_preview_package_v1');
-    } catch {
-      // ignore
-    }
-  };
-
   // State สำหรับฟีเจอร์ล้างข้อมูลเก่าในเครื่องแบบปลอดภัย (ต้องออนไลน์ + ตรวจซิงค์ Cloud ผ่านก่อน)
   const [verifyingCloud, setVerifyingCloud] = useState(false);
   const [cloudVerifiedInfo, setCloudVerifiedInfo] = useState<{
@@ -399,14 +390,6 @@ export const SettingsView: React.FC<Props> = ({
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 เปลี่ยน / ซื้อเพิ่ม
-              </button>
-              <button
-                type="button"
-                onClick={handleResetMockPackage}
-                className="inline-flex items-center gap-1 bg-white/10 hover:bg-white/20 text-white/90 font-bold px-3 py-2 rounded-xl text-xs transition cursor-pointer"
-                title="กลับไปดูหน้าตาตอนยังไม่ได้ซื้อ"
-              >
-                กลับเป็น Free
               </button>
             </div>
           </div>
