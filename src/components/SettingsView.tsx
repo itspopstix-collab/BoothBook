@@ -33,6 +33,8 @@ import {
   X,
   Check,
   ExternalLink,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 interface Props {
@@ -80,6 +82,12 @@ export const SettingsView: React.FC<Props> = ({
   const [showPackageModal, setShowPackageModal] = useState(false);
   const [selectedBoothPack, setSelectedBoothPack] = useState<string>('pack-7');
   const [selectedStoragePlan, setSelectedStoragePlan] = useState<string>('sb-unlimited');
+  const boothCarouselRef = useRef<HTMLDivElement>(null);
+  const storageCarouselRef = useRef<HTMLDivElement>(null);
+  const slideCarousel = (ref: React.RefObject<HTMLDivElement | null>, dir: 'left' | 'right') => {
+    if (!ref.current) return;
+    ref.current.scrollBy({ left: dir === 'left' ? -240 : 240, behavior: 'smooth' });
+  };
   const [purchasedPackage, setPurchasedPackage] = useState<{
     boothId: string;
     boothLabel: string;
@@ -104,7 +112,7 @@ export const SettingsView: React.FC<Props> = ({
     { id: 'pack-3', label: '3 รอบออกบูธ', desc: 'เฉลี่ยรอบละ 43฿', price: 129, quota: 3 as number | 'unlimited' },
     { id: 'pack-7', label: '7 รอบออกบูธ', desc: 'เฉลี่ยรอบละ 27฿', price: 189, badge: 'ยอดนิยม', quota: 7 as number | 'unlimited' },
     { id: 'pack-15', label: '15 รอบออกบูธ', desc: 'เฉลี่ยรอบละ 17฿', price: 259, quota: 15 as number | 'unlimited' },
-    { id: 'pack-lifetime', label: 'POS ตลอดชีพ', desc: 'ออกบูธไม่จำกัดรอบ จ่ายครั้งเดียวจบ', price: 2999, badge: 'คุ้มที่สุด', quota: 'unlimited' as number | 'unlimited' },
+    { id: 'pack-lifetime', label: 'POS ตลอดชีพ', desc: 'ออกบูธไม่จำกัดรอบ ใช้งานได้ตลอดไป', price: 2999, badge: 'คุ้มที่สุด', quota: 'unlimited' as number | 'unlimited' },
   ];
 
   const STORAGE_PLANS = [
@@ -112,7 +120,7 @@ export const SettingsView: React.FC<Props> = ({
     { id: 'sb-500', provider: 'Supabase Cloud', label: '500 บิล', desc: 'ซิงค์ไว แยกสิทธิ์ Owner / Staff', price: 29, quota: 500 as number | 'unlimited' },
     { id: 'sb-1000', provider: 'Supabase Cloud', label: '1,000 บิล', desc: 'เหมาะกับงาน 3–7 บูธ', price: 49, quota: 1000 as number | 'unlimited' },
     { id: 'sb-2000', provider: 'Supabase Cloud', label: '2,000 บิล', desc: 'ออกบูธต่อเนื่องหลายงาน', price: 89, quota: 2000 as number | 'unlimited' },
-    { id: 'sb-unlimited', provider: 'Supabase Cloud', label: 'Unlimited ตลอดชีพ', desc: 'ไม่จำกัดจำนวนบิล จ่ายครั้งเดียวใช้ได้ตลอดไป', price: 149, badge: 'แนะนำ', quota: 'unlimited' as number | 'unlimited' },
+    { id: 'sb-unlimited', provider: 'Supabase Cloud', label: 'Unlimited ตลอดชีพ', desc: 'ไม่จำกัดจำนวนบิล ใช้งานได้ตลอดไป', price: 149, badge: 'แนะนำ', quota: 'unlimited' as number | 'unlimited' },
   ];
 
   const activeBoothObj = BOOTH_PACKS.find((p) => p.id === selectedBoothPack) || BOOTH_PACKS[0];
@@ -1066,59 +1074,84 @@ export const SettingsView: React.FC<Props> = ({
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
-              {/* ส่วนที่ 1: จำนวนรอบออกบูธ */}
+            <div className="p-5 sm:p-6 space-y-6 max-h-[72vh] overflow-y-auto">
+              {/* ส่วนที่ 1: จำนวนรอบออกบูธ (Carousel) */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-black text-[#0d3a57]">
-                    1. เลือกจำนวนรอบออกบูธ
-                  </h4>
-                  <span className="text-[11px] font-bold text-[#6b8799]">จ่ายครั้งเดียว ไม่มีรายเดือน</span>
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <h4 className="text-sm font-black text-[#0d3a57]">
+                      1. เลือกจำนวนรอบออกบูธ
+                    </h4>
+                    <span className="text-[11px] font-bold text-[#6b8799]">
+                      ไม่มีรายเดือน · เลื่อนซ้าย-ขวาเพื่อเลือกแพ็กเกจ
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => slideCarousel(boothCarouselRef, 'left')}
+                      className="w-7 h-7 rounded-full border border-[#eae3cf] bg-white hover:bg-[#fef9ec] text-[#0d3a57] flex items-center justify-center shadow-2xs cursor-pointer"
+                      aria-label="เลื่อนซ้าย"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => slideCarousel(boothCarouselRef, 'right')}
+                      className="w-7 h-7 rounded-full border border-[#eae3cf] bg-white hover:bg-[#fef9ec] text-[#0d3a57] flex items-center justify-center shadow-2xs cursor-pointer"
+                      aria-label="เลื่อนขวา"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div
+                  ref={boothCarouselRef}
+                  className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                >
                   {BOOTH_PACKS.map((pack) => {
                     const isSelected = selectedBoothPack === pack.id;
-                    const isLifetime = pack.id === 'pack-lifetime';
                     return (
                       <button
                         key={pack.id}
                         type="button"
                         onClick={() => setSelectedBoothPack(pack.id)}
-                        className={`relative text-left p-3.5 rounded-2xl border-2 transition cursor-pointer flex items-center justify-between gap-2 ${
-                          isLifetime ? 'sm:col-span-2' : ''
-                        } ${
+                        className={`min-w-[205px] sm:min-w-[220px] shrink-0 snap-start text-left p-4 rounded-2xl border-2 transition cursor-pointer flex flex-col justify-between gap-3 ${
                           isSelected
-                            ? 'border-[#118cd1] bg-[#118cd1]/5 shadow-xs'
+                            ? 'border-[#118cd1] bg-[#118cd1]/5 shadow-sm'
                             : 'border-[#eae3cf] bg-[#fef9ec]/40 hover:border-[#90d4ec]'
                         }`}
                       >
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-extrabold text-sm text-[#0d3a57]">
-                              {pack.label}
-                            </span>
-                            {pack.badge && (
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            {pack.badge ? (
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300">
                                 {pack.badge}
                               </span>
+                            ) : (
+                              <span className="text-[10px] font-bold text-[#6b8799]">แพ็กเกจบูธ</span>
                             )}
+                            <span
+                              className={`w-5 h-5 rounded-full flex items-center justify-center border shrink-0 ${
+                                isSelected
+                                  ? 'bg-[#118cd1] border-[#118cd1] text-white'
+                                  : 'border-[#cbd5e1] bg-white'
+                              }`}
+                            >
+                              {isSelected && <Check className="w-3 h-3" />}
+                            </span>
                           </div>
-                          <p className="text-[11px] text-[#6b8799] mt-0.5">{pack.desc}</p>
+                          <div className="font-extrabold text-base text-[#0d3a57]">
+                            {pack.label}
+                          </div>
+                          <p className="text-[11px] text-[#6b8799] leading-snug">{pack.desc}</p>
                         </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-base font-black text-[#118cd1]">
+                        <div className="pt-2 border-t border-[#eae3cf]/70 flex items-baseline justify-between">
+                          <span className="text-[11px] font-bold text-[#6b8799]">ราคา</span>
+                          <span className="text-lg font-black text-[#118cd1]">
                             ฿{pack.price.toLocaleString()}
-                          </span>
-                          <span
-                            className={`w-5 h-5 rounded-full flex items-center justify-center border ${
-                              isSelected
-                                ? 'bg-[#118cd1] border-[#118cd1] text-white'
-                                : 'border-[#cbd5e1] bg-white'
-                            }`}
-                          >
-                            {isSelected && <Check className="w-3 h-3" />}
                           </span>
                         </div>
                       </button>
@@ -1127,40 +1160,119 @@ export const SettingsView: React.FC<Props> = ({
                 </div>
               </div>
 
-              {/* ส่วนที่ 2: จำนวนบิล & ระบบเก็บข้อมูล Cloud */}
+              {/* ส่วนที่ 2: จำนวนบิล & ระบบเก็บข้อมูล Cloud (Carousel + ข้อดี Database) */}
               <div className="space-y-3 pt-4 border-t border-[#eae3cf]">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-black text-[#0d3a57]">
-                    2. เลือกโควตาบิลและระบบเก็บข้อมูล Cloud
-                  </h4>
-                  <span className="text-[11px] font-bold text-emerald-700">
-                    Google Sheets ฟรีตลอดชีพ!
-                  </span>
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <h4 className="text-sm font-black text-[#0d3a57]">
+                      2. เลือกโควตาบิลและระบบเก็บข้อมูล Cloud
+                    </h4>
+                    <span className="text-[11px] font-bold text-emerald-700">
+                      Google Sheets ฟรีตลอดชีพ! · เลื่อนเลือกการ์ดด้านล่าง
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => slideCarousel(storageCarouselRef, 'left')}
+                      className="w-7 h-7 rounded-full border border-[#eae3cf] bg-white hover:bg-[#fef9ec] text-[#0d3a57] flex items-center justify-center shadow-2xs cursor-pointer"
+                      aria-label="เลื่อนซ้าย"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => slideCarousel(storageCarouselRef, 'right')}
+                      className="w-7 h-7 rounded-full border border-[#eae3cf] bg-white hover:bg-[#fef9ec] text-[#0d3a57] flex items-center justify-center shadow-2xs cursor-pointer"
+                      aria-label="เลื่อนขวา"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {/* กล่องบอกข้อดีของ Database แต่ละชนิด */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-[11px]">
+                  <div
+                    className={`rounded-xl p-3 border transition ${
+                      activeStorageObj.provider === 'Google Sheets'
+                        ? 'bg-emerald-50/90 border-emerald-300'
+                        : 'bg-emerald-50/40 border-emerald-200/70'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 font-black text-emerald-900 text-xs mb-1">
+                      <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      ข้อดีของ Google Sheets
+                    </div>
+                    <ul className="space-y-0.5 text-emerald-900/90 list-disc list-inside leading-relaxed">
+                      <li>ฟรี! ใช้ Google Drive ของร้านเอง ไม่มีค่าบิลเพิ่ม</li>
+                      <li>เปิดดูยอดขาย/แต่งตาราง/ส่งบัญชีในมือถือได้ทันที</li>
+                      <li>เหมาะกับขาย 1–2 เครื่อง (ห้ามเผลอลบหัวตารางในชีท)</li>
+                    </ul>
+                  </div>
+
+                  <div
+                    className={`rounded-xl p-3 border transition ${
+                      activeStorageObj.provider === 'Supabase Cloud'
+                        ? 'bg-sky-50/90 border-[#118cd1]/50'
+                        : 'bg-sky-50/40 border-sky-200/70'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 font-black text-[#0d3a57] text-xs mb-1">
+                      <Database className="w-3.5 h-3.5 text-[#118cd1] shrink-0" />
+                      ข้อดีของ Supabase Cloud
+                    </div>
+                    <ul className="space-y-0.5 text-[#0d3a57]/90 list-disc list-inside leading-relaxed">
+                      <li>เร็ว เสถียร ขายพร้อมกันหลายเครื่องช่วงคนแน่นไม่ชนกัน</li>
+                      <li>รองรับบิลเยอะหลักหมื่น-แสนบิล กู้คืนข้ามเครื่องไว</li>
+                      <li>ปลอดภัย โครงสร้างล็อกไว้ไม่พังเพราะมือลั่นแก้ไฟล์</li>
+                    </ul>
+                  </div>
+                </div>
+
+                {/* การ์ดสไลด์เลือกแพ็กเกจ Cloud */}
+                <div
+                  ref={storageCarouselRef}
+                  className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                >
                   {STORAGE_PLANS.map((plan) => {
                     const isSelected = selectedStoragePlan === plan.id;
-                    const isUnlimited = plan.id === 'sb-unlimited' || plan.id === 'gs-free';
+                    const isGS = plan.provider === 'Google Sheets';
                     return (
                       <button
                         key={plan.id}
                         type="button"
                         onClick={() => setSelectedStoragePlan(plan.id)}
-                        className={`text-left p-3.5 rounded-2xl border-2 transition cursor-pointer flex items-center justify-between gap-2 ${
-                          isUnlimited ? 'sm:col-span-2' : ''
-                        } ${
+                        className={`min-w-[215px] sm:min-w-[230px] shrink-0 snap-start text-left p-4 rounded-2xl border-2 transition cursor-pointer flex flex-col justify-between gap-3 ${
                           isSelected
-                            ? 'border-[#118cd1] bg-[#118cd1]/5 shadow-xs'
+                            ? 'border-[#118cd1] bg-[#118cd1]/5 shadow-sm'
                             : 'border-[#eae3cf] bg-[#fef9ec]/40 hover:border-[#90d4ec]'
                         }`}
                       >
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-white border border-[#eae3cf] text-[#0d3a57]">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <span
+                              className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md border ${
+                                isGS
+                                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                                  : 'bg-white border-[#eae3cf] text-[#0d3a57]'
+                              }`}
+                            >
                               {plan.provider}
                             </span>
-                            <span className="font-extrabold text-sm text-[#0d3a57]">
+                            <span
+                              className={`w-5 h-5 rounded-full flex items-center justify-center border shrink-0 ${
+                                isSelected
+                                  ? 'bg-[#118cd1] border-[#118cd1] text-white'
+                                  : 'border-[#cbd5e1] bg-white'
+                              }`}
+                            >
+                              {isSelected && <Check className="w-3 h-3" />}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-extrabold text-base text-[#0d3a57]">
                               {plan.label}
                             </span>
                             {plan.badge && (
@@ -1175,25 +1287,17 @@ export const SettingsView: React.FC<Props> = ({
                               </span>
                             )}
                           </div>
-                          <p className="text-[11px] text-[#6b8799] mt-0.5">{plan.desc}</p>
+                          <p className="text-[11px] text-[#6b8799] leading-snug">{plan.desc}</p>
                         </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="pt-2 border-t border-[#eae3cf]/70 flex items-baseline justify-between">
+                          <span className="text-[11px] font-bold text-[#6b8799]">ค่าบริการ</span>
                           <span
-                            className={`text-base font-black ${
+                            className={`text-lg font-black ${
                               plan.price === 0 ? 'text-emerald-600' : 'text-[#118cd1]'
                             }`}
                           >
                             {plan.price === 0 ? 'ฟรี' : `+฿${plan.price.toLocaleString()}`}
-                          </span>
-                          <span
-                            className={`w-5 h-5 rounded-full flex items-center justify-center border ${
-                              isSelected
-                                ? 'bg-[#118cd1] border-[#118cd1] text-white'
-                                : 'border-[#cbd5e1] bg-white'
-                            }`}
-                          >
-                            {isSelected && <Check className="w-3 h-3" />}
                           </span>
                         </div>
                       </button>
