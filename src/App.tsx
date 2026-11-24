@@ -162,7 +162,7 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
     { id: 'pos', label: 'แคชเชียร์ POS', icon: <ShoppingBag className="w-5 h-5 shrink-0" /> },
     { id: 'events', label: 'ออกบูธ & P&L', icon: <BarChart3 className="w-5 h-5 shrink-0" />, ownerOnly: true },
     { id: 'inventory', label: 'สต็อก FIFO', icon: <Package className="w-5 h-5 shrink-0" />, ownerOnly: true },
-    { id: 'recipes', label: 'สูตรไอติม', icon: <IceCream className="w-5 h-5 shrink-0" />, ownerOnly: true },
+    { id: 'recipes', label: 'สูตร & สินค้า', icon: <IceCream className="w-5 h-5 shrink-0" />, ownerOnly: true },
     { id: 'settings', label: 'ตั้งค่า', icon: <Settings className="w-5 h-5 shrink-0" />, ownerOnly: true },
   ];
 
@@ -192,18 +192,13 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
         {/* Brand & Collapse Toggle */}
         <div className="flex items-center justify-between gap-2 px-4 py-4 border-b border-[#eae3cf]">
           <div className={`flex items-center gap-2.5 min-w-0 ${sidebarCollapsed ? 'lg:justify-center lg:w-full' : ''}`}>
-            <img
-              src="./images/logo.png"
-              alt="REFV Gelato"
-              className="h-9 w-9 rounded-xl object-contain shrink-0"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
-            />
+            <div className="h-9 w-9 rounded-xl bg-[#118cd1] text-white font-black text-sm flex items-center justify-center shrink-0">
+              BB
+            </div>
             {!sidebarCollapsed && (
               <div className="min-w-0">
                 <h1 className="text-sm font-black tracking-tight text-[#0d3a57] truncate">
-                  {state.settings.shopName || 'REFV Gelato'}
+                  {state.settings.shopName || 'BoothBook'}
                 </h1>
                 <span
                   className={`inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-black tracking-wide uppercase ${
@@ -323,7 +318,7 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
                 {visibleNavItems.find((i) => i.id === activeTab)?.label || 'BoothBook'}
               </div>
               <div className="text-[11px] text-[#6b8799] truncate">
-                {state.settings.shopName || 'REFV Gelato'}
+                {state.settings.shopName || 'BoothBook'}
               </div>
             </div>
           </div>

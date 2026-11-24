@@ -2,7 +2,13 @@ import { AppDatabaseState, IngredientLot, PackagingLot, PosConnectionSettings } 
 import { createInitialSeedState } from './seedData';
 import { pullStateFromSupabase, pushStateToSupabase } from './supabase';
 
-const STORAGE_KEY = 'boothbook_db_v1';
+const STORAGE_KEY = 'boothbook_db_clean_v2';
+try {
+  localStorage.removeItem('boothbook_db_v1');
+  localStorage.removeItem('refv_cost_pnl_db_v1');
+} catch {
+  // ignore
+}
 
 export type SyncStatusInfo = {
   diskSaved: boolean;
@@ -37,7 +43,7 @@ export function loadAppState(): AppDatabaseState {
       return seed;
     }
     const parsed = JSON.parse(raw) as AppDatabaseState;
-    if (!parsed || !Array.isArray(parsed.recipes) || parsed.recipes.length === 0) {
+    if (!parsed || !Array.isArray(parsed.recipes) || !Array.isArray(parsed.events)) {
       const seed = ensureEventSnapshots(createInitialSeedState());
       localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
       return seed;
@@ -54,10 +60,9 @@ export function loadAppState(): AppDatabaseState {
 export async function loadStateFromDiskOrCloud(
   currentState: AppDatabaseState
 ): Promise<{ state: AppDatabaseState; source: 'disk' | 'cloud' | 'seed' }> {
-  // 1. ลองดึงจาก Supabase ก่อนเป็นอันดับแรกเสมอ
   try {
     const cloudData = await pullStateFromSupabase();
-    if (cloudData && Array.isArray(cloudData.recipes) && cloudData.recipes.length > 0) {
+    if (cloudData && Array.isArray(cloudData.recipes)) {
       const normalized = ensureEventSnapshots(cloudData);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
       return { state: normalized, source: 'cloud' };
@@ -66,15 +71,7 @@ export async function loadStateFromDiskOrCloud(
     console.warn('Could not pull from Supabase:', err);
   }
 
-  // 2. ถ้าในเครื่องมีข้อมูลและมีสูตรอยู่แล้ว ให้ใช้ต่อ
-  if (currentState && Array.isArray(currentState.recipes) && currentState.recipes.length > 0) {
-    return { state: currentState, source: 'disk' };
-  }
-
-  // 3. Fallback เป็น initial seed (ซึ่งมีสูตร 9 รสชาติและยอดขาย Slow Combo ครบแล้ว)
-  const seed = ensureEventSnapshots(createInitialSeedState());
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
-  return { state: seed, source: 'seed' };
+  return { state: currentState, source: 'seed' };
 }
 
 export async function saveToDiskFile(state: AppDatabaseState): Promise<boolean> {

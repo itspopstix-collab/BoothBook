@@ -98,11 +98,11 @@ export const AuthGate: React.FC<{ children: (profile: UserProfile | null) => Rea
         className="bg-white rounded-3xl border border-[#eae3cf] shadow-xl p-8 w-full max-w-sm space-y-4"
       >
         <div className="text-center space-y-1">
-          <div className="w-12 h-12 bg-[#118cd1]/10 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-2">
-            🍨
+          <div className="w-12 h-12 bg-[#118cd1] text-white rounded-2xl flex items-center justify-center text-lg font-black mx-auto mb-2">
+            BB
           </div>
           <h1 className="text-2xl font-black text-[#0d3a57]">BoothBook</h1>
-          <p className="text-xs text-[#6b8799]">ระบบจัดการบูธ & แคชเชียร์หน้าร้าน REFV POS</p>
+          <p className="text-xs text-[#6b8799]">ระบบจัดการบูธและแคชเชียร์หน้าร้าน</p>
         </div>
 
         {!configured ? (

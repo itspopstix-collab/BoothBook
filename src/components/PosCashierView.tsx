@@ -29,9 +29,7 @@ interface CartItem {
   price: number;
 }
 
-const CATEGORIES: FlavorCategory[] = ['Original', 'Premium', 'Signature'];
-
-const PRICE_TABLE = {
+const PRICE_TABLE: Record<string, Record<string, number>> = {
   g1: { Original: 79, Premium: 89, Signature: 99 },
   g2: { Original: 40, Premium: 45, Signature: 50 },
 };
@@ -53,15 +51,14 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
-  // Active event
   const activeEvent = useMemo(() => {
     return (
       state.events.find((e) => e.status === 'active') ||
-      state.events[0] || { id: 'ev-default', name: 'หน้าบูธทั่วไป', posSales: [] }
+      state.events[0] || { id: 'ev-default', name: 'ยังไม่ได้สร้างอีเวนต์', posSales: [] }
     );
   }, [state.events]);
 
-  // Flavor recipes from database
+  // รายการสินค้าจากฐานข้อมูลจริง
   const availableFlavors = useMemo(() => {
     return state.recipes.map((r) => ({
       name: r.name,
@@ -69,6 +66,13 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
       image: r.image,
     }));
   }, [state.recipes]);
+
+  // หมวดหมู่สินค้าสร้างแบบไดนามิกจากข้อมูลสินค้าจริง (ไม่ฝัง master data)
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    availableFlavors.forEach((f) => set.add(f.category || 'ทั่วไป'));
+    return Array.from(set);
+  }, [availableFlavors]);
 
   const requiredCount = flavorsPerCup;
 
@@ -180,7 +184,7 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
             <ShoppingBag className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-lg font-black text-[#0d3a57]">แคชเชียร์ขายหน้าร้าน (REFV POS)</h1>
+            <h1 className="text-lg font-black text-[#0d3a57]">แคชเชียร์ขายหน้าร้าน (POS)</h1>
             <p className="text-xs text-[#6b8799]">
               อีเวนต์ปัจจุบัน: <span className="font-bold text-[#118cd1]">{activeEvent.name}</span> · ซิงค์ยอดขายตรงเข้า Supabase ทันที
             </p>
@@ -230,16 +234,24 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
             </div>
           </div>
 
-          {/* Flavor Selection Grid by Category */}
+          {/* Product Selection Grid by Category */}
           <div className="space-y-6">
-            {CATEGORIES.map((cat) => {
-              const catFlavors = availableFlavors.filter((f) => f.category === cat);
-              if (catFlavors.length === 0) return null;
+            {availableFlavors.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-dashed border-[#eae3cf] p-10 text-center space-y-2">
+                <div className="text-sm font-black text-[#0d3a57]">ยังไม่มีรายการสินค้า</div>
+                <p className="text-xs text-[#6b8799]">
+                  ไปเพิ่มสินค้าและสูตรได้ที่แท็บ <b>"สูตร & สินค้า"</b> เพื่อเริ่มขายหน้าร้าน
+                </p>
+              </div>
+            ) : (
+              categories.map((cat) => {
+                const catFlavors = availableFlavors.filter((f) => (f.category || 'ทั่วไป') === cat);
+                if (catFlavors.length === 0) return null;
 
-              const priceLabel =
-                flavorsPerCup === 1
-                  ? formatBaht(PRICE_TABLE.g1[cat] || 89)
-                  : `${formatBaht(PRICE_TABLE.g2[cat] || 45)}/scoop`;
+                const priceLabel =
+                  flavorsPerCup === 1
+                    ? formatBaht(PRICE_TABLE.g1[cat] || 89)
+                    : `${formatBaht(PRICE_TABLE.g2[cat] || 45)}/scoop`;
 
               return (
                 <div key={cat} className="space-y-2">
@@ -304,7 +316,8 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
                   </div>
                 </div>
               );
-            })}
+            })
+            )}
           </div>
 
           {/* Bottom Dock Bar for adding to cart */}
