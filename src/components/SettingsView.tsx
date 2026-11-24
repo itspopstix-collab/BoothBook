@@ -1,7 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { AppDatabaseState, CloudStorageBackend } from '../types';
 import { fetchAllPosSalesFromCloud } from '../services/posSync';
-import { clearDemoTransactionsOnly, resetToDemoState } from '../services/storage';
 import { getStorageEngineLabel } from '../services/nativeStorage';
 import { verifyAndSyncAllToCloud } from '../services/offlineSync';
 import {
@@ -11,12 +10,8 @@ import {
 } from '../services/googleSheetsAuth';
 import {
   Link2,
-  Download,
-  Upload,
-  RotateCcw,
   CheckCircle2,
   AlertCircle,
-  Building2,
   Sparkles,
   CloudUpload,
   CloudDownload,
@@ -35,6 +30,7 @@ import {
   ExternalLink,
   ChevronLeft,
   ChevronRight,
+  Info,
 } from 'lucide-react';
 
 interface Props {
@@ -259,8 +255,6 @@ export const SettingsView: React.FC<Props> = ({
     setCloudVerifiedInfo(null);
   };
 
-  const importRef = useRef<HTMLInputElement | null>(null);
-
   const activeBackendLabel = storageBackend === 'google_sheets' ? 'Google Sheets' : 'Supabase';
 
   const handleSelectBackend = (backend: CloudStorageBackend) => {
@@ -368,37 +362,6 @@ export const SettingsView: React.FC<Props> = ({
     } finally {
       setTesting(false);
     }
-  };
-
-  const handleExportJson = () => {
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `refv-cost-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  };
-
-  const handleImportJson = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const parsed = JSON.parse(String(reader.result)) as AppDatabaseState;
-        if (parsed && Array.isArray(parsed.packagingItems) && Array.isArray(parsed.recipes)) {
-          onUpdateState(() => parsed);
-          setTestStatus({ type: 'ok', msg: 'นำเข้าข้อมูลสำรองสำเร็จแล้ว!' });
-        } else {
-          alert('รูปแบบไฟล์สำรองข้อมูลไม่ถูกต้อง');
-        }
-      } catch {
-        alert('ไม่สามารถอ่านไฟล์ JSON ได้');
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
   };
 
   return (
@@ -925,9 +888,24 @@ export const SettingsView: React.FC<Props> = ({
                   : 'bg-gray-50 border-gray-200 opacity-60 pointer-events-none'
               }`}
             >
-              <div className="flex items-center gap-1.5 text-xs font-extrabold text-[#0d3a57]">
+              <div className="flex flex-wrap items-center gap-1.5 text-xs font-extrabold text-[#0d3a57]">
                 <Calendar className="w-4 h-4 text-rose-500" />
-                ขั้นที่ 2: เลือกช่วงระยะเวลาของรายการขายที่ต้องการลบออกจากเครื่องนี้
+                <span>ขั้นที่ 2: เลือกช่วงเวลาที่จะ Resync</span>
+                <span className="relative inline-flex items-center group pointer-events-auto">
+                  <button
+                    type="button"
+                    aria-label="ข้อมูลเพิ่มเติมเกี่ยวกับช่วงเวลาที่จะ Resync"
+                    className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#118cd1]/15 text-[#118cd1] hover:bg-[#118cd1] hover:text-white transition cursor-help"
+                  >
+                    <Info className="w-3 h-3" />
+                  </button>
+                  <span
+                    role="tooltip"
+                    className="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 transition-opacity duration-150 absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 sm:w-72 p-2.5 rounded-xl bg-[#0d3a57] text-white text-[11px] font-medium leading-relaxed shadow-lg z-30 pointer-events-none"
+                  >
+                    ระบบจะทำการกวาดข้อมูลที่ยังไม่ถูก Sync ภายในช่วงที่ระบุ เพื่อนำไปเก็บไว้ในฐานข้อมูลที่เลือกไว้
+                  </span>
+                </span>
                 {!cloudVerifiedInfo && (
                   <span className="text-[11px] font-bold text-[#6b8799]">(กรุณากดยืนยันขั้นที่ 1 ก่อน)</span>
                 )}
@@ -1006,80 +984,6 @@ export const SettingsView: React.FC<Props> = ({
             <span>{cleanupNotice.msg}</span>
           </div>
         )}
-      </div>
-
-      {/* จัดการฐานข้อมูล สำรองข้อมูล และรีเซ็ตข้อมูลตัวอย่าง */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#eae3cf] space-y-4">
-        <div className="flex items-center gap-2.5">
-          <Building2 className="w-5 h-5 text-[#118cd1]" />
-          <div>
-            <h2 className="text-lg font-extrabold text-[#0d3a57]">
-              ส่งออกไฟล์สำรองข้อมูล & จัดการข้อมูลตั้งต้น
-            </h2>
-            <p className="text-xs text-[#6b8799]">
-              ส่งออกไฟล์ .json หรือล้างรายการตัวอย่างเพื่อเริ่มจดงานจริง
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-          <button
-            onClick={handleExportJson}
-            className="flex items-center justify-center gap-2 bg-[#fef9ec] hover:bg-[#90d4ec]/25 border border-[#eae3cf] text-[#0d3a57] font-bold py-3 px-4 rounded-xl text-sm transition cursor-pointer"
-          >
-            <Download className="w-4 h-4 text-[#118cd1]" />
-            ดาวน์โหลดไฟล์สำรองข้อมูล (.json)
-          </button>
-
-          <button
-            onClick={() => importRef.current?.click()}
-            className="flex items-center justify-center gap-2 bg-[#fef9ec] hover:bg-[#90d4ec]/25 border border-[#eae3cf] text-[#0d3a57] font-bold py-3 px-4 rounded-xl text-sm transition cursor-pointer"
-          >
-            <Upload className="w-4 h-4 text-[#118cd1]" />
-            นำเข้าไฟล์สำรองข้อมูล (.json)
-          </button>
-          <input
-            ref={importRef}
-            type="file"
-            accept=".json"
-            onChange={handleImportJson}
-            className="hidden"
-          />
-        </div>
-
-        <div className="pt-4 border-t border-[#eae3cf] flex flex-wrap items-center justify-between gap-3">
-          <button
-            onClick={() => {
-              if (
-                window.confirm(
-                  'ต้องการล้างเฉพาะล็อตการซื้อแพ็กเกจจิ้งและงานออกบูธตัวอย่าง เพื่อเริ่มจดข้อมูลจริงใช่หรือไม่? (สูตรสินค้าและราคาวัตถุดิบตั้งต้นจะยังคงอยู่)'
-                )
-              ) {
-                onUpdateState((prev) => clearDemoTransactionsOnly(prev));
-              }
-            }}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-600 hover:bg-rose-50 px-3.5 py-2 rounded-xl border border-rose-200 cursor-pointer"
-          >
-            <Sparkles className="w-4 h-4" />
-            ล้างรายการบูธตัวอย่างเพื่อเริ่มจดงานจริง (เก็บสูตรไว้)
-          </button>
-
-          <button
-            onClick={() => {
-              if (
-                window.confirm(
-                  'ต้องการโหลดข้อมูลตัวอย่าง Scenario (ซื้อแก้ว 100 ชิ้น ใช้ 80 ชิ้น ซื้อเจ้าใหม่ 100 ชิ้น ใช้ 60 ชิ้น) กลับมาใหม่หรือไม่?'
-                )
-              ) {
-                onUpdateState(() => resetToDemoState());
-              }
-            }}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#6b8799] hover:text-[#0d3a57] px-3 py-2 rounded-xl cursor-pointer"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            รีเซ็ตกลับเป็นข้อมูลตัวอย่าง (Demo Scenario)
-          </button>
-        </div>
       </div>
       {/* Modal เลือกแพ็กเกจ (UI Preview) */}
       {showPackageModal && (
