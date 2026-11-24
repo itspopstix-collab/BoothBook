@@ -493,7 +493,7 @@ export const SettingsView: React.FC<Props> = ({
             <HardDrive className="w-5 h-5 text-[#118cd1]" />
             <div>
               <h2 className="text-lg font-extrabold text-[#0d3a57]">
-                ระบบจัดเก็บข้อมูล (Offline-First + เลือก Cloud ได้ 2 แบบ)
+                ระบบจัดเก็บข้อมูล ({activeBackendLabel} + Offline-First)
               </h2>
               <p className="text-xs text-[#6b8799]">
                 รองรับการติดตั้งและใช้งานบนทุกอุปกรณ์ (มือถือ / แท็บเล็ต / คอม) โดยสำรองข้อมูลไว้ในเครื่องนี้เสมอ
@@ -513,58 +513,92 @@ export const SettingsView: React.FC<Props> = ({
           </span>
         </div>
 
-        {/* ตัวเลือก Cloud 2 แบบ */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => handleSelectBackend('supabase')}
-            className={`text-left p-4 rounded-2xl border-2 transition cursor-pointer space-y-1.5 ${
-              storageBackend === 'supabase'
-                ? 'border-[#118cd1] bg-[#118cd1]/5 shadow-xs'
-                : 'border-[#eae3cf] bg-[#fef9ec]/40 hover:border-[#90d4ec]'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="font-extrabold text-sm text-[#0d3a57] flex items-center gap-2">
-                <Database className="w-4 h-4 text-[#118cd1]" />
-                1. Supabase Cloud
-              </span>
-              {storageBackend === 'supabase' && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#118cd1] text-white">
+        {/* ตัวเลือก/สถานะ Cloud ตามแพ็กเกจที่เลือก */}
+        {purchasedPackage ? (
+          purchasedPackage.storageProvider === 'Google Sheets' ? (
+            <div className="p-4 rounded-2xl border-2 border-emerald-300 bg-emerald-50/40 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-sm text-[#0d3a57] flex items-center gap-2">
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                  Google Sheets
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-600 text-white">
                   กำลังใช้งาน
                 </span>
-              )}
+              </div>
+              <p className="text-xs text-[#6b8799]">
+                เก็บออเดอร์และสำรองข้อมูลลง Google Sheet ของร้านคุณโดยตรง เปิดดูและส่งต่อบัญชีได้ทันที
+              </p>
             </div>
-            <p className="text-xs text-[#6b8799]">
-              ฐานข้อมูลจริง แยกสิทธิ์ Owner / Staff POS อัตโนมัติ ซิงค์หลายเครื่องได้พร้อมกันแบบ Real-time
-            </p>
-          </button>
+          ) : (
+            <div className="p-4 rounded-2xl border-2 border-[#118cd1] bg-[#118cd1]/5 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-sm text-[#0d3a57] flex items-center gap-2">
+                  <Database className="w-4 h-4 text-[#118cd1]" />
+                  Supabase Cloud
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-[#118cd1] text-white">
+                  กำลังใช้งาน
+                </span>
+              </div>
+              <p className="text-xs text-[#6b8799]">
+                ฐานข้อมูลจริง แยกสิทธิ์ Owner / Staff POS อัตโนมัติ ซิงค์หลายเครื่องได้พร้อมกันแบบ Real-time
+              </p>
+            </div>
+          )
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => handleSelectBackend('supabase')}
+              className={`text-left p-4 rounded-2xl border-2 transition cursor-pointer space-y-1.5 ${
+                storageBackend === 'supabase'
+                  ? 'border-[#118cd1] bg-[#118cd1]/5 shadow-xs'
+                  : 'border-[#eae3cf] bg-[#fef9ec]/40 hover:border-[#90d4ec]'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-sm text-[#0d3a57] flex items-center gap-2">
+                  <Database className="w-4 h-4 text-[#118cd1]" />
+                  1. Supabase Cloud
+                </span>
+                {storageBackend === 'supabase' && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#118cd1] text-white">
+                    กำลังใช้งาน
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-[#6b8799]">
+                ฐานข้อมูลจริง แยกสิทธิ์ Owner / Staff POS อัตโนมัติ ซิงค์หลายเครื่องได้พร้อมกันแบบ Real-time
+              </p>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => handleSelectBackend('google_sheets')}
-            className={`text-left p-4 rounded-2xl border-2 transition cursor-pointer space-y-1.5 ${
-              storageBackend === 'google_sheets'
-                ? 'border-[#118cd1] bg-[#118cd1]/5 shadow-xs'
-                : 'border-[#eae3cf] bg-[#fef9ec]/40 hover:border-[#90d4ec]'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="font-extrabold text-sm text-[#0d3a57] flex items-center gap-2">
-                <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-                2. Google Sheets
-              </span>
-              {storageBackend === 'google_sheets' && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#118cd1] text-white">
-                  กำลังใช้งาน
+            <button
+              type="button"
+              onClick={() => handleSelectBackend('google_sheets')}
+              className={`text-left p-4 rounded-2xl border-2 transition cursor-pointer space-y-1.5 ${
+                storageBackend === 'google_sheets'
+                  ? 'border-[#118cd1] bg-[#118cd1]/5 shadow-xs'
+                  : 'border-[#eae3cf] bg-[#fef9ec]/40 hover:border-[#90d4ec]'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-sm text-[#0d3a57] flex items-center gap-2">
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                  2. Google Sheets
                 </span>
-              )}
-            </div>
-            <p className="text-xs text-[#6b8799]">
-              ส่งออเดอร์และสำรองข้อมูลลง Google Sheet ของร้านผ่าน Apps Script Web App URL
-            </p>
-          </button>
-        </div>
+                {storageBackend === 'google_sheets' && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#118cd1] text-white">
+                    กำลังใช้งาน
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-[#6b8799]">
+                ส่งออเดอร์และสำรองข้อมูลลง Google Sheet ของร้านอัตโนมัติ
+              </p>
+            </button>
+          </div>
+        )}
 
         {/* แผงเชื่อมต่อ Google Sheet แบบ 1 คลิก (แสดงเมื่อเลือกโหมด Google Sheets) */}
         {storageBackend === 'google_sheets' && (
@@ -720,7 +754,9 @@ export const SettingsView: React.FC<Props> = ({
               ข้อมูลร้านค้า & การเชื่อมต่อ ({activeBackendLabel})
             </h2>
             <p className="text-xs text-[#6b8799]">
-              ตั้งค่าชื่อร้าน เบอร์พร้อมเพย์สำหรับสแกน QR หน้า POS และลิงก์ Google Sheet (กรณีใช้โหมด Google Sheets)
+              {storageBackend === 'google_sheets'
+                ? 'ตั้งค่าชื่อร้าน เบอร์พร้อมเพย์สำหรับสแกน QR หน้า POS และลิงก์ Google Sheet'
+                : 'ตั้งค่าชื่อร้าน และเบอร์พร้อมเพย์สำหรับสแกน QR หน้า POS'}
             </p>
           </div>
         </div>
@@ -762,31 +798,35 @@ export const SettingsView: React.FC<Props> = ({
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-[#6b8799] mb-1">
-              Google Sheet ID (หรือวางลิงก์ Google Sheet ของ POS ได้เลย)
-            </label>
-            <input
-              type="text"
-              value={sheetId}
-              onChange={(e) => setSheetId(e.target.value)}
-              placeholder="วาง Sheet ID ของคุณที่นี่"
-              className="w-full border-2 border-[#eae3cf] rounded-xl px-3.5 py-2 text-sm font-mono font-semibold text-[#0d3a57]"
-            />
-          </div>
+          {storageBackend === 'google_sheets' && (
+            <>
+              <div>
+                <label className="block text-xs font-bold text-[#6b8799] mb-1">
+                  Google Sheet ID (หรือวางลิงก์ Google Sheet ของ POS ได้เลย)
+                </label>
+                <input
+                  type="text"
+                  value={sheetId}
+                  onChange={(e) => setSheetId(e.target.value)}
+                  placeholder="วาง Sheet ID ของคุณที่นี่"
+                  className="w-full border-2 border-[#eae3cf] rounded-xl px-3.5 py-2 text-sm font-mono font-semibold text-[#0d3a57]"
+                />
+              </div>
 
-          <div>
-            <label className="block text-xs font-bold text-[#6b8799] mb-1">
-              Google Apps Script Web App URL (จาก POS config.json)
-            </label>
-            <input
-              type="url"
-              value={appsScriptUrl}
-              onChange={(e) => setAppsScriptUrl(e.target.value)}
-              placeholder="https://script.google.com/macros/s/.../exec"
-              className="w-full border-2 border-[#eae3cf] rounded-xl px-3.5 py-2 text-sm font-mono font-semibold text-[#0d3a57]"
-            />
-          </div>
+              <div>
+                <label className="block text-xs font-bold text-[#6b8799] mb-1">
+                  Google Apps Script Web App URL (จาก POS config.json)
+                </label>
+                <input
+                  type="url"
+                  value={appsScriptUrl}
+                  onChange={(e) => setAppsScriptUrl(e.target.value)}
+                  placeholder="https://script.google.com/macros/s/.../exec"
+                  className="w-full border-2 border-[#eae3cf] rounded-xl px-3.5 py-2 text-sm font-mono font-semibold text-[#0d3a57]"
+                />
+              </div>
+            </>
+          )}
 
           <div className="flex flex-wrap items-center gap-3 pt-2">
             <button
