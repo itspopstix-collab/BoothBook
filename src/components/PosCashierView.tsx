@@ -137,11 +137,6 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
 
       for (let i = 0; i < cart.length; i++) {
         const item = cart[i];
-        const lineItemName =
-          item.flavors.length > 1
-            ? `${item.flavors[0].name} + ${item.flavors[1].name}`
-            : item.flavors[0]?.name || (item.type === 'affogato' ? 'Affogato' : 'Gelato');
-
         const saleRow: PosSaleRow = {
           id: `pos-${activeEvent.id}-${Date.now()}-${i}`,
           orderId: orderBatchId,
@@ -375,7 +370,7 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
                 >
                   <div className="text-xs space-y-0.5">
                     <span className="font-bold text-[#0d3a57]">
-                      {item.type === 'affogato' ? '☕ Affogato' : `🍨 Gelato (${item.cups} รส)`}
+                      🍨 Gelato ({item.cups} รส)
                     </span>
                     <div className="text-[#6b8799] line-clamp-1">
                       {item.flavors.map((f) => f.name).join(' + ')}
