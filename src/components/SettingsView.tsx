@@ -568,7 +568,7 @@ export const SettingsView: React.FC<Props> = ({
           </div>
         )}
 
-        {/* กล่องสถานะ Offline Backup & Sync Queue */}
+        {/* ซ่อนกล่องสถานะ Offline Backup & Sync Queue ตามคำขอ
         <div className="bg-emerald-50/80 rounded-2xl p-4 border border-emerald-200 space-y-2.5">
           <div className="text-xs font-extrabold text-emerald-950">
             พื้นที่จัดเก็บในเครื่องปัจจุบัน: <span className="text-[#118cd1]">{getStorageEngineLabel()}</span>
@@ -618,6 +618,7 @@ export const SettingsView: React.FC<Props> = ({
             )}
           </div>
         </div>
+        */}
       </div>
 
       {/* ตั้งค่าร้านค้า & ช่องทางเชื่อมต่อ */}
