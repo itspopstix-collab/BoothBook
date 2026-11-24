@@ -378,3 +378,113 @@ export async function verifyAndSyncAllToCloud(state: AppDatabaseState): Promise<
     verifiedAt: new Date().toLocaleTimeString('th-TH'),
   };
 }
+
+/**
+ * Resync รายการขายในช่วงวันที่ที่ระบุขึ้นฐานข้อมูล Cloud (Upsert ตาม Primary Key)
+ * และยืนยันว่าบันทึกสำเร็จครบถ้วนก่อนอนุญาตให้ลบออกจากเครื่อง
+ */
+export async function resyncRangeAndVerifyCloud(
+  state: AppDatabaseState,
+  startDate: string,
+  endDate: string
+): Promise<{
+  ok: boolean;
+  syncedOrders: number;
+  remainingOrders: number;
+  backendLabel: string;
+  error?: string;
+}> {
+  const backend = getActiveBackend(state.settings);
+  const backendLabel = backend === 'google_sheets' ? 'Google Sheets' : 'Supabase';
+
+  if (!isOnline()) {
+    return {
+      ok: false,
+      syncedOrders: 0,
+      remainingOrders: getPendingOrdersCount(),
+      backendLabel,
+      error: 'กรุณาเชื่อมต่ออินเทอร์เน็ตก่อนดำเนินการ',
+    };
+  }
+
+  // หากใช้ Google Sheets แบบ OAuth ให้ขอ Token สดก่อน Resync
+  if (backend === 'google_sheets' && state.settings.sheetId && !state.settings.appsScriptUrl) {
+    if (!getCachedGoogleToken()) {
+      try {
+        const clientId = getGoogleClientId(state.settings.googleClientId);
+        await requestGoogleAccessToken(clientId, true);
+      } catch (err: any) {
+        return {
+          ok: false,
+          syncedOrders: 0,
+          remainingOrders: getPendingOrdersCount(),
+          backendLabel,
+          error: err?.message || 'กรุณาเชื่อมต่อบัญชี Google ก่อนทำการ Resync',
+        };
+      }
+    }
+  }
+
+  // 1. ซิงค์คิวที่ค้างอยู่ก่อน
+  const flushRes = await flushOfflineSyncQueue(state);
+  if (flushRes.remainingOrders > 0) {
+    return {
+      ok: false,
+      syncedOrders: flushRes.syncedOrders,
+      remainingOrders: flushRes.remainingOrders,
+      backendLabel,
+      error: `ยังมี ${flushRes.remainingOrders} รายการที่ซิงค์ขึ้น ${backendLabel} ไม่สำเร็จ ระบบจึงยังไม่ลบข้อมูลในเครื่อง`,
+    };
+  }
+
+  // 2. กวาดรายการขายในช่วงวันที่ที่เลือกเพื่อ Upsert ขึ้น Cloud (ตาม Primary Key)
+  let rangeSynced = 0;
+  if (backend === 'supabase') {
+    for (const ev of state.events || []) {
+      for (const sale of ev.posSales || []) {
+        const dt = (sale.date || '').slice(0, 10);
+        if (dt && dt >= startDate && dt <= endDate) {
+          const ok = await recordPosSaleToSupabase(sale, ev.id);
+          if (!ok) {
+            return {
+              ok: false,
+              syncedOrders: flushRes.syncedOrders + rangeSynced,
+              remainingOrders: 0,
+              backendLabel,
+              error: `ซิงค์รายการ ${sale.orderId || sale.id} ขึ้น ${backendLabel} ไม่สำเร็จ ระบบจึงยกเลิกการลบข้อมูลในเครื่องเพื่อความปลอดภัย`,
+            };
+          }
+          rangeSynced++;
+        }
+      }
+    }
+  } else {
+    // Google Sheets: นับจำนวนรายการในช่วงที่ระบุ แล้วอัปเดต Snapshot + ชีทขึ้น Google Sheets
+    for (const ev of state.events || []) {
+      for (const sale of ev.posSales || []) {
+        const dt = (sale.date || '').slice(0, 10);
+        if (dt && dt >= startDate && dt <= endDate) {
+          rangeSynced++;
+        }
+      }
+    }
+  }
+
+  const stateOk = await pushStateToActiveCloud(state);
+  if (!stateOk) {
+    return {
+      ok: false,
+      syncedOrders: flushRes.syncedOrders + rangeSynced,
+      remainingOrders: 0,
+      backendLabel,
+      error: `ไม่สามารถบันทึกข้อมูลขึ้น ${backendLabel} ได้ ระบบจึงยังไม่ลบข้อมูลในเครื่อง`,
+    };
+  }
+
+  return {
+    ok: true,
+    syncedOrders: Math.max(rangeSynced, flushRes.syncedOrders),
+    remainingOrders: 0,
+    backendLabel,
+  };
+}

@@ -2,7 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { AppDatabaseState, CloudStorageBackend } from '../types';
 import { fetchAllPosSalesFromCloud } from '../services/posSync';
 import { getStorageEngineLabel } from '../services/nativeStorage';
-import { verifyAndSyncAllToCloud } from '../services/offlineSync';
+import { resyncRangeAndVerifyCloud } from '../services/offlineSync';
 import {
   connectAndCreateGoogleSheet,
   getGoogleClientId,
@@ -22,7 +22,6 @@ import {
   WifiOff,
   RefreshCw,
   ShieldCheck,
-  Trash2,
   Calendar,
   Crown,
   X,
@@ -150,13 +149,8 @@ export const SettingsView: React.FC<Props> = ({
     setShowPackageModal(false);
   };
 
-  // State สำหรับฟีเจอร์ล้างข้อมูลเก่าในเครื่องแบบปลอดภัย (ต้องออนไลน์ + ตรวจซิงค์ Cloud ผ่านก่อน)
-  const [verifyingCloud, setVerifyingCloud] = useState(false);
-  const [cloudVerifiedInfo, setCloudVerifiedInfo] = useState<{
-    verifiedAt: string;
-    backendLabel: string;
-    syncedOrders: number;
-  } | null>(null);
+  // State สำหรับฟีเจอร์ Resync & ล้างข้อมูลเก่าในเครื่อง (รวมขั้นตอน Sync + ลบในปุ่มเดียว)
+  const [syncingAndPruning, setSyncingAndPruning] = useState(false);
   const [cleanupNotice, setCleanupNotice] = useState<{ type: 'ok' | 'err'; msg: string } | null>(
     null
   );
@@ -190,69 +184,58 @@ export const SettingsView: React.FC<Props> = ({
     setPruneEndDate(d.toISOString().slice(0, 10));
   };
 
-  const handleVerifyCloudBeforeCleanup = async () => {
+  const handleResyncAndPrune = async () => {
     if (!isOnline) {
       setCleanupNotice({
         type: 'err',
-        msg: 'ต้องเชื่อมต่ออินเทอร์เน็ตก่อนเท่านั้น จึงจะตรวจสอบและล้างข้อมูลในเครื่องได้',
+        msg: 'ต้องเชื่อมต่ออินเทอร์เน็ตก่อนเท่านั้น จึงจะ Sync และล้างข้อมูลในเครื่องได้',
       });
       return;
     }
-    setVerifyingCloud(true);
-    setCleanupNotice(null);
-    setCloudVerifiedInfo(null);
-    try {
-      const res = await verifyAndSyncAllToCloud(state);
-      onPendingCountChange?.(res.remainingOrders);
-      if (res.ok) {
-        setCloudVerifiedInfo({
-          verifiedAt: res.verifiedAt,
-          backendLabel: res.backendLabel,
-          syncedOrders: res.syncedOrders,
-        });
-        setCleanupNotice({
-          type: 'ok',
-          msg: `ตรวจสอบและซิงค์ข้อมูลทั้งหมดขึ้น ${res.backendLabel} ครบ 100% แล้ว (ซิงค์เพิ่ม ${res.syncedOrders} รายการ · เวลา ${res.verifiedAt}) — สามารถเลือกช่วงวันที่เพื่อล้างออกจากเครื่องได้แล้ว`,
-        });
-      } else {
-        setCleanupNotice({
-          type: 'err',
-          msg: res.error || 'ตรวจสอบการซิงค์ไม่สำเร็จ',
-        });
-      }
-    } finally {
-      setVerifyingCloud(false);
-    }
-  };
-
-  const handlePruneLocalOrders = () => {
-    if (!isOnline || !cloudVerifiedInfo) return;
     if (matchingLocalOrdersCount === 0) {
       setCleanupNotice({ type: 'err', msg: 'ไม่พบรายการขายในช่วงวันที่ที่เลือก' });
       return;
     }
+
     const ok = window.confirm(
-      `ยืนยันลบรายการขายจำนวน ${matchingLocalOrdersCount.toLocaleString()} รายการ (วันที่ ${pruneStartDate} ถึง ${pruneEndDate}) ออกจากหน่วยความจำเครื่องนี้?\n\n• ข้อมูลที่ซิงค์ขึ้น ${cloudVerifiedInfo.backendLabel} แล้วยังอยู่ครบ 100%\n• สูตรสินค้าและสต็อกในเครื่องจะไม่ถูกลบ`
+      `ยืนยัน Sync และคืนความจำเครื่องสำหรับรายการวันที่ ${pruneStartDate} ถึง ${pruneEndDate} (${matchingLocalOrdersCount.toLocaleString()} รายการ)?\n\n• ระบบจะซิงค์ข้อมูลในช่วงเวลานี้ขึ้น ${activeBackendLabel} ให้ครบก่อน\n• จากนั้นจึงจะลบรายการที่ซิงค์แล้วออกจากหน่วยความจำเครื่องนี้ (ข้อมูลบน ${activeBackendLabel} ยังอยู่ครบ 100%)`
     );
     if (!ok) return;
 
-    const pruneFn = onPruneLocalState || onUpdateState;
-    pruneFn((prev) => ({
-      ...prev,
-      events: (prev.events || []).map((ev) => ({
-        ...ev,
-        posSales: (ev.posSales || []).filter((s) => {
-          const dt = (s.date || '').slice(0, 10);
-          return !(dt && dt >= pruneStartDate && dt <= pruneEndDate);
-        }),
-      })),
-    }));
+    setSyncingAndPruning(true);
+    setCleanupNotice(null);
+    try {
+      // 1. หลังบ้าน: Sync (Upsert ตาม Primary Key) รายการในช่วงเวลาที่เลือกขึ้น Cloud ก่อน
+      const res = await resyncRangeAndVerifyCloud(state, pruneStartDate, pruneEndDate);
+      onPendingCountChange?.(res.remainingOrders);
+      if (!res.ok) {
+        setCleanupNotice({
+          type: 'err',
+          msg: res.error || 'Sync ข้อมูลไม่สำเร็จ ระบบจึงยังไม่ลบรายการในเครื่อง',
+        });
+        return;
+      }
 
-    setCleanupNotice({
-      type: 'ok',
-      msg: `ล้างรายการขายเก่าออกจากเครื่องนี้แล้ว ${matchingLocalOrdersCount.toLocaleString()} รายการ (ข้อมูลบน ${cloudVerifiedInfo.backendLabel} ยังคงอยู่ครบ 100%)`,
-    });
-    setCloudVerifiedInfo(null);
+      // 2. หลังบ้าน: เมื่อ Sync สำเร็จครบถ้วนแล้ว ค่อยลบรายการในช่วงนั้นออกจากเครื่อง
+      const pruneFn = onPruneLocalState || onUpdateState;
+      pruneFn((prev) => ({
+        ...prev,
+        events: (prev.events || []).map((ev) => ({
+          ...ev,
+          posSales: (ev.posSales || []).filter((s) => {
+            const dt = (s.date || '').slice(0, 10);
+            return !(dt && dt >= pruneStartDate && dt <= pruneEndDate);
+          }),
+        })),
+      }));
+
+      setCleanupNotice({
+        type: 'ok',
+        msg: `Sync ขึ้น ${res.backendLabel} และคืนความจำเครื่องเรียบร้อยแล้ว ${matchingLocalOrdersCount.toLocaleString()} รายการ (ข้อมูลบน ${res.backendLabel} อยู่ครบ 100%)`,
+      });
+    } finally {
+      setSyncingAndPruning(false);
+    }
   };
 
   const activeBackendLabel = storageBackend === 'google_sheets' ? 'Google Sheets' : 'Supabase';
@@ -827,17 +810,17 @@ export const SettingsView: React.FC<Props> = ({
         )}
       </div>
 
-      {/* ล้างรายการเก่าในเครื่องเพื่อคืนความจำ (ต้องออนไลน์ + ตรวจซิงค์ Cloud ครบก่อนเท่านั้น) */}
+      {/* Resync & คืนความจำเครื่อง (รวม Sync + ลบในปุ่มเดียว) */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#eae3cf] space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2.5">
             <ShieldCheck className="w-5 h-5 text-[#118cd1]" />
             <div>
               <h2 className="text-lg font-extrabold text-[#0d3a57]">
-                คืนความจำเครื่อง (ล้างรายการขายเก่าเฉพาะในเครื่องนี้)
+                Resync & คืนความจำเครื่อง
               </h2>
               <p className="text-xs text-[#6b8799]">
-                ระบบจะตรวจสอบและซิงค์รายการที่ค้างขึ้น <b>{activeBackendLabel}</b> ให้ครบ 100% ก่อน จึงจะเปิดให้เลือกช่วงวันที่ลบได้ (ข้อมูลบน Cloud ไม่ถูกลบ)
+                เลือกช่วงเวลาแล้วกด Sync ระบบจะซิงค์ข้อมูลขึ้น <b>{activeBackendLabel}</b> ให้ครบก่อน แล้วล้างรายการที่ซิงค์แล้วออกจากเครื่องให้อัตโนมัติ
               </p>
             </div>
           </div>
@@ -850,120 +833,85 @@ export const SettingsView: React.FC<Props> = ({
           <div className="p-4 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-bold flex items-center gap-2.5">
             <WifiOff className="w-5 h-5 text-amber-600 shrink-0" />
             <span>
-              ล็อกฟีเจอร์ชั่วคราว: ต้องเชื่อมต่ออินเทอร์เน็ตก่อนเท่านั้น จึงจะตรวจสอบการซิงค์และล้างข้อมูลในเครื่องได้ (ป้องกันข้อมูลที่ยังไม่ซิงค์สูญหาย)
+              ล็อกฟีเจอร์ชั่วคราว: ต้องเชื่อมต่ออินเทอร์เน็ตก่อนเท่านั้น จึงจะ Sync และคืนความจำเครื่องได้
             </span>
           </div>
         ) : (
-          <div className="space-y-4">
-            {/* ขั้นที่ 1: ตรวจสอบและซิงค์รายการที่ค้างขึ้น Cloud */}
-            <div className="p-4 rounded-2xl bg-[#fef9ec]/70 border border-[#eae3cf] space-y-2.5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-xs font-extrabold text-[#0d3a57]">
-                  ขั้นที่ 1: ตรวจสอบ & ซิงค์รายการที่ค้างขึ้น {activeBackendLabel} ให้ครบก่อน
-                </div>
-                {cloudVerifiedInfo && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-800">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> ยืนยันซิงค์ครบแล้ว ({cloudVerifiedInfo.verifiedAt})
-                  </span>
-                )}
+          <div className="p-4 rounded-2xl border border-[#eae3cf] bg-[#fef9ec]/50 space-y-3">
+            <div className="flex flex-wrap items-center gap-1.5 text-xs font-extrabold text-[#0d3a57]">
+              <Calendar className="w-4 h-4 text-[#118cd1]" />
+              <span>เลือกช่วงเวลาที่จะ Resync</span>
+              <span className="relative inline-flex items-center group">
+                <button
+                  type="button"
+                  aria-label="ข้อมูลเพิ่มเติมเกี่ยวกับช่วงเวลาที่จะ Resync"
+                  className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#118cd1]/15 text-[#118cd1] hover:bg-[#118cd1] hover:text-white transition cursor-help"
+                >
+                  <Info className="w-3 h-3" />
+                </button>
+                <span
+                  role="tooltip"
+                  className="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 transition-opacity duration-150 absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 sm:w-72 p-2.5 rounded-xl bg-[#0d3a57] text-white text-[11px] font-medium leading-relaxed shadow-lg z-30 pointer-events-none"
+                >
+                  ระบบจะทำการกวาดข้อมูลที่ยังไม่ถูก Sync ภายในช่วงที่ระบุ เพื่อนำไปเก็บไว้ในฐานข้อมูลที่เลือกไว้
+                </span>
+              </span>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { label: 'เก่ากว่า 30 วัน', days: 30 },
+                { label: 'เก่ากว่า 90 วัน', days: 90 },
+                { label: 'เก่ากว่า 6 เดือน', days: 180 },
+              ].map((preset) => (
+                <button
+                  key={preset.days}
+                  type="button"
+                  onClick={() => setPresetOlderThanDays(preset.days)}
+                  className="px-3 py-1 rounded-lg text-[11px] font-bold bg-white border border-[#eae3cf] text-[#0d3a57] hover:bg-[#fef9ec] cursor-pointer"
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-bold text-[#6b8799] mb-1">ตั้งแต่วันที่</label>
+                <input
+                  type="date"
+                  value={pruneStartDate}
+                  onChange={(e) => setPruneStartDate(e.target.value)}
+                  className="w-full bg-white border border-[#eae3cf] rounded-xl px-3 py-2 text-xs font-bold text-[#0d3a57]"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-[#6b8799] mb-1">ถึงวันที่</label>
+                <input
+                  type="date"
+                  value={pruneEndDate}
+                  onChange={(e) => setPruneEndDate(e.target.value)}
+                  className="w-full bg-white border border-[#eae3cf] rounded-xl px-3 py-2 text-xs font-bold text-[#0d3a57]"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+              <div className="text-xs text-[#0d3a57]">
+                พบรายการขายในช่วงนี้:{' '}
+                <b className="text-[#118cd1]">{matchingLocalOrdersCount.toLocaleString()} รายการ</b>
               </div>
               <button
                 type="button"
-                onClick={handleVerifyCloudBeforeCleanup}
-                disabled={verifyingCloud || !isOnline}
-                className="inline-flex items-center gap-2 bg-[#118cd1] hover:bg-[#0e78b5] text-white font-bold px-4 py-2.5 rounded-xl text-xs transition cursor-pointer disabled:opacity-50"
+                disabled={syncingAndPruning || !isOnline || matchingLocalOrdersCount === 0}
+                onClick={handleResyncAndPrune}
+                className="inline-flex items-center gap-2 bg-[#118cd1] hover:bg-[#0e78b5] text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow-sm transition cursor-pointer disabled:opacity-40"
               >
-                <RefreshCw className={`w-4 h-4 ${verifyingCloud ? 'animate-spin' : ''}`} />
-                {verifyingCloud
-                  ? `กำลังตรวจสอบและซิงค์ขึ้น ${activeBackendLabel}...`
-                  : `ตรวจสอบ & ซิงค์รายการที่ค้างขึ้น ${activeBackendLabel} เดี๋ยวนี้`}
+                <RefreshCw className={`w-4 h-4 ${syncingAndPruning ? 'animate-spin' : ''}`} />
+                {syncingAndPruning
+                  ? `กำลัง Sync ขึ้น ${activeBackendLabel} และคืนความจำ...`
+                  : `Sync (${matchingLocalOrdersCount.toLocaleString()} รายการ)`}
               </button>
-            </div>
-
-            {/* ขั้นที่ 2: เลือกช่วงวันที่ลบออกจากเครื่อง (ปลดล็อกเมื่อผ่านขั้นที่ 1 เท่านั้น) */}
-            <div
-              className={`p-4 rounded-2xl border space-y-3 transition ${
-                cloudVerifiedInfo
-                  ? 'bg-rose-50/40 border-rose-200'
-                  : 'bg-gray-50 border-gray-200 opacity-60 pointer-events-none'
-              }`}
-            >
-              <div className="flex flex-wrap items-center gap-1.5 text-xs font-extrabold text-[#0d3a57]">
-                <Calendar className="w-4 h-4 text-rose-500" />
-                <span>ขั้นที่ 2: เลือกช่วงเวลาที่จะ Resync</span>
-                <span className="relative inline-flex items-center group pointer-events-auto">
-                  <button
-                    type="button"
-                    aria-label="ข้อมูลเพิ่มเติมเกี่ยวกับช่วงเวลาที่จะ Resync"
-                    className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#118cd1]/15 text-[#118cd1] hover:bg-[#118cd1] hover:text-white transition cursor-help"
-                  >
-                    <Info className="w-3 h-3" />
-                  </button>
-                  <span
-                    role="tooltip"
-                    className="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 transition-opacity duration-150 absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 sm:w-72 p-2.5 rounded-xl bg-[#0d3a57] text-white text-[11px] font-medium leading-relaxed shadow-lg z-30 pointer-events-none"
-                  >
-                    ระบบจะทำการกวาดข้อมูลที่ยังไม่ถูก Sync ภายในช่วงที่ระบุ เพื่อนำไปเก็บไว้ในฐานข้อมูลที่เลือกไว้
-                  </span>
-                </span>
-                {!cloudVerifiedInfo && (
-                  <span className="text-[11px] font-bold text-[#6b8799]">(กรุณากดยืนยันขั้นที่ 1 ก่อน)</span>
-                )}
-              </div>
-
-              <div className="flex flex-wrap gap-1.5">
-                {[
-                  { label: 'เก่ากว่า 30 วัน', days: 30 },
-                  { label: 'เก่ากว่า 90 วัน', days: 90 },
-                  { label: 'เก่ากว่า 6 เดือน', days: 180 },
-                ].map((preset) => (
-                  <button
-                    key={preset.days}
-                    type="button"
-                    onClick={() => setPresetOlderThanDays(preset.days)}
-                    className="px-3 py-1 rounded-lg text-[11px] font-bold bg-white border border-[#eae3cf] text-[#0d3a57] hover:bg-[#fef9ec] cursor-pointer"
-                  >
-                    {preset.label}
-                  </button>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-bold text-[#6b8799] mb-1">ตั้งแต่วันที่</label>
-                  <input
-                    type="date"
-                    value={pruneStartDate}
-                    onChange={(e) => setPruneStartDate(e.target.value)}
-                    className="w-full bg-white border border-[#eae3cf] rounded-xl px-3 py-2 text-xs font-bold text-[#0d3a57]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-[#6b8799] mb-1">ถึงวันที่</label>
-                  <input
-                    type="date"
-                    value={pruneEndDate}
-                    onChange={(e) => setPruneEndDate(e.target.value)}
-                    className="w-full bg-white border border-[#eae3cf] rounded-xl px-3 py-2 text-xs font-bold text-[#0d3a57]"
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                <div className="text-xs text-[#0d3a57]">
-                  พบรายการขายในช่วงนี้:{' '}
-                  <b className="text-rose-600">{matchingLocalOrdersCount.toLocaleString()} รายการ</b>
-                </div>
-                <button
-                  type="button"
-                  disabled={!cloudVerifiedInfo || !isOnline || matchingLocalOrdersCount === 0}
-                  onClick={handlePruneLocalOrders}
-                  className="inline-flex items-center gap-2 bg-rose-600 hover:bg-rose-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition cursor-pointer disabled:opacity-40"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  ลบ {matchingLocalOrdersCount.toLocaleString()} รายการออกจากเครื่องนี้ (Cloud ยังอยู่ครบ)
-                </button>
-              </div>
             </div>
           </div>
         )}
