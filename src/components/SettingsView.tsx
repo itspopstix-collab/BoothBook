@@ -57,9 +57,8 @@ export const SettingsView: React.FC<Props> = ({
   isOnline = true,
   cloudBusy,
 }) => {
-  const [storageBackend, setStorageBackend] = useState<CloudStorageBackend>(
-    state.settings.storageBackend || 'supabase'
-  );
+  // Release 1: ใช้ Google Sheets เป็นหลักก่อน (comment Supabase ออกชั่วคราว)
+  const [storageBackend, setStorageBackend] = useState<CloudStorageBackend>('google_sheets');
   const [sheetId, setSheetId] = useState(state.settings.sheetId);
   const [appsScriptUrl, setAppsScriptUrl] = useState(state.settings.appsScriptUrl);
   const [googleClientId, setGoogleClientId] = useState(() =>
@@ -76,7 +75,7 @@ export const SettingsView: React.FC<Props> = ({
   // Modal เลือกแพ็กเกจ (UI Preview / Mockup)
   const [showPackageModal, setShowPackageModal] = useState(false);
   const [selectedBoothPack, setSelectedBoothPack] = useState<string>('pack-7');
-  const [selectedStoragePlan, setSelectedStoragePlan] = useState<string>('sb-unlimited');
+  const [selectedStoragePlan, setSelectedStoragePlan] = useState<string>('gs-free');
   const boothCarouselRef = useRef<HTMLDivElement>(null);
   const storageCarouselRef = useRef<HTMLDivElement>(null);
   const slideCarousel = (ref: React.RefObject<HTMLDivElement | null>, dir: 'left' | 'right') => {
@@ -112,10 +111,11 @@ export const SettingsView: React.FC<Props> = ({
 
   const STORAGE_PLANS = [
     { id: 'gs-free', provider: 'Google Sheets', label: 'ไม่จำกัดบิล', desc: 'เก็บลง Google Sheet ของร้านเอง', price: 0, badge: 'ฟรี', quota: 'unlimited' as number | 'unlimited' },
-    { id: 'sb-500', provider: 'Supabase Cloud', label: '500 บิล', desc: 'ซิงค์ไว แยกสิทธิ์ Owner / Staff', price: 29, quota: 500 as number | 'unlimited' },
-    { id: 'sb-1000', provider: 'Supabase Cloud', label: '1,000 บิล', desc: 'เหมาะกับงาน 3–7 บูธ', price: 49, quota: 1000 as number | 'unlimited' },
-    { id: 'sb-2000', provider: 'Supabase Cloud', label: '2,000 บิล', desc: 'ออกบูธต่อเนื่องหลายงาน', price: 89, quota: 2000 as number | 'unlimited' },
-    { id: 'sb-unlimited', provider: 'Supabase Cloud', label: 'Unlimited ตลอดชีพ', desc: 'ไม่จำกัดจำนวนบิล ใช้งานได้ตลอดไป', price: 149, badge: 'แนะนำ', quota: 'unlimited' as number | 'unlimited' },
+    // Release 1: ซ่อนแพ็กเกจ Supabase Cloud ไว้ก่อน
+    // { id: 'sb-500', provider: 'Supabase Cloud', label: '500 บิล', desc: 'ซิงค์ไว แยกสิทธิ์ Owner / Staff', price: 29, quota: 500 as number | 'unlimited' },
+    // { id: 'sb-1000', provider: 'Supabase Cloud', label: '1,000 บิล', desc: 'เหมาะกับงาน 3–7 บูธ', price: 49, quota: 1000 as number | 'unlimited' },
+    // { id: 'sb-2000', provider: 'Supabase Cloud', label: '2,000 บิล', desc: 'ออกบูธต่อเนื่องหลายงาน', price: 89, quota: 2000 as number | 'unlimited' },
+    // { id: 'sb-unlimited', provider: 'Supabase Cloud', label: 'Unlimited ตลอดชีพ', desc: 'ไม่จำกัดจำนวนบิล ใช้งานได้ตลอดไป', price: 149, badge: 'แนะนำ', quota: 'unlimited' as number | 'unlimited' },
   ];
 
   const activeBoothObj = BOOTH_PACKS.find((p) => p.id === selectedBoothPack) || BOOTH_PACKS[0];
@@ -361,7 +361,7 @@ export const SettingsView: React.FC<Props> = ({
               อัปเกรด BoothBook เพื่อปลดล็อกรอบออกบูธและ Cloud
             </h2>
             <p className="text-xs text-white/85">
-              เลือกแพ็กเกจจำนวนรอบออกบูธได้ตามต้องการ เริ่มต้นเพียง 69฿ · เก็บข้อมูลลง Google Sheets ฟรี หรือเลือก Supabase Cloud ตลอดชีพ
+              เลือกแพ็กเกจจำนวนรอบออกบูธได้ตามต้องการ เริ่มต้นเพียง 69฿ · เก็บข้อมูลลง Google Sheets ของร้านฟรีตลอดชีพ
             </p>
           </div>
 
@@ -459,92 +459,21 @@ export const SettingsView: React.FC<Props> = ({
           </span>
         </div>
 
-        {/* ตัวเลือก/สถานะ Cloud ตามแพ็กเกจที่เลือก */}
-        {purchasedPackage ? (
-          purchasedPackage.storageProvider === 'Google Sheets' ? (
-            <div className="p-4 rounded-2xl border-2 border-emerald-300 bg-emerald-50/40 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="font-extrabold text-sm text-[#0d3a57] flex items-center gap-2">
-                  <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-                  Google Sheets
-                </span>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-600 text-white">
-                  กำลังใช้งาน
-                </span>
-              </div>
-              <p className="text-xs text-[#6b8799]">
-                เก็บออเดอร์และสำรองข้อมูลลง Google Sheet ของร้านคุณโดยตรง เปิดดูและส่งต่อบัญชีได้ทันที
-              </p>
-            </div>
-          ) : (
-            <div className="p-4 rounded-2xl border-2 border-[#118cd1] bg-[#118cd1]/5 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="font-extrabold text-sm text-[#0d3a57] flex items-center gap-2">
-                  <Database className="w-4 h-4 text-[#118cd1]" />
-                  Supabase Cloud
-                </span>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-[#118cd1] text-white">
-                  กำลังใช้งาน
-                </span>
-              </div>
-              <p className="text-xs text-[#6b8799]">
-                ฐานข้อมูลจริง แยกสิทธิ์ Owner / Staff POS อัตโนมัติ ซิงค์หลายเครื่องได้พร้อมกันแบบ Real-time
-              </p>
-            </div>
-          )
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => handleSelectBackend('supabase')}
-              className={`text-left p-4 rounded-2xl border-2 transition cursor-pointer space-y-1.5 ${
-                storageBackend === 'supabase'
-                  ? 'border-[#118cd1] bg-[#118cd1]/5 shadow-xs'
-                  : 'border-[#eae3cf] bg-[#fef9ec]/40 hover:border-[#90d4ec]'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-extrabold text-sm text-[#0d3a57] flex items-center gap-2">
-                  <Database className="w-4 h-4 text-[#118cd1]" />
-                  1. Supabase Cloud
-                </span>
-                {storageBackend === 'supabase' && (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#118cd1] text-white">
-                    กำลังใช้งาน
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-[#6b8799]">
-                ฐานข้อมูลจริง แยกสิทธิ์ Owner / Staff POS อัตโนมัติ ซิงค์หลายเครื่องได้พร้อมกันแบบ Real-time
-              </p>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleSelectBackend('google_sheets')}
-              className={`text-left p-4 rounded-2xl border-2 transition cursor-pointer space-y-1.5 ${
-                storageBackend === 'google_sheets'
-                  ? 'border-[#118cd1] bg-[#118cd1]/5 shadow-xs'
-                  : 'border-[#eae3cf] bg-[#fef9ec]/40 hover:border-[#90d4ec]'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-extrabold text-sm text-[#0d3a57] flex items-center gap-2">
-                  <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-                  2. Google Sheets
-                </span>
-                {storageBackend === 'google_sheets' && (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#118cd1] text-white">
-                    กำลังใช้งาน
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-[#6b8799]">
-                ส่งออเดอร์และสำรองข้อมูลลง Google Sheet ของร้านอัตโนมัติ
-              </p>
-            </button>
+        {/* Release 1: ใช้ Google Sheets เป็นระบบเก็บข้อมูลหลัก (comment Supabase ออกชั่วคราว) */}
+        <div className="p-4 rounded-2xl border-2 border-emerald-300 bg-emerald-50/40 space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="font-extrabold text-sm text-[#0d3a57] flex items-center gap-2">
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+              Google Sheets
+            </span>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-600 text-white">
+              กำลังใช้งาน
+            </span>
           </div>
-        )}
+          <p className="text-xs text-[#6b8799]">
+            เก็บออเดอร์และสำรองข้อมูลลง Google Sheet ของร้านคุณโดยตรง เปิดดูและส่งต่อบัญชีได้ทันที
+          </p>
+        </div>
 
         {/* แผงเชื่อมต่อ Google Sheet แบบ 1 คลิก (แสดงเมื่อเลือกโหมด Google Sheets) */}
         {storageBackend === 'google_sheets' && (
@@ -1083,15 +1012,9 @@ export const SettingsView: React.FC<Props> = ({
                   </div>
                 </div>
 
-                {/* กล่องบอกข้อดีของ Database แต่ละชนิด */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-[11px]">
-                  <div
-                    className={`rounded-xl p-3 border transition ${
-                      activeStorageObj.provider === 'Google Sheets'
-                        ? 'bg-emerald-50/90 border-emerald-300'
-                        : 'bg-emerald-50/40 border-emerald-200/70'
-                    }`}
-                  >
+                {/* กล่องบอกข้อดีของ Google Sheets (Release 1 — comment Supabase ออกชั่วคราว) */}
+                <div className="grid grid-cols-1 gap-2.5 text-[11px]">
+                  <div className="rounded-xl p-3 border bg-emerald-50/90 border-emerald-300">
                     <div className="flex items-center gap-1.5 font-black text-emerald-900 text-xs mb-1">
                       <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                       ข้อดีของ Google Sheets
@@ -1103,13 +1026,8 @@ export const SettingsView: React.FC<Props> = ({
                     </ul>
                   </div>
 
-                  <div
-                    className={`rounded-xl p-3 border transition ${
-                      activeStorageObj.provider === 'Supabase Cloud'
-                        ? 'bg-sky-50/90 border-[#118cd1]/50'
-                        : 'bg-sky-50/40 border-sky-200/70'
-                    }`}
-                  >
+                  {/* Release 1: ซ่อนกล่อง Supabase Cloud ชั่วคราว
+                  <div className="rounded-xl p-3 border bg-sky-50/40 border-sky-200/70">
                     <div className="flex items-center gap-1.5 font-black text-[#0d3a57] text-xs mb-1">
                       <Database className="w-3.5 h-3.5 text-[#118cd1] shrink-0" />
                       ข้อดีของ Supabase Cloud
@@ -1120,6 +1038,7 @@ export const SettingsView: React.FC<Props> = ({
                       <li>ปลอดภัย โครงสร้างล็อกไว้ไม่พังเพราะมือลั่นแก้ไฟล์</li>
                     </ul>
                   </div>
+                  */}
                 </div>
 
                 {/* การ์ดสไลด์เลือกแพ็กเกจ Cloud */}

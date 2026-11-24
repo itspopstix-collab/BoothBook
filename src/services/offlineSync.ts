@@ -24,8 +24,10 @@ export interface PendingPosOrder {
   queuedAt: string;
 }
 
-export function getActiveBackend(settings?: PosConnectionSettings): CloudStorageBackend {
-  return settings?.storageBackend === 'google_sheets' ? 'google_sheets' : 'supabase';
+export function getActiveBackend(_settings?: PosConnectionSettings): CloudStorageBackend {
+  // Release 1: ใช้ Google Sheets เป็นหลักก่อน (comment Supabase ออกชั่วคราว)
+  // return _settings?.storageBackend === 'google_sheets' ? 'google_sheets' : 'supabase';
+  return 'google_sheets';
 }
 
 export function isOnline(): boolean {

@@ -366,29 +366,31 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
           })}
         </nav>
 
-        {/* User Info & Logout at Bottom */}
-        <div className="p-3 border-t border-[#eae3cf] space-y-2">
-          {!sidebarCollapsed && (
-            <div className="px-3 py-2 rounded-xl bg-[#fef9ec] text-xs">
-              <div className="text-[10px] font-bold text-[#6b8799]">ผู้ใช้งานปัจจุบัน</div>
-              <div className="font-bold text-[#0d3a57] truncate">
-                {userProfile?.username || userProfile?.email}
+        {/* User Info & Logout at Bottom (แสดงเฉพาะเมื่อล็อกอินผ่าน Supabase AuthGate) */}
+        {userProfile && (
+          <div className="p-3 border-t border-[#eae3cf] space-y-2">
+            {!sidebarCollapsed && (
+              <div className="px-3 py-2 rounded-xl bg-[#fef9ec] text-xs">
+                <div className="text-[10px] font-bold text-[#6b8799]">ผู้ใช้งานปัจจุบัน</div>
+                <div className="font-bold text-[#0d3a57] truncate">
+                  {userProfile?.username || userProfile?.email}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          <button
-            type="button"
-            onClick={() => signOut()}
-            title="ออกจากระบบ"
-            className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 transition cursor-pointer ${
-              sidebarCollapsed ? 'lg:justify-center lg:px-2' : ''
-            }`}
-          >
-            <LogOut className="w-4 h-4 shrink-0" />
-            <span className={sidebarCollapsed ? 'lg:hidden' : ''}>ออกจากระบบ</span>
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={() => signOut()}
+              title="ออกจากระบบ"
+              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 transition cursor-pointer ${
+                sidebarCollapsed ? 'lg:justify-center lg:px-2' : ''
+              }`}
+            >
+              <LogOut className="w-4 h-4 shrink-0" />
+              <span className={sidebarCollapsed ? 'lg:hidden' : ''}>ออกจากระบบ</span>
+            </button>
+          </div>
+        )}
       </aside>
 
       {/* Right Content Wrapper */}
