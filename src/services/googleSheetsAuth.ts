@@ -3,7 +3,8 @@ import { AppDatabaseState, PosSaleRow } from '../types';
 const GOOGLE_CLIENT_ID_KEY = 'boothbook_google_client_id';
 const GOOGLE_TOKEN_KEY = 'boothbook_google_oauth_token';
 const DEFAULT_GOOGLE_CLIENT_ID =
-  ((import.meta as any).env?.VITE_GOOGLE_CLIENT_ID as string | undefined) || '';
+  ((import.meta as any).env?.VITE_GOOGLE_CLIENT_ID as string | undefined) ||
+  '499600452641-a1crt8jlkncuq97glh72bhq8c7r8h2ne.apps.googleusercontent.com';
 
 const SCOPES =
   'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email';

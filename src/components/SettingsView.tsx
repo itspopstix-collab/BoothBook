@@ -625,8 +625,8 @@ export const SettingsView: React.FC<Props> = ({
               </div>
             )}
 
-            {/* ตั้งค่า Google OAuth Client ID (สำหรับผู้พัฒนา / ฝังครั้งเดียวใช้ได้ทุกคน) */}
-            {!((import.meta as any).env?.VITE_GOOGLE_CLIENT_ID) && (
+            {/* ตั้งค่า Google OAuth Client ID (ซ่อนอัตโนมัติเมื่อฝัง Client ID ของระบบแล้ว) */}
+            {!getGoogleClientId() && (
               <details className="text-xs text-[#6b8799] pt-1">
                 <summary className="cursor-pointer font-bold hover:text-[#0d3a57]">
                   ตั้งค่า Google OAuth Client ID (สำหรับผู้พัฒนาตั้งค่าครั้งแรก)
