@@ -287,6 +287,9 @@ export interface PosConnectionSettings {
   storageBackend?: CloudStorageBackend;
   sheetId: string;
   appsScriptUrl: string;
+  googleSheetUrl?: string;
+  googleAccountEmail?: string;
+  googleClientId?: string;
   shopName: string;
   branchName: string;
   promptPayNumber?: string;

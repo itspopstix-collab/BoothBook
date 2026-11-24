@@ -5,6 +5,14 @@ import {
   recordPosSaleToSupabase,
 } from './supabase';
 import { persistJson, readPersistedJson } from './nativeStorage';
+import {
+  appendSaleRowToGoogleSheet,
+  getCachedGoogleToken,
+  getGoogleClientId,
+  loadDbSnapshotFromGoogleSheet,
+  requestGoogleAccessToken,
+  saveDbSnapshotToGoogleSheet,
+} from './googleSheetsAuth';
 
 const PENDING_ORDERS_KEY = 'boothbook_pending_orders_v1';
 const STATE_DIRTY_KEY = 'boothbook_state_dirty_v1';
@@ -69,12 +77,22 @@ export function isStateDirty(): boolean {
   }
 }
 
-/* ---------- Google Sheets Cloud Backend (Apps Script Web App) ---------- */
+/* ---------- Google Sheets Cloud Backend (Direct OAuth API v4 + Apps Script Fallback) ---------- */
 
 async function pushSaleToGoogleSheets(
   sale: PosSaleRow,
-  settings: PosConnectionSettings
+  settings: PosConnectionSettings,
+  googleTokenOverride?: string
 ): Promise<boolean> {
+  // 1. ใช้ Google Sheets API v4 โดยตรง (กรณีเชื่อมต่อ Google Login แล้ว)
+  const sheetId = (settings.sheetId || '').trim();
+  const token = googleTokenOverride || getCachedGoogleToken()?.accessToken;
+  if (sheetId && token) {
+    const ok = await appendSaleRowToGoogleSheet(sheetId, sale, token);
+    if (ok) return true;
+  }
+
+  // 2. Fallback: ใช้ Apps Script Web App URL (ถ้าผู้ใช้ตั้งค่าไว้)
   const url = (settings.appsScriptUrl || '').trim();
   if (!url || !url.includes('script.google.com')) return false;
   try {
@@ -108,7 +126,17 @@ async function pushSaleToGoogleSheets(
   }
 }
 
-export async function pushStateToGoogleSheetsBackend(state: AppDatabaseState): Promise<boolean> {
+export async function pushStateToGoogleSheetsBackend(
+  state: AppDatabaseState,
+  googleTokenOverride?: string
+): Promise<boolean> {
+  const sheetId = (state.settings?.sheetId || '').trim();
+  const token = googleTokenOverride || getCachedGoogleToken()?.accessToken;
+  if (sheetId && token) {
+    const ok = await saveDbSnapshotToGoogleSheet(sheetId, state, token);
+    if (ok) return true;
+  }
+
   const url = (state.settings?.appsScriptUrl || '').trim();
   if (!url || !url.includes('script.google.com')) return false;
   try {
@@ -127,8 +155,16 @@ export async function pushStateToGoogleSheetsBackend(state: AppDatabaseState): P
 }
 
 export async function pullStateFromGoogleSheetsBackend(
-  settings: PosConnectionSettings
+  settings: PosConnectionSettings,
+  googleTokenOverride?: string
 ): Promise<AppDatabaseState | null> {
+  const sheetId = (settings?.sheetId || '').trim();
+  const token = googleTokenOverride || getCachedGoogleToken()?.accessToken;
+  if (sheetId && token) {
+    const state = await loadDbSnapshotFromGoogleSheet(sheetId, token);
+    if (state) return state;
+  }
+
   const url = (settings?.appsScriptUrl || '').trim();
   if (!url || !url.includes('script.google.com')) return null;
   try {
@@ -277,8 +313,8 @@ export async function verifyAndSyncAllToCloud(state: AppDatabaseState): Promise<
   verifiedAt: string;
   error?: string;
 }> {
-  const backendLabel =
-    getActiveBackend(state.settings) === 'google_sheets' ? 'Google Sheets' : 'Supabase';
+  const backend = getActiveBackend(state.settings);
+  const backendLabel = backend === 'google_sheets' ? 'Google Sheets' : 'Supabase';
 
   if (!isOnline()) {
     return {
@@ -289,6 +325,25 @@ export async function verifyAndSyncAllToCloud(state: AppDatabaseState): Promise<
       verifiedAt: '',
       error: 'กรุณาเชื่อมต่ออินเทอร์เน็ตก่อนดำเนินการ',
     };
+  }
+
+  // หากใช้โหมด Google Sheets แบบ OAuth ให้ขอ Token สดก่อนกวาดซิงค์ (ป้องกัน Token หมดอายุ)
+  if (backend === 'google_sheets' && state.settings.sheetId && !state.settings.appsScriptUrl) {
+    if (!getCachedGoogleToken()) {
+      try {
+        const clientId = getGoogleClientId(state.settings.googleClientId);
+        await requestGoogleAccessToken(clientId, true);
+      } catch (err: any) {
+        return {
+          ok: false,
+          syncedOrders: 0,
+          remainingOrders: getPendingOrdersCount(),
+          backendLabel,
+          verifiedAt: '',
+          error: err?.message || 'กรุณาเชื่อมต่อบัญชี Google ก่อนตรวจสอบและล้างข้อมูล',
+        };
+      }
+    }
   }
 
   const flushRes = await flushOfflineSyncQueue(state);

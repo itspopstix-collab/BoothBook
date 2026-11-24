@@ -5,6 +5,11 @@ import { clearDemoTransactionsOnly, resetToDemoState } from '../services/storage
 import { getStorageEngineLabel } from '../services/nativeStorage';
 import { verifyAndSyncAllToCloud } from '../services/offlineSync';
 import {
+  connectAndCreateGoogleSheet,
+  getGoogleClientId,
+  saveGoogleClientId,
+} from '../services/googleSheetsAuth';
+import {
   Link2,
   Download,
   Upload,
@@ -27,6 +32,7 @@ import {
   Crown,
   X,
   Check,
+  ExternalLink,
 } from 'lucide-react';
 
 interface Props {
@@ -59,6 +65,11 @@ export const SettingsView: React.FC<Props> = ({
   );
   const [sheetId, setSheetId] = useState(state.settings.sheetId);
   const [appsScriptUrl, setAppsScriptUrl] = useState(state.settings.appsScriptUrl);
+  const [googleClientId, setGoogleClientId] = useState(() =>
+    getGoogleClientId(state.settings.googleClientId)
+  );
+  const [googleConnecting, setGoogleConnecting] = useState(false);
+  const [googleNotice, setGoogleNotice] = useState<{ type: 'ok' | 'err'; msg: string } | null>(null);
   const [shopName, setShopName] = useState(state.settings.shopName);
   const [branchName, setBranchName] = useState(state.settings.branchName);
   const [promptPayNumber, setPromptPayNumber] = useState(state.settings.promptPayNumber || '');
@@ -254,6 +265,51 @@ export const SettingsView: React.FC<Props> = ({
       },
     }));
   };
+
+  const handleOneClickConnectGoogleSheet = async () => {
+    if (!isOnline) {
+      setGoogleNotice({ type: 'err', msg: 'กรุณาเชื่อมต่ออินเทอร์เน็ตก่อนเชื่อมต่อ Google Sheet' });
+      return;
+    }
+    setGoogleConnecting(true);
+    setGoogleNotice(null);
+    try {
+      if (googleClientId.trim()) {
+        saveGoogleClientId(googleClientId.trim());
+      }
+      const res = await connectAndCreateGoogleSheet(state, googleClientId.trim());
+      setSheetId(res.spreadsheetId);
+      onUpdateState((prev) => ({
+        ...prev,
+        settings: {
+          ...prev.settings,
+          storageBackend: 'google_sheets',
+          sheetId: res.spreadsheetId,
+          googleSheetUrl: res.spreadsheetUrl,
+          googleAccountEmail: res.email,
+          googleClientId: googleClientId.trim() || prev.settings.googleClientId,
+        },
+      }));
+      setStorageBackend('google_sheets');
+      setGoogleNotice({
+        type: 'ok',
+        msg: `สร้าง Google Sheet อัตโนมัติสำเร็จ! (${res.email || 'Google Account'}) พร้อมซิงค์ออเดอร์และสำรองข้อมูลแล้ว`,
+      });
+    } catch (err: any) {
+      setGoogleNotice({
+        type: 'err',
+        msg: err?.message || 'เชื่อมต่อ Google Sheet ไม่สำเร็จ',
+      });
+    } finally {
+      setGoogleConnecting(false);
+    }
+  };
+
+  const resolvedGoogleSheetUrl =
+    state.settings.googleSheetUrl ||
+    (state.settings.sheetId
+      ? `https://docs.google.com/spreadsheets/d/${state.settings.sheetId}/edit`
+      : '');
 
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
@@ -501,6 +557,99 @@ export const SettingsView: React.FC<Props> = ({
             </p>
           </button>
         </div>
+
+        {/* แผงเชื่อมต่อ Google Sheet แบบ 1 คลิก (แสดงเมื่อเลือกโหมด Google Sheets) */}
+        {storageBackend === 'google_sheets' && (
+          <div className="bg-[#fef9ec] rounded-2xl p-4 sm:p-5 border-2 border-emerald-200 space-y-3.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
+                <div>
+                  <div className="text-sm font-black text-[#0d3a57]">
+                    เชื่อมต่อ Google Sheet อัตโนมัติ (1 คลิก)
+                  </div>
+                  <p className="text-xs text-[#6b8799]">
+                    กดปุ่มเพื่อล็อกอิน Google แล้วระบบจะสร้างไฟล์ชีท (Sales / Events_Summary / BoothBook_DB) ให้ทันที
+                  </p>
+                </div>
+              </div>
+              {state.settings.googleAccountEmail && (
+                <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-full">
+                  {state.settings.googleAccountEmail}
+                </span>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                onClick={handleOneClickConnectGoogleSheet}
+                disabled={googleConnecting || !isOnline}
+                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black px-4 py-2.5 rounded-xl text-xs shadow-sm transition cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw className={`w-4 h-4 ${googleConnecting ? 'animate-spin' : ''}`} />
+                {googleConnecting
+                  ? 'กำลังล็อกอิน & สร้าง Google Sheet...'
+                  : resolvedGoogleSheetUrl
+                  ? 'สร้างชีทใหม่ / เปลี่ยนบัญชี Google'
+                  : 'เชื่อมต่อ Google & สร้างชีทอัตโนมัติ'}
+              </button>
+
+              {resolvedGoogleSheetUrl && (
+                <a
+                  href={resolvedGoogleSheetUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-white hover:bg-emerald-50 text-emerald-800 border-2 border-emerald-300 font-black px-4 py-2.5 rounded-xl text-xs transition"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  เปิดดู Google Sheet (แท็บใหม่)
+                </a>
+              )}
+            </div>
+
+            {googleNotice && (
+              <div
+                className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 ${
+                  googleNotice.type === 'ok'
+                    ? 'bg-emerald-100/70 text-emerald-900 border border-emerald-300'
+                    : 'bg-rose-50 text-rose-800 border border-rose-200'
+                }`}
+              >
+                {googleNotice.type === 'ok' ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                )}
+                <span>{googleNotice.msg}</span>
+              </div>
+            )}
+
+            {/* ตั้งค่า Google OAuth Client ID (สำหรับผู้พัฒนา / ฝังครั้งเดียวใช้ได้ทุกคน) */}
+            {!((import.meta as any).env?.VITE_GOOGLE_CLIENT_ID) && (
+              <details className="text-xs text-[#6b8799] pt-1">
+                <summary className="cursor-pointer font-bold hover:text-[#0d3a57]">
+                  ตั้งค่า Google OAuth Client ID (สำหรับผู้พัฒนาตั้งค่าครั้งแรก)
+                </summary>
+                <div className="mt-2 space-y-1.5">
+                  <input
+                    type="text"
+                    value={googleClientId}
+                    onChange={(e) => {
+                      setGoogleClientId(e.target.value);
+                      saveGoogleClientId(e.target.value);
+                    }}
+                    placeholder="xxxxxxxxxx-xxxxxxxx.apps.googleusercontent.com"
+                    className="w-full bg-white border border-[#eae3cf] rounded-xl px-3 py-2 text-xs font-mono text-[#0d3a57]"
+                  />
+                  <p className="text-[11px] text-[#6b8799]">
+                    * เมื่อใส่ค่านี้ลงใน <code>VITE_GOOGLE_CLIENT_ID</code> ตอน Build แอปจริง ลูกค้าปลายทางจะกดปุ่มด้านบนแล้วล็อกอินได้ทันทีโดยไม่เห็นช่องนี้
+                  </p>
+                </div>
+              </details>
+            )}
+          </div>
+        )}
 
         {/* กล่องสถานะ Offline Backup & Sync Queue */}
         <div className="bg-emerald-50/80 rounded-2xl p-4 border border-emerald-200 space-y-2.5">
