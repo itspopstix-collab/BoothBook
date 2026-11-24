@@ -104,8 +104,8 @@ export const SettingsView: React.FC<Props> = ({
   const BOOTH_PACKS = [
     { id: 'pack-1', label: '1 รอบออกบูธ', desc: 'ทดลองออกบูธ · ไม่เกิน 15 วัน/งาน', price: 69, quota: 1 as number | 'unlimited' },
     { id: 'pack-3', label: '3 รอบออกบูธ', desc: 'เฉลี่ยรอบละ 63฿ · ไม่เกิน 15 วัน/งาน', price: 189, quota: 3 as number | 'unlimited' },
-    { id: 'pack-7', label: '7 รอบออกบูธ', desc: 'เฉลี่ยรอบละ ~66฿ · ไม่เกิน 15 วัน/งาน', price: 459, badge: 'ยอดนิยม', quota: 7 as number | 'unlimited' },
-    { id: 'pack-15', label: '15 รอบออกบูธ', desc: 'เฉลี่ยรอบละ ~67฿ · ไม่เกิน 15 วัน/งาน', price: 999, quota: 15 as number | 'unlimited' },
+    { id: 'pack-7', label: '7 รอบออกบูธ', desc: 'เฉลี่ยรอบละ 57฿ · ไม่เกิน 15 วัน/งาน', price: 399, badge: 'ยอดนิยม', quota: 7 as number | 'unlimited' },
+    { id: 'pack-15', label: '15 รอบออกบูธ', desc: 'เฉลี่ยรอบละ ~51฿ · ไม่เกิน 15 วัน/งาน', price: 769, quota: 15 as number | 'unlimited' },
     { id: 'pack-unlimited', label: 'ออกบูธไม่จำกัดรอบ (รายปี)', desc: 'ออกบูธไม่จำกัดจำนวนรอบ · ไม่เกิน 15 วัน/งาน', price: 1690, badge: 'คุ้มที่สุด', quota: 'unlimited' as number | 'unlimited' },
   ];
 
