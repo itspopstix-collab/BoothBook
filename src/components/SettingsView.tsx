@@ -24,6 +24,9 @@ import {
   ShieldCheck,
   Trash2,
   Calendar,
+  Crown,
+  X,
+  Check,
 } from 'lucide-react';
 
 interface Props {
@@ -61,6 +64,31 @@ export const SettingsView: React.FC<Props> = ({
   const [promptPayNumber, setPromptPayNumber] = useState(state.settings.promptPayNumber || '');
   const [testStatus, setTestStatus] = useState<{ type: 'ok' | 'err'; msg: string } | null>(null);
   const [testing, setTesting] = useState(false);
+
+  // Modal เลือกแพ็กเกจ (UI Preview / Mockup)
+  const [showPackageModal, setShowPackageModal] = useState(false);
+  const [selectedBoothPack, setSelectedBoothPack] = useState<string>('pack-7');
+  const [selectedStoragePlan, setSelectedStoragePlan] = useState<string>('sb-unlimited');
+
+  const BOOTH_PACKS = [
+    { id: 'pack-1', label: '1 รอบออกบูธ', desc: 'เหมาะสำหรับทดลองออกบูธครั้งแรก', price: 69 },
+    { id: 'pack-3', label: '3 รอบออกบูธ', desc: 'เฉลี่ยรอบละ 43฿', price: 129 },
+    { id: 'pack-7', label: '7 รอบออกบูธ', desc: 'เฉลี่ยรอบละ 27฿', price: 189, badge: 'ยอดนิยม' },
+    { id: 'pack-15', label: '15 รอบออกบูธ', desc: 'เฉลี่ยรอบละ 17฿', price: 259 },
+    { id: 'pack-lifetime', label: 'POS ตลอดชีพ', desc: 'ออกบูธไม่จำกัดรอบ จ่ายครั้งเดียวจบ', price: 2999, badge: 'คุ้มที่สุด' },
+  ];
+
+  const STORAGE_PLANS = [
+    { id: 'gs-free', provider: 'Google Sheets', label: 'ไม่จำกัดบิล', desc: 'เก็บลง Google Sheet ของร้านเอง', price: 0, badge: 'ฟรี' },
+    { id: 'sb-500', provider: 'Supabase Cloud', label: '500 บิล', desc: 'ซิงค์ไว แยกสิทธิ์ Owner / Staff', price: 29 },
+    { id: 'sb-1000', provider: 'Supabase Cloud', label: '1,000 บิล', desc: 'เหมาะกับงาน 3–7 บูธ', price: 49 },
+    { id: 'sb-2000', provider: 'Supabase Cloud', label: '2,000 บิล', desc: 'ออกบูธต่อเนื่องหลายงาน', price: 89 },
+    { id: 'sb-unlimited', provider: 'Supabase Cloud', label: 'Unlimited ตลอดชีพ', desc: 'ไม่จำกัดจำนวนบิล จ่ายครั้งเดียวใช้ได้ตลอดไป', price: 149, badge: 'แนะนำ' },
+  ];
+
+  const activeBoothObj = BOOTH_PACKS.find((p) => p.id === selectedBoothPack) || BOOTH_PACKS[0];
+  const activeStorageObj = STORAGE_PLANS.find((p) => p.id === selectedStoragePlan) || STORAGE_PLANS[0];
+  const totalPackagePrice = activeBoothObj.price + activeStorageObj.price;
 
   // State สำหรับฟีเจอร์ล้างข้อมูลเก่าในเครื่องแบบปลอดภัย (ต้องออนไลน์ + ตรวจซิงค์ Cloud ผ่านก่อน)
   const [verifyingCloud, setVerifyingCloud] = useState(false);
@@ -266,6 +294,31 @@ export const SettingsView: React.FC<Props> = ({
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
+      {/* แบนเนอร์แพ็กเกจปัจจุบัน & ปุ่มอัปเกรด */}
+      <div className="bg-gradient-to-r from-[#0d3a57] via-[#11649c] to-[#118cd1] rounded-2xl p-5 sm:p-6 shadow-md text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/15 text-[11px] font-black tracking-wide">
+            <Crown className="w-3.5 h-3.5 text-amber-300" />
+            แพ็กเกจปัจจุบัน: ฟรี (Free Plan)
+          </div>
+          <h2 className="text-lg sm:text-xl font-black tracking-tight">
+            อัปเกรด BoothBook เพื่อปลดล็อกรอบออกบูธและ Cloud
+          </h2>
+          <p className="text-xs text-white/85">
+            เลือกแพ็กเกจจำนวนรอบออกบูธได้ตามต้องการ เริ่มต้นเพียง 69฿ · เก็บข้อมูลลง Google Sheets ฟรี หรือเลือก Supabase Cloud ตลอดชีพ
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowPackageModal(true)}
+          className="shrink-0 inline-flex items-center justify-center gap-2 bg-amber-400 hover:bg-amber-300 text-[#0d3a57] font-black px-5 py-3 rounded-xl text-sm shadow-lg transition active:scale-95 cursor-pointer"
+        >
+          <Sparkles className="w-4 h-4" />
+          เลือกแพ็กเกจ / อัปเกรด
+        </button>
+      </div>
+
       {/* เลือกวิธีการเก็บข้อมูลบน Cloud + ระบบสำรองออฟไลน์ในเครื่อง */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#eae3cf] space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -728,6 +781,211 @@ export const SettingsView: React.FC<Props> = ({
           </button>
         </div>
       </div>
+      {/* Modal เลือกแพ็กเกจ (UI Preview) */}
+      {showPackageModal && (
+        <div
+          className="fixed inset-0 z-50 bg-[#0d3a57]/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+          onClick={() => setShowPackageModal(false)}
+        >
+          <div
+            className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-[#eae3cf] overflow-hidden my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-[#0d3a57] to-[#118cd1] px-6 py-5 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center">
+                  <Crown className="w-5 h-5 text-amber-300" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black">เลือกแพ็กเกจ BoothBook</h3>
+                  <p className="text-xs text-white/80">
+                    ปรับเลือกจำนวนรอบออกบูธและโควตาบิล Cloud ได้ตามสไตล์ร้านคุณ
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPackageModal(false)}
+                className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+              {/* ส่วนที่ 1: จำนวนรอบออกบูธ */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-black text-[#0d3a57]">
+                    1. เลือกจำนวนรอบออกบูธ
+                  </h4>
+                  <span className="text-[11px] font-bold text-[#6b8799]">จ่ายครั้งเดียว ไม่มีรายเดือน</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {BOOTH_PACKS.map((pack) => {
+                    const isSelected = selectedBoothPack === pack.id;
+                    const isLifetime = pack.id === 'pack-lifetime';
+                    return (
+                      <button
+                        key={pack.id}
+                        type="button"
+                        onClick={() => setSelectedBoothPack(pack.id)}
+                        className={`relative text-left p-3.5 rounded-2xl border-2 transition cursor-pointer flex items-center justify-between gap-2 ${
+                          isLifetime ? 'sm:col-span-2' : ''
+                        } ${
+                          isSelected
+                            ? 'border-[#118cd1] bg-[#118cd1]/5 shadow-xs'
+                            : 'border-[#eae3cf] bg-[#fef9ec]/40 hover:border-[#90d4ec]'
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-extrabold text-sm text-[#0d3a57]">
+                              {pack.label}
+                            </span>
+                            {pack.badge && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300">
+                                {pack.badge}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-[#6b8799] mt-0.5">{pack.desc}</p>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-base font-black text-[#118cd1]">
+                            ฿{pack.price.toLocaleString()}
+                          </span>
+                          <span
+                            className={`w-5 h-5 rounded-full flex items-center justify-center border ${
+                              isSelected
+                                ? 'bg-[#118cd1] border-[#118cd1] text-white'
+                                : 'border-[#cbd5e1] bg-white'
+                            }`}
+                          >
+                            {isSelected && <Check className="w-3 h-3" />}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* ส่วนที่ 2: จำนวนบิล & ระบบเก็บข้อมูล Cloud */}
+              <div className="space-y-3 pt-4 border-t border-[#eae3cf]">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-black text-[#0d3a57]">
+                    2. เลือกโควตาบิลและระบบเก็บข้อมูล Cloud
+                  </h4>
+                  <span className="text-[11px] font-bold text-emerald-700">
+                    Google Sheets ฟรีตลอดชีพ!
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {STORAGE_PLANS.map((plan) => {
+                    const isSelected = selectedStoragePlan === plan.id;
+                    const isUnlimited = plan.id === 'sb-unlimited' || plan.id === 'gs-free';
+                    return (
+                      <button
+                        key={plan.id}
+                        type="button"
+                        onClick={() => setSelectedStoragePlan(plan.id)}
+                        className={`text-left p-3.5 rounded-2xl border-2 transition cursor-pointer flex items-center justify-between gap-2 ${
+                          isUnlimited ? 'sm:col-span-2' : ''
+                        } ${
+                          isSelected
+                            ? 'border-[#118cd1] bg-[#118cd1]/5 shadow-xs'
+                            : 'border-[#eae3cf] bg-[#fef9ec]/40 hover:border-[#90d4ec]'
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-white border border-[#eae3cf] text-[#0d3a57]">
+                              {plan.provider}
+                            </span>
+                            <span className="font-extrabold text-sm text-[#0d3a57]">
+                              {plan.label}
+                            </span>
+                            {plan.badge && (
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                                  plan.price === 0
+                                    ? 'bg-emerald-100 text-emerald-800'
+                                    : 'bg-amber-100 text-amber-900 border border-amber-300'
+                                }`}
+                              >
+                                {plan.badge}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-[#6b8799] mt-0.5">{plan.desc}</p>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span
+                            className={`text-base font-black ${
+                              plan.price === 0 ? 'text-emerald-600' : 'text-[#118cd1]'
+                            }`}
+                          >
+                            {plan.price === 0 ? 'ฟรี' : `+฿${plan.price.toLocaleString()}`}
+                          </span>
+                          <span
+                            className={`w-5 h-5 rounded-full flex items-center justify-center border ${
+                              isSelected
+                                ? 'bg-[#118cd1] border-[#118cd1] text-white'
+                                : 'border-[#cbd5e1] bg-white'
+                            }`}
+                          >
+                            {isSelected && <Check className="w-3 h-3" />}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer: สรุปยอดรวม */}
+            <div className="bg-[#fef9ec] border-t border-[#eae3cf] px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <div className="text-[11px] font-bold text-[#6b8799]">
+                  {activeBoothObj.label} + {activeStorageObj.provider} ({activeStorageObj.label})
+                </div>
+                <div className="text-xl font-black text-[#0d3a57]">
+                  ยอดรวมทั้งสิ้น: <span className="text-[#118cd1]">฿{totalPackagePrice.toLocaleString()}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPackageModal(false)}
+                  className="px-4 py-2.5 rounded-xl font-bold text-xs text-[#6b8799] hover:bg-white cursor-pointer"
+                >
+                  ปิดหน้าต่าง
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    alert(
+                      `[ตัวอย่างหน้าจอเลือกแพ็กเกจ]\n• แพ็กเกจ: ${activeBoothObj.label} (฿${activeBoothObj.price.toLocaleString()})\n• Cloud & บิล: ${activeStorageObj.provider} - ${activeStorageObj.label} (${activeStorageObj.price === 0 ? 'ฟรี' : `฿${activeStorageObj.price}`})\n• ยอดรวม: ฿${totalPackagePrice.toLocaleString()}\n\n(ระบบชำระเงินผ่าน Apple In-App Purchase จะเชื่อมต่อในขั้นตอนถัดไป)`
+                    );
+                  }}
+                  className="px-6 py-2.5 rounded-xl font-black text-sm bg-[#118cd1] hover:bg-[#0e78b5] text-white shadow-md transition active:scale-95 cursor-pointer"
+                >
+                  ดำเนินการชำระเงิน (฿{totalPackagePrice.toLocaleString()})
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
