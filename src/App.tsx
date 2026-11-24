@@ -113,6 +113,24 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
     };
   }, [state]);
 
+  // ขอสิทธิ์ Persistent Storage เพื่อไม่ให้เบราว์เซอร์แอบลบข้อมูลออฟไลน์
+  useEffect(() => {
+    if (navigator.storage && typeof navigator.storage.persist === 'function') {
+      navigator.storage.persist().catch(() => {});
+    }
+  }, []);
+
+  // เตือนก่อนปิดแท็บ/รีเฟรช หากยังมีออเดอร์ค้างรอซิงค์ขึ้น Cloud
+  useEffect(() => {
+    if (pendingSyncCount <= 0) return;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [pendingSyncCount]);
+
   // Auto-switch to pos tab if staff
   useEffect(() => {
     if (isStaff && activeTab !== 'pos') {
