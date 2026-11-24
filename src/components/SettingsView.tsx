@@ -74,7 +74,7 @@ export const SettingsView: React.FC<Props> = ({
 
   // Modal เลือกแพ็กเกจ (UI Preview / Mockup)
   const [showPackageModal, setShowPackageModal] = useState(false);
-  const [selectedBoothPack, setSelectedBoothPack] = useState<string>('pack-7');
+  const [selectedBoothPack, setSelectedBoothPack] = useState<string>('pack-8');
   const [selectedStoragePlan, setSelectedStoragePlan] = useState<string>('gs-free');
   const boothCarouselRef = useRef<HTMLDivElement>(null);
   const storageCarouselRef = useRef<HTMLDivElement>(null);
@@ -102,11 +102,11 @@ export const SettingsView: React.FC<Props> = ({
   });
 
   const BOOTH_PACKS = [
-    { id: 'pack-1', label: '1 รอบออกบูธ', desc: 'เหมาะสำหรับทดลองออกบูธครั้งแรก', price: 69, quota: 1 as number | 'unlimited' },
-    { id: 'pack-3', label: '3 รอบออกบูธ', desc: 'เฉลี่ยรอบละ 43฿', price: 129, quota: 3 as number | 'unlimited' },
-    { id: 'pack-7', label: '7 รอบออกบูธ', desc: 'เฉลี่ยรอบละ 27฿', price: 189, badge: 'ยอดนิยม', quota: 7 as number | 'unlimited' },
-    { id: 'pack-15', label: '15 รอบออกบูธ', desc: 'เฉลี่ยรอบละ 17฿', price: 259, quota: 15 as number | 'unlimited' },
-    { id: 'pack-lifetime', label: 'POS ตลอดชีพ', desc: 'ออกบูธไม่จำกัดรอบ ใช้งานได้ตลอดไป', price: 2999, badge: 'คุ้มที่สุด', quota: 'unlimited' as number | 'unlimited' },
+    { id: 'pack-1', label: '1 รอบออกบูธ', desc: 'ทดลองออกบูธ · ไม่เกิน 15 วัน/งาน', price: 69, quota: 1 as number | 'unlimited' },
+    { id: 'pack-3', label: '3 รอบออกบูธ', desc: 'เฉลี่ยรอบละ 63฿ · ไม่เกิน 15 วัน/งาน', price: 189, quota: 3 as number | 'unlimited' },
+    { id: 'pack-8', label: '8 รอบออกบูธ', desc: 'เฉลี่ยรอบละ 57฿ · ไม่เกิน 15 วัน/งาน', price: 459, badge: 'ยอดนิยม', quota: 8 as number | 'unlimited' },
+    { id: 'pack-20', label: '20 รอบออกบูธ', desc: 'เฉลี่ยรอบละ 50฿ · ไม่เกิน 15 วัน/งาน', price: 999, quota: 20 as number | 'unlimited' },
+    { id: 'pack-unlimited', label: 'ออกบูธไม่จำกัดรอบ (รายปี)', desc: 'ออกบูธไม่จำกัดจำนวนรอบ · ไม่เกิน 15 วัน/งาน', price: 1690, badge: 'คุ้มที่สุด', quota: 'unlimited' as number | 'unlimited' },
   ];
 
   const STORAGE_PLANS = [
@@ -901,10 +901,10 @@ export const SettingsView: React.FC<Props> = ({
                 <div className="flex items-center justify-between gap-2">
                   <div>
                     <h4 className="text-sm font-black text-[#0d3a57]">
-                      1. เลือกจำนวนรอบออกบูธ
+                      1. เลือกจำนวนรอบออกบูธ (รายปี)
                     </h4>
                     <span className="text-[11px] font-bold text-[#6b8799]">
-                      ไม่มีรายเดือน · เลื่อนซ้าย-ขวาเพื่อเลือกแพ็กเกจ
+                      แต่ละ Event เลือกระยะเวลาได้ไม่เกิน 15 วัน · เลื่อนซ้าย-ขวาเพื่อเลือก
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
@@ -970,9 +970,10 @@ export const SettingsView: React.FC<Props> = ({
                         </div>
 
                         <div className="pt-2 border-t border-[#eae3cf]/70 flex items-baseline justify-between">
-                          <span className="text-[11px] font-bold text-[#6b8799]">ราคา</span>
+                          <span className="text-[11px] font-bold text-[#6b8799]">ราคาต่อปี</span>
                           <span className="text-lg font-black text-[#118cd1]">
                             ฿{pack.price.toLocaleString()}
+                            <span className="text-[11px] font-bold text-[#6b8799] ml-0.5">/ปี</span>
                           </span>
                         </div>
                       </button>

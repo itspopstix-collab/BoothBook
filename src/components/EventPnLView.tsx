@@ -57,6 +57,22 @@ const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, { label: string; badge: s
   other: { label: 'ค่าใช้จ่ายอื่นๆ', badge: 'bg-slate-100 text-slate-800' },
 };
 
+const MAX_EVENT_DAYS = 15;
+
+function addDaysIso(isoDate: string, days: number): string {
+  if (!isoDate) return isoDate;
+  const [y, m, d] = isoDate.split('-').map(Number);
+  if (!y || !m || !d) return isoDate;
+  const dt = new Date(Date.UTC(y, m - 1, d + days));
+  return dt.toISOString().slice(0, 10);
+}
+
+function isExceedingMaxEventDays(startDate: string, endDate: string): boolean {
+  if (!startDate || !endDate) return false;
+  const maxEnd = addDaysIso(startDate, MAX_EVENT_DAYS - 1);
+  return endDate > maxEnd;
+}
+
 export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => {
   const [selectedEventId, setSelectedEventId] = useState<string>(
     state.events[state.events.length - 1]?.id || ''
@@ -177,6 +193,10 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEvName.trim()) return;
+    if (isExceedingMaxEventDays(newEvStart, newEvEnd || newEvStart)) {
+      window.alert(`แต่ละ Event เลือกระยะเวลาได้ไม่เกิน ${MAX_EVENT_DAYS} วันครับ`);
+      return;
+    }
     const newId = 'ev-' + Date.now();
     // บันทึก Snapshot ของสูตรและล็อตวัตถุดิบ ณ วันที่สร้างบูธ เพื่อไม่ให้การแก้สูตรในอนาคตไปกระทบย้อนหลัง
     const snapshotRecipes = JSON.parse(JSON.stringify(state.recipes));
@@ -1300,6 +1320,36 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
     value: string
   ) => {
     if (!selectedEvent) return;
+    if (field === 'startDate') {
+      const maxEnd = addDaysIso(value, MAX_EVENT_DAYS - 1);
+      const nextEnd =
+        selectedEvent.endDate < value
+          ? value
+          : selectedEvent.endDate > maxEnd
+          ? maxEnd
+          : selectedEvent.endDate;
+      onUpdateState((prev) => ({
+        ...prev,
+        events: prev.events.map((ev) =>
+          ev.id === selectedEvent.id ? { ...ev, startDate: value, endDate: nextEnd } : ev
+        ),
+      }));
+      return;
+    }
+    if (field === 'endDate') {
+      if (value < selectedEvent.startDate) return;
+      if (isExceedingMaxEventDays(selectedEvent.startDate, value)) {
+        window.alert(`แต่ละ Event เลือกระยะเวลาได้ไม่เกิน ${MAX_EVENT_DAYS} วันครับ`);
+        const clamped = addDaysIso(selectedEvent.startDate, MAX_EVENT_DAYS - 1);
+        onUpdateState((prev) => ({
+          ...prev,
+          events: prev.events.map((ev) =>
+            ev.id === selectedEvent.id ? { ...ev, endDate: clamped } : ev
+          ),
+        }));
+        return;
+      }
+    }
     onUpdateState((prev) => ({
       ...prev,
       events: prev.events.map((ev) =>
@@ -1469,6 +1519,8 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
                     <input
                       type="date"
                       value={selectedEvent.endDate}
+                      min={selectedEvent.startDate}
+                      max={addDaysIso(selectedEvent.startDate, MAX_EVENT_DAYS - 1)}
                       onChange={(e) => handleUpdateEventDates('endDate', e.target.value)}
                       className="bg-transparent font-bold focus:outline-none"
                     />
@@ -3039,19 +3091,34 @@ const isBatchCollapsed = collapsedBatches[batch.id];
                     type="date"
                     value={newEvStart}
                     onChange={(e) => {
-                      setNewEvStart(e.target.value);
-                      if (newEvEnd < e.target.value) setNewEvEnd(e.target.value);
+                      const nextStart = e.target.value;
+                      setNewEvStart(nextStart);
+                      const maxEnd = addDaysIso(nextStart, MAX_EVENT_DAYS - 1);
+                      if (newEvEnd < nextStart) setNewEvEnd(nextStart);
+                      else if (newEvEnd > maxEnd) setNewEvEnd(maxEnd);
                     }}
                     className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-semibold"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#6b8799] mb-1">วันที่สิ้นสุดงาน *</label>
+                  <label className="block text-xs font-bold text-[#6b8799] mb-1">
+                    วันที่สิ้นสุดงาน * <span className="text-[10px] font-semibold text-[#118cd1]">(ไม่เกิน 15 วัน)</span>
+                  </label>
                   <input
                     type="date"
                     value={newEvEnd}
-                    onChange={(e) => setNewEvEnd(e.target.value)}
+                    min={newEvStart}
+                    max={addDaysIso(newEvStart, MAX_EVENT_DAYS - 1)}
+                    onChange={(e) => {
+                      const nextEnd = e.target.value;
+                      if (isExceedingMaxEventDays(newEvStart, nextEnd)) {
+                        window.alert(`แต่ละ Event เลือกระยะเวลาได้ไม่เกิน ${MAX_EVENT_DAYS} วันครับ`);
+                        setNewEvEnd(addDaysIso(newEvStart, MAX_EVENT_DAYS - 1));
+                      } else {
+                        setNewEvEnd(nextEnd);
+                      }
+                    }}
                     className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-semibold"
                     required
                   />
