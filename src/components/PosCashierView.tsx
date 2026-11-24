@@ -23,7 +23,7 @@ interface PosCashierViewProps {
 
 interface CartItem {
   id: string;
-  type: 'gelato' | 'affogato';
+  type: 'gelato';
   cups: number; // 1 or 2 flavors
   flavors: { name: string; category: FlavorCategory; image?: string }[];
   price: number;
@@ -34,7 +34,6 @@ const CATEGORIES: FlavorCategory[] = ['Original', 'Premium', 'Signature'];
 const PRICE_TABLE = {
   g1: { Original: 79, Premium: 89, Signature: 99 },
   g2: { Original: 40, Premium: 45, Signature: 50 },
-  aff: { Original: 79, Premium: 84, Signature: 89 },
 };
 
 export const PosCashierView: React.FC<PosCashierViewProps> = ({
@@ -42,7 +41,6 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
   onRecordSale,
   promptPayNumber = '0812345678',
 }) => {
-  const [selectedType, setSelectedType] = useState<'gelato' | 'affogato'>('gelato');
   const [flavorsPerCup, setFlavorsPerCup] = useState<1 | 2>(1);
   const [selectedPicks, setSelectedPicks] = useState<
     { name: string; category: FlavorCategory; image?: string }[]
@@ -72,20 +70,16 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
     }));
   }, [state.recipes]);
 
-  const requiredCount = selectedType === 'gelato' && flavorsPerCup === 2 ? 2 : 1;
+  const requiredCount = flavorsPerCup;
 
   const currentItemPrice = useMemo(() => {
     if (selectedPicks.length === 0) return 0;
-    if (selectedType === 'affogato') {
-      const cat = selectedPicks[0]?.category || 'Original';
-      return PRICE_TABLE.aff[cat] || 89;
-    }
     if (flavorsPerCup === 1) {
       const cat = selectedPicks[0]?.category || 'Original';
       return PRICE_TABLE.g1[cat] || 89;
     }
     return selectedPicks.reduce((sum, p) => sum + (PRICE_TABLE.g2[p.category] || 45), 0);
-  }, [selectedType, flavorsPerCup, selectedPicks]);
+  }, [flavorsPerCup, selectedPicks]);
 
   const cartTotal = useMemo(() => {
     return cart.reduce((sum, item) => sum + item.price, 0);
@@ -119,7 +113,7 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
 
     const newItem: CartItem = {
       id: `cart-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      type: selectedType,
+      type: 'gelato',
       cups: flavorsPerCup,
       flavors: [...selectedPicks],
       price: currentItemPrice,
@@ -208,71 +202,37 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* ซ้าย: เมนูรสชาติและตัวเลือก (8 คอลัมน์) */}
         <div className="lg:col-span-8 space-y-4">
-          {/* Controls: Type & Flavors per cup */}
-          <div className="bg-white p-4 rounded-2xl border border-[#eae3cf] shadow-sm space-y-3">
-            <div className="flex flex-wrap gap-2">
+          {/* Controls: Flavors per cup */}
+          <div className="bg-white p-4 rounded-2xl border border-[#eae3cf] shadow-sm">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => {
-                  setSelectedType('gelato');
-                  setSelectedPicks([]);
+                  setFlavorsPerCup(1);
+                  setSelectedPicks((prev) => prev.slice(0, 1));
                 }}
-                className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all ${
-                  selectedType === 'gelato'
+                className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all cursor-pointer ${
+                  flavorsPerCup === 1
                     ? 'bg-[#118cd1] text-white shadow-sm'
                     : 'bg-[#fef9ec] text-[#0d3a57] hover:bg-[#f6eed5]'
                 }`}
               >
-                🍨 Gelato (ไอศกรีม)
+                🍨 1 รสชาติ (1 Scoop)
               </button>
               <button
                 type="button"
                 onClick={() => {
-                  setSelectedType('affogato');
-                  setSelectedPicks([]);
+                  setFlavorsPerCup(2);
                 }}
-                className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all ${
-                  selectedType === 'affogato'
+                className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all cursor-pointer ${
+                  flavorsPerCup === 2
                     ? 'bg-[#118cd1] text-white shadow-sm'
                     : 'bg-[#fef9ec] text-[#0d3a57] hover:bg-[#f6eed5]'
                 }`}
               >
-                ☕ Affogato (กาแฟ+ไอติม)
+                🍨🍨 2 รสชาติ (2 Scoops)
               </button>
             </div>
-
-            {selectedType === 'gelato' && (
-              <div className="flex items-center gap-3 pt-2 border-t border-[#eae3cf]/60">
-                <span className="text-xs font-bold text-[#6b8799]">จำนวนรสชาติต่อถ้วย:</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFlavorsPerCup(1);
-                    setSelectedPicks((prev) => prev.slice(0, 1));
-                  }}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                    flavorsPerCup === 1
-                      ? 'bg-[#0d3a57] text-white'
-                      : 'bg-[#fef9ec] text-[#6b8799] hover:bg-[#f6eed5]'
-                  }`}
-                >
-                  1 รสชาติ (1 Scoop)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFlavorsPerCup(2);
-                  }}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                    flavorsPerCup === 2
-                      ? 'bg-[#0d3a57] text-white'
-                      : 'bg-[#fef9ec] text-[#6b8799] hover:bg-[#f6eed5]'
-                  }`}
-                >
-                  2 รสชาติ (2 Scoops)
-                </button>
-              </div>
-            )}
           </div>
 
           {/* Flavor Selection Grid by Category */}
@@ -282,9 +242,7 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
               if (catFlavors.length === 0) return null;
 
               const priceLabel =
-                selectedType === 'affogato'
-                  ? formatBaht(PRICE_TABLE.aff[cat] || 89)
-                  : flavorsPerCup === 1
+                flavorsPerCup === 1
                   ? formatBaht(PRICE_TABLE.g1[cat] || 89)
                   : `${formatBaht(PRICE_TABLE.g2[cat] || 45)}/scoop`;
 
