@@ -11,11 +11,19 @@ import {
   PackagingEventUsage,
 } from '../types';
 
-export const POS_SELLING_PRICE: Record<FlavorCategory, { single: number; half: number; affogato: number }> = {
+export const POS_SELLING_PRICE: Record<string, { single: number; half: number; affogato: number }> = {
   Original: { single: 79, half: 40, affogato: 79 },
   Premium: { single: 89, half: 45, affogato: 84 },
   Signature: { single: 99, half: 50, affogato: 89 },
 };
+
+export function getRecipeSellingPrice(recipe?: FlavorRecipe | null): number {
+  if (!recipe) return 0;
+  if (typeof recipe.sellingPrice === 'number' && !Number.isNaN(recipe.sellingPrice)) {
+    return recipe.sellingPrice;
+  }
+  return POS_SELLING_PRICE[recipe.category]?.single ?? 0;
+}
 
 export interface LotRemainingState {
   lotId: string;
@@ -304,7 +312,7 @@ export function calculateRecipeUnitCost(
     });
 
   const totalFullCupCost = ingredientCostPerFullCup + packagingCostPerCup;
-  const sellingPriceSingle = POS_SELLING_PRICE[recipe.category]?.single ?? 79;
+  const sellingPriceSingle = getRecipeSellingPrice(recipe);
   const grossProfitSingle = sellingPriceSingle - totalFullCupCost;
   const grossMarginPct = sellingPriceSingle > 0 ? (grossProfitSingle / sellingPriceSingle) * 100 : 0;
 

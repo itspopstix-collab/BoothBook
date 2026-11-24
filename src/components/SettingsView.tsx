@@ -35,6 +35,7 @@ export const SettingsView: React.FC<Props> = ({
   const [appsScriptUrl, setAppsScriptUrl] = useState(state.settings.appsScriptUrl);
   const [shopName, setShopName] = useState(state.settings.shopName);
   const [branchName, setBranchName] = useState(state.settings.branchName);
+  const [promptPayNumber, setPromptPayNumber] = useState(state.settings.promptPayNumber || '');
   const [testStatus, setTestStatus] = useState<{ type: 'ok' | 'err'; msg: string } | null>(null);
   const [testing, setTesting] = useState(false);
 
@@ -54,8 +55,9 @@ export const SettingsView: React.FC<Props> = ({
       settings: {
         sheetId: cleanedSheetId,
         appsScriptUrl: appsScriptUrl.trim(),
-        shopName: shopName.trim() || 'REFV Gelato',
+        shopName: shopName.trim() || 'BoothBook',
         branchName: branchName.trim() || 'Main',
+        promptPayNumber: promptPayNumber.trim(),
       },
     }));
 
@@ -77,7 +79,7 @@ export const SettingsView: React.FC<Props> = ({
       });
       setTestStatus({
         type: 'ok',
-        msg: `เชื่อมต่อ REFV POS สำเร็จ (${res.source}) — พบข้อมูลการขายทั้งหมด ${res.sales.length} ถ้วย`,
+        msg: `เชื่อมต่อ POS สำเร็จ (${res.source}) — พบข้อมูลการขายทั้งหมด ${res.sales.length} ชิ้น`,
       });
     } catch (err) {
       setTestStatus({
@@ -170,25 +172,25 @@ export const SettingsView: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* การเชื่อมต่อกับ REFV POS */}
+      {/* การเชื่อมต่อกับ POS */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#eae3cf] space-y-4">
         <div className="flex items-center gap-2.5">
           <Link2 className="w-5 h-5 text-[#118cd1]" />
           <div>
             <h2 className="text-lg font-extrabold text-[#0d3a57]">
-              การเชื่อมต่อกับระบบ REFV POS (Google Sheets & Apps Script)
+              การเชื่อมต่อกับระบบ POS (Google Sheets & Apps Script)
             </h2>
             <p className="text-xs text-[#6b8799]">
-              เชื่อมต่อกับชีท POS ของร้านเพื่อดึงยอดขาย จำนวนถ้วย และเก็บสำรองข้อมูลสูตร/สต็อกขึ้นชีท
+              ตั้งค่าชื่อร้าน เบอร์พร้อมเพย์สำหรับสแกน QR หน้า POS และตัวเลือกเชื่อมต่อ Google Sheet (ถ้ามี)
             </p>
           </div>
         </div>
 
         <form onSubmit={handleSaveSettings} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-bold text-[#6b8799] mb-1">
-                ชื่อร้าน / แบรนด์ (รองรับหลายร้านในอนาคต)
+                ชื่อร้าน / แบรนด์
               </label>
               <input
                 type="text"
@@ -206,11 +208,24 @@ export const SettingsView: React.FC<Props> = ({
                 className="w-full border-2 border-[#eae3cf] rounded-xl px-3.5 py-2 text-sm font-bold text-[#0d3a57]"
               />
             </div>
+            <div>
+              <label className="block text-xs font-bold text-[#6b8799] mb-1">
+                เบอร์พร้อมเพย์ / เลข 13 หลัก (สำหรับ QR POS)
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="เช่น 0812345678"
+                value={promptPayNumber}
+                onChange={(e) => setPromptPayNumber(e.target.value)}
+                className="w-full border-2 border-[#eae3cf] rounded-xl px-3.5 py-2 text-sm font-bold text-[#0d3a57]"
+              />
+            </div>
           </div>
 
           <div>
             <label className="block text-xs font-bold text-[#6b8799] mb-1">
-              Google Sheet ID (หรือวางลิงก์ Google Sheet ของ REFV POS ได้เลย)
+              Google Sheet ID (หรือวางลิงก์ Google Sheet ของ POS ได้เลย)
             </label>
             <input
               type="text"
@@ -223,7 +238,7 @@ export const SettingsView: React.FC<Props> = ({
 
           <div>
             <label className="block text-xs font-bold text-[#6b8799] mb-1">
-              Google Apps Script Web App URL (จาก REFV POS config.json)
+              Google Apps Script Web App URL (จาก POS config.json)
             </label>
             <input
               type="url"
@@ -247,7 +262,7 @@ export const SettingsView: React.FC<Props> = ({
               disabled={testing}
               className="bg-[#90d4ec]/30 hover:bg-[#90d4ec]/50 text-[#0d3a57] font-bold px-4 py-2.5 rounded-xl text-sm transition cursor-pointer"
             >
-              {testing ? 'กำลังทดสอบ...' : 'ทดสอบการเชื่อมต่อกับ REFV POS'}
+              {testing ? 'กำลังทดสอบ...' : 'ทดสอบการเชื่อมต่อกับ POS'}
             </button>
           </div>
         </form>
@@ -314,7 +329,7 @@ export const SettingsView: React.FC<Props> = ({
             onClick={() => {
               if (
                 window.confirm(
-                  'ต้องการล้างเฉพาะล็อตการซื้อแพ็กเกจจิ้งและงานออกบูธตัวอย่าง เพื่อเริ่มจดข้อมูลจริงใช่หรือไม่? (สูตรไอติมและราคาวัตถุดิบตั้งต้นจะยังคงอยู่)'
+                  'ต้องการล้างเฉพาะล็อตการซื้อแพ็กเกจจิ้งและงานออกบูธตัวอย่าง เพื่อเริ่มจดข้อมูลจริงใช่หรือไม่? (สูตรสินค้าและราคาวัตถุดิบตั้งต้นจะยังคงอยู่)'
                 )
               ) {
                 onUpdateState((prev) => clearDemoTransactionsOnly(prev));

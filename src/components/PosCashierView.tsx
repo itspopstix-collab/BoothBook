@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { AppDatabaseState, FlavorCategory, FlavorRecipe, PosSaleRow } from '../types';
+import { AppDatabaseState, PosSaleRow } from '../types';
+import { getRecipeSellingPrice } from '../services/fifoEngine';
 import { generatePromptPayPayload, generateQrDataUrl } from '../services/promptpay';
 import { recordPosSaleToSupabase } from '../services/supabase';
 import { formatBaht } from '../services/storage';
@@ -10,9 +11,10 @@ import {
   QrCode,
   Banknote,
   Plus,
+  Minus,
   RefreshCw,
-  Sparkles,
-  ArrowRight,
+  Tag,
+  Package,
 } from 'lucide-react';
 
 interface PosCashierViewProps {
@@ -23,26 +25,18 @@ interface PosCashierViewProps {
 
 interface CartItem {
   id: string;
-  type: 'gelato';
-  cups: number; // 1 or 2 flavors
-  flavors: { name: string; category: FlavorCategory; image?: string }[];
-  price: number;
+  productId: string;
+  name: string;
+  category: string;
+  unitPrice: number;
+  qty: number;
 }
-
-const PRICE_TABLE: Record<string, Record<string, number>> = {
-  g1: { Original: 79, Premium: 89, Signature: 99 },
-  g2: { Original: 40, Premium: 45, Signature: 50 },
-};
 
 export const PosCashierView: React.FC<PosCashierViewProps> = ({
   state,
   onRecordSale,
-  promptPayNumber = '0812345678',
+  promptPayNumber = '',
 }) => {
-  const [selectedPicks, setSelectedPicks] = useState<
-    { name: string; category: FlavorCategory; image?: string }[]
-  >([]);
-
   const [cart, setCart] = useState<CartItem[]>([]);
   const [payMethod, setPayMethod] = useState<'cash' | 'qr'>('qr');
   const [cashReceived, setCashReceived] = useState<number>(0);
@@ -57,35 +51,31 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
     );
   }, [state.events]);
 
-  // รายการสินค้าจากฐานข้อมูลจริง
-  const availableFlavors = useMemo(() => {
+  const products = useMemo(() => {
     return state.recipes.map((r) => ({
+      id: r.id,
       name: r.name,
-      category: (r.category as FlavorCategory) || 'Original',
+      category: r.category || 'ทั่วไป',
+      price: getRecipeSellingPrice(r),
+      unitLabel: r.unitLabel || 'ชิ้น',
       image: r.image,
     }));
   }, [state.recipes]);
 
-  // หมวดหมู่สินค้าสร้างแบบไดนามิกจากข้อมูลสินค้าจริง (ไม่ฝัง master data)
   const categories = useMemo(() => {
     const set = new Set<string>();
-    availableFlavors.forEach((f) => set.add(f.category || 'ทั่วไป'));
+    products.forEach((p) => set.add(p.category));
     return Array.from(set);
-  }, [availableFlavors]);
-
-  const requiredCount = 1;
-
-  const currentItemPrice = useMemo(() => {
-    if (selectedPicks.length === 0) return 0;
-    const cat = selectedPicks[0]?.category || 'Original';
-    return PRICE_TABLE.g1[cat] || 89;
-  }, [selectedPicks]);
+  }, [products]);
 
   const cartTotal = useMemo(() => {
-    return cart.reduce((sum, item) => sum + item.price, 0);
+    return cart.reduce((sum, item) => sum + item.unitPrice * item.qty, 0);
   }, [cart]);
 
-  // Generate PromptPay QR when in QR mode
+  const totalItems = useMemo(() => {
+    return cart.reduce((sum, item) => sum + item.qty, 0);
+  }, [cart]);
+
   useEffect(() => {
     if (payMethod === 'qr' && cartTotal > 0 && promptPayNumber) {
       const payload = generatePromptPayPayload(promptPayNumber, cartTotal);
@@ -95,32 +85,32 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
     }
   }, [payMethod, cartTotal, promptPayNumber]);
 
-  const handleToggleFlavor = (flavor: { name: string; category: FlavorCategory; image?: string }) => {
-    const existingIdx = selectedPicks.findIndex((p) => p.name === flavor.name);
-    if (existingIdx >= 0) {
-      setSelectedPicks((prev) => prev.filter((_, idx) => idx !== existingIdx));
-    } else {
-      if (selectedPicks.length >= requiredCount) {
-        setSelectedPicks([flavor]);
-      } else {
-        setSelectedPicks((prev) => [...prev, flavor]);
+  const handleAddProduct = (prod: (typeof products)[number]) => {
+    setCart((prev) => {
+      const existing = prev.find((c) => c.productId === prod.id);
+      if (existing) {
+        return prev.map((c) => (c.productId === prod.id ? { ...c, qty: c.qty + 1 } : c));
       }
-    }
+      return [
+        ...prev,
+        {
+          id: `cart-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          productId: prod.id,
+          name: prod.name,
+          category: prod.category,
+          unitPrice: prod.price,
+          qty: 1,
+        },
+      ];
+    });
   };
 
-  const handleAddToCart = () => {
-    if (selectedPicks.length !== requiredCount) return;
-
-    const newItem: CartItem = {
-      id: `cart-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      type: 'gelato',
-      cups: 1,
-      flavors: [...selectedPicks],
-      price: currentItemPrice,
-    };
-
-    setCart((prev) => [...prev, newItem]);
-    setSelectedPicks([]);
+  const handleChangeQty = (productId: string, delta: number) => {
+    setCart((prev) =>
+      prev
+        .map((c) => (c.productId === productId ? { ...c, qty: c.qty + delta } : c))
+        .filter((c) => c.qty > 0)
+    );
   };
 
   const handleConfirmOrder = async () => {
@@ -135,29 +125,28 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
         (activeEvent.posSales?.length || 0) + 1
       ).padStart(3, '0')}`;
 
-      for (let i = 0; i < cart.length; i++) {
-        const item = cart[i];
-        const saleRow: PosSaleRow = {
-          id: `pos-${activeEvent.id}-${Date.now()}-${i}`,
-          orderId: orderBatchId,
-          date: dateStr,
-          time: timeStr,
-          type: item.type,
-          flavorsPerCup: item.cups,
-          flavor1: item.flavors[0]?.name || '',
-          flavor2: item.flavors[1]?.name || '',
-          category1: item.flavors[0]?.category || 'Original',
-          category2: item.flavors[1]?.category || '',
-          payment: payMethod === 'qr' ? 'QR' : 'Cash',
-          amount: item.price,
-          discountAmount: 0,
-        };
+      let seq = 0;
+      for (const item of cart) {
+        for (let q = 0; q < item.qty; q++) {
+          const saleRow: PosSaleRow = {
+            id: `pos-${activeEvent.id}-${Date.now()}-${seq++}`,
+            orderId: orderBatchId,
+            date: dateStr,
+            time: timeStr,
+            type: 'item',
+            flavorsPerCup: 1,
+            flavor1: item.name,
+            flavor2: '',
+            category1: item.category,
+            category2: '',
+            payment: payMethod === 'qr' ? 'QR' : 'Cash',
+            amount: item.unitPrice,
+            discountAmount: 0,
+          };
 
-        // 1. เรียก callback อัปเดต state รวม
-        onRecordSale(saleRow);
-
-        // 2. ยิงบันทึกลง Supabase ตาราง pos_sales ทันที
-        await recordPosSaleToSupabase(saleRow, activeEvent.id);
+          onRecordSale(saleRow);
+          await recordPosSaleToSupabase(saleRow, activeEvent.id);
+        }
       }
 
       setSuccessToast(`บันทึกคำสั่งซื้อ #${orderBatchId} เรียบร้อย (${formatBaht(cartTotal)})`);
@@ -182,12 +171,12 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
           <div>
             <h1 className="text-lg font-black text-[#0d3a57]">แคชเชียร์ขายหน้าร้าน (POS)</h1>
             <p className="text-xs text-[#6b8799]">
-              อีเวนต์ปัจจุบัน: <span className="font-bold text-[#118cd1]">{activeEvent.name}</span> · ซิงค์ยอดขายตรงเข้า Supabase ทันที
+              อีเวนต์ปัจจุบัน: <span className="font-bold text-[#118cd1]">{activeEvent.name}</span> · ซิงค์ยอดขายเข้า Supabase อัตโนมัติ
             </p>
           </div>
         </div>
         {successToast && (
-          <div className="bg-[#1a9a5b] text-white text-xs font-bold px-4 py-2 rounded-full shadow-md animate-fade-in flex items-center gap-2">
+          <div className="bg-[#1a9a5b] text-white text-xs font-bold px-4 py-2 rounded-full shadow-md flex items-center gap-2">
             <CheckCircle className="w-4 h-4" />
             {successToast}
           </div>
@@ -195,80 +184,79 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* ซ้าย: เมนูสินค้า (8 คอลัมน์) */}
-        <div className="lg:col-span-8 space-y-4">
-          {/* Product Selection Grid by Category */}
-          <div className="space-y-6">
-            {availableFlavors.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-dashed border-[#eae3cf] p-10 text-center space-y-2">
-                <div className="text-sm font-black text-[#0d3a57]">ยังไม่มีรายการสินค้า</div>
-                <p className="text-xs text-[#6b8799]">
-                  ไปเพิ่มสินค้าและสูตรได้ที่แท็บ <b>"สูตร & สินค้า"</b> เพื่อเริ่มขายหน้าร้าน
-                </p>
-              </div>
-            ) : (
-              categories.map((cat) => {
-                const catFlavors = availableFlavors.filter((f) => (f.category || 'ทั่วไป') === cat);
-                if (catFlavors.length === 0) return null;
-
-                const priceLabel = formatBaht(PRICE_TABLE.g1[cat] || 89);
+        {/* ซ้าย: รายการสินค้า (8 คอลัมน์) */}
+        <div className="lg:col-span-8 space-y-6">
+          {products.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-dashed border-[#eae3cf] p-12 text-center space-y-2">
+              <Package className="w-10 h-10 text-[#6b8799]/50 mx-auto" />
+              <div className="text-sm font-black text-[#0d3a57]">ยังไม่มีรายการสินค้า</div>
+              <p className="text-xs text-[#6b8799]">
+                ไปเพิ่มสินค้า ราคาขาย และสูตรต้นทุนได้ที่แท็บ <b>"สูตร & สินค้า"</b> เพื่อเริ่มขายหน้าร้าน
+              </p>
+            </div>
+          ) : (
+            categories.map((cat) => {
+              const catProducts = products.filter((p) => p.category === cat);
+              if (catProducts.length === 0) return null;
 
               return (
-                <div key={cat} className="space-y-2">
+                <div key={cat} className="space-y-2.5">
                   <div className="flex items-center justify-between px-1">
                     <span className="font-extrabold text-[#0d3a57] text-sm flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4 text-[#118cd1]" />
-                      หมวด {cat}
+                      <Tag className="w-4 h-4 text-[#118cd1]" />
+                      {cat}
                     </span>
-                    <span className="text-xs font-bold text-[#118cd1] bg-[#118cd1]/10 px-2.5 py-0.5 rounded-full">
-                      {priceLabel}
+                    <span className="text-xs font-bold text-[#6b8799]">
+                      {catProducts.length} รายการ
                     </span>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {catFlavors.map((fl) => {
-                      const pickIdx = selectedPicks.findIndex((p) => p.name === fl.name);
-                      const isPicked = pickIdx >= 0;
+                    {catProducts.map((prod) => {
+                      const inCart = cart.find((c) => c.productId === prod.id);
 
                       return (
                         <button
-                          key={fl.name}
+                          key={prod.id}
                           type="button"
-                          onClick={() => handleToggleFlavor(fl)}
-                          className={`relative text-left p-3 rounded-2xl border transition-all duration-150 flex flex-col justify-between ${
-                            isPicked
+                          onClick={() => handleAddProduct(prod)}
+                          className={`relative text-left p-3 rounded-2xl border transition-all duration-150 flex flex-col justify-between cursor-pointer active:scale-95 ${
+                            inCart
                               ? 'border-[#118cd1] bg-[#118cd1]/5 ring-2 ring-[#118cd1] shadow-sm'
-                              : 'border-[#eae3cf] bg-white hover:border-[#118cd1]/40 shadow-sm'
+                              : 'border-[#eae3cf] bg-white hover:border-[#118cd1]/50 shadow-sm'
                           }`}
                         >
-                          {isPicked && (
-                            <span className="absolute top-2 right-2 w-6 h-6 rounded-full bg-[#118cd1] text-white text-xs font-black flex items-center justify-center shadow">
-                              ✓
+                          {inCart && (
+                            <span className="absolute top-2 right-2 min-w-6 h-6 px-1.5 rounded-full bg-[#118cd1] text-white text-xs font-black flex items-center justify-center shadow">
+                              {inCart.qty}
                             </span>
                           )}
 
-                          <div className="w-full aspect-square rounded-xl bg-[#90d4ec]/20 mb-2 overflow-hidden flex items-center justify-center">
-                            {fl.image ? (
+                          {prod.image && (
+                            <div className="w-full aspect-square rounded-xl bg-[#fef9ec] mb-2 overflow-hidden flex items-center justify-center">
                               <img
-                                src={fl.image}
-                                alt={fl.name}
+                                src={prod.image}
+                                alt={prod.name}
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
                                   (e.target as HTMLElement).style.display = 'none';
                                 }}
                               />
-                            ) : (
-                              <span className="text-3xl">🍨</span>
-                            )}
-                          </div>
-
-                          <div>
-                            <div className="font-bold text-xs text-[#0d3a57] line-clamp-2 leading-tight">
-                              {fl.name}
                             </div>
-                            <span className="inline-block mt-1 text-[10px] font-bold text-[#6b8799] bg-[#fef9ec] px-1.5 py-0.5 rounded">
-                              {fl.category}
-                            </span>
+                          )}
+
+                          <div className="space-y-1">
+                            <div className="font-bold text-sm text-[#0d3a57] line-clamp-2 leading-tight">
+                              {prod.name}
+                            </div>
+                            <div className="flex items-center justify-between pt-1">
+                              <span className="text-sm font-black text-[#118cd1]">
+                                {formatBaht(prod.price, 0)}
+                              </span>
+                              <span className="text-[10px] font-bold text-[#6b8799]">
+                                / {prod.unitLabel}
+                              </span>
+                            </div>
                           </div>
                         </button>
                       );
@@ -277,36 +265,7 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
                 </div>
               );
             })
-            )}
-          </div>
-
-          {/* Bottom Dock Bar for adding to cart */}
-          <div className="sticky bottom-4 z-10 bg-white/95 backdrop-blur-md p-4 rounded-2xl border border-[#eae3cf] shadow-xl flex items-center justify-between gap-4">
-            <div>
-              <div className="text-xs text-[#6b8799]">
-                รายการที่เลือก: <b className="text-[#0d3a57]">{selectedPicks.length}/{requiredCount}</b>
-              </div>
-              <div className="text-sm font-bold text-[#0d3a57] truncate max-w-xs sm:max-w-md">
-                {selectedPicks.length > 0
-                  ? selectedPicks.map((p) => p.name).join(' + ')
-                  : 'แตะเลือกสินค้าเพื่อใส่ตะกร้า'}
-              </div>
-            </div>
-
-            <button
-              type="button"
-              disabled={selectedPicks.length !== requiredCount}
-              onClick={handleAddToCart}
-              className={`px-6 py-3 rounded-xl font-black text-sm flex items-center gap-2 transition-all ${
-                selectedPicks.length === requiredCount
-                  ? 'bg-[#118cd1] hover:bg-[#0f7ebc] text-white shadow-md active:scale-95'
-                  : 'bg-[#e2e8f0] text-[#94a3b8] cursor-not-allowed'
-              }`}
-            >
-              <Plus className="w-4 h-4" />
-              ใส่ตะกร้า {selectedPicks.length === requiredCount && `(${formatBaht(currentItemPrice)})`}
-            </button>
-          </div>
+          )}
         </div>
 
         {/* ขวา: ตะกร้าและคิดเงิน (4 คอลัมน์) */}
@@ -314,13 +273,15 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
           <div className="flex items-center justify-between pb-3 border-b border-[#eae3cf]">
             <div className="flex items-center gap-2">
               <ShoppingBag className="w-5 h-5 text-[#118cd1]" />
-              <h2 className="font-black text-[#0d3a57]">บิลคำสั่งซื้อ (Order)</h2>
+              <h2 className="font-black text-[#0d3a57]">
+                บิลคำสั่งซื้อ {totalItems > 0 && `(${totalItems})`}
+              </h2>
             </div>
             {cart.length > 0 && (
               <button
                 type="button"
                 onClick={() => setCart([])}
-                className="text-xs text-rose-500 hover:text-rose-700 font-bold flex items-center gap-1"
+                className="text-xs text-rose-500 hover:text-rose-700 font-bold flex items-center gap-1 cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" /> ล้างบิล
               </button>
@@ -328,38 +289,44 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
           </div>
 
           {/* Cart items list */}
-          <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+          <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
             {cart.length === 0 ? (
               <div className="text-center py-8 text-xs text-[#6b8799]">
                 ยังไม่มีรายการในตะกร้า
                 <br />
-                แตะเลือกรสชาติและกด "ใส่ตะกร้า"
+                แตะที่สินค้าด้านซ้ายเพื่อเพิ่มเข้าบิล
               </div>
             ) : (
-              cart.map((item, idx) => (
+              cart.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-start justify-between gap-2 p-2.5 rounded-xl bg-[#fef9ec]/60 border border-[#eae3cf]/60"
+                  className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-[#fef9ec]/60 border border-[#eae3cf]/60"
                 >
-                  <div className="text-xs space-y-0.5">
-                    <span className="font-bold text-[#0d3a57]">
-                      🍨 Gelato ({item.cups} รส)
-                    </span>
-                    <div className="text-[#6b8799] line-clamp-1">
-                      {item.flavors.map((f) => f.name).join(' + ')}
+                  <div className="min-w-0 flex-1 text-xs space-y-0.5">
+                    <div className="font-bold text-[#0d3a57] truncate">{item.name}</div>
+                    <div className="text-[11px] text-[#6b8799]">
+                      {formatBaht(item.unitPrice, 0)} × {item.qty}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-black text-xs text-[#0d3a57]">
-                      {formatBaht(item.price)}
-                    </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <button
                       type="button"
-                      onClick={() => setCart((prev) => prev.filter((_, i) => i !== idx))}
-                      className="text-gray-400 hover:text-rose-500 p-0.5"
+                      onClick={() => handleChangeQty(item.productId, -1)}
+                      className="w-6 h-6 rounded-lg bg-white border border-[#eae3cf] flex items-center justify-center text-[#0d3a57] hover:bg-rose-50 hover:text-rose-600 cursor-pointer"
                     >
-                      ×
+                      <Minus className="w-3 h-3" />
                     </button>
+                    <span className="w-5 text-center text-xs font-black">{item.qty}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleChangeQty(item.productId, 1)}
+                      className="w-6 h-6 rounded-lg bg-white border border-[#eae3cf] flex items-center justify-center text-[#0d3a57] hover:bg-[#118cd1]/10 hover:text-[#118cd1] cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                    <span className="font-black text-xs text-[#0d3a57] w-14 text-right">
+                      {formatBaht(item.unitPrice * item.qty, 0)}
+                    </span>
                   </div>
                 </div>
               ))
@@ -379,13 +346,13 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
               <button
                 type="button"
                 onClick={() => setPayMethod('qr')}
-                className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${
+                className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   payMethod === 'qr'
                     ? 'bg-[#118cd1] text-white shadow-sm'
                     : 'bg-[#fef9ec] text-[#0d3a57] hover:bg-[#f6eed5]'
                 }`}
               >
-                <QrCode className="w-4 h-4" /> สแกน QR (PromptPay)
+                <QrCode className="w-4 h-4" /> สแกน QR
               </button>
               <button
                 type="button"
@@ -393,13 +360,13 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
                   setPayMethod('cash');
                   setCashReceived(cartTotal);
                 }}
-                className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${
+                className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   payMethod === 'cash'
                     ? 'bg-[#118cd1] text-white shadow-sm'
                     : 'bg-[#fef9ec] text-[#0d3a57] hover:bg-[#f6eed5]'
                 }`}
               >
-                <Banknote className="w-4 h-4" /> เงินสด (Cash)
+                <Banknote className="w-4 h-4" /> เงินสด
               </button>
             </div>
           </div>
@@ -424,7 +391,7 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
                     key={amt}
                     type="button"
                     onClick={() => setCashReceived(amt)}
-                    className="flex-1 py-1 text-[11px] font-bold bg-white border border-[#eae3cf] rounded-lg text-[#0d3a57] hover:bg-gray-50"
+                    className="flex-1 py-1 text-[11px] font-bold bg-white border border-[#eae3cf] rounded-lg text-[#0d3a57] hover:bg-gray-50 cursor-pointer"
                   >
                     {amt === cartTotal ? 'พอดี' : `${amt}฿`}
                   </button>
@@ -458,7 +425,9 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
                   <p className="text-[10px] text-[#6b8799]">พร้อมเพย์: {promptPayNumber}</p>
                 </>
               ) : (
-                <p className="text-xs text-[#6b8799]">กรุณาระบุเบอร์พร้อมเพย์ในหน้าตั้งค่า</p>
+                <p className="text-xs text-[#6b8799]">
+                  ยังไม่ได้ตั้งค่าเบอร์พร้อมเพย์ (ไปตั้งค่าได้ที่แท็บ "ตั้งค่า")
+                </p>
               )}
             </div>
           )}
@@ -472,7 +441,7 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
               (payMethod === 'cash' && cashReceived < cartTotal)
             }
             onClick={handleConfirmOrder}
-            className={`w-full py-3.5 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all ${
+            className={`w-full py-3.5 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
               cart.length > 0 &&
               !isSubmitting &&
               (payMethod === 'qr' || cashReceived >= cartTotal)

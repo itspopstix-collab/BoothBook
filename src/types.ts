@@ -1,11 +1,11 @@
-export type FlavorCategory = 'Original' | 'Premium' | 'Signature';
+export type FlavorCategory = string;
 
 export interface PackagingItem {
   id: string;
   name: string;
-  unit: string; // เช่น "ชิ้น", "ใบ", "คัน"
-  usagePerCup: number; // จำนวนที่ใช้ต่อการขาย 1 ถ้วยใน POS (เช่น แก้ว = 1, ช้อน = 1)
-  applyToType: 'all' | 'gelato' | 'affogato'; // ใช้กับทุกถ้วย หรือเฉพาะเมนู
+  unit: string; // เช่น "ชิ้น", "ใบ", "คัน", "กล่อง"
+  usagePerCup: number; // จำนวนที่ใช้ต่อการขาย 1 หน่วยใน POS
+  applyToType: string; // 'all' หรือระบุประเภทสินค้า
   minStockAlert?: number;
 }
 
@@ -23,7 +23,7 @@ export interface PackagingLot {
 export interface Ingredient {
   id: string;
   name: string;
-  category: 'dairy' | 'base' | 'flavoring' | 'topping' | 'beverage';
+  category: string;
   note?: string;
 }
 
@@ -62,29 +62,27 @@ export interface FlavorProductionRun {
 
 export interface FlavorRecipe {
   id: string;
-  name: string; // ชื่อรสชาติตรงกับใน REFV POS เช่น "Holy Cow!", "Matcha Snob"
-  category: FlavorCategory;
+  name: string; // ชื่อสินค้า / เมนู
+  category: FlavorCategory; // หมวดหมู่สินค้า (ตั้งชื่อได้อิสระ)
+  sellingPrice?: number; // ราคาขายต่อหน่วย (บาท)
+  unitLabel?: string; // หน่วยขาย เช่น "ชิ้น", "แก้ว", "กล่อง", "ชุด"
   image?: string;
   mode: 'per_cup' | 'per_batch';
-  batchYieldCups: number; // จำนวนถ้วยต่อหม้อ (คำนวณอัตโนมัติจาก กรัม/หม้อ ÷ กรัม/ถ้วย หรือกำหนดเอง)
+  batchYieldCups: number; // จำนวนชิ้น/หน่วยที่ได้ต่อ 1 ล็อตผลิต
   /**
-   * น้ำหนักเนื้อไอติมที่ได้ต่อ 1 หม้อปั่น (กรัม/หม้อ)
-   * หากไม่ระบุ (หรือเป็น 0) ระบบจะใช้ผลรวมน้ำหนักกรัมของวัตถุดิบทั้งหมดในสูตรเป็นน้ำหนักต่อหม้ออัตโนมัติ
+   * น้ำหนัก/ปริมาณรวมที่ได้ต่อ 1 ล็อตผลิต (กรัม)
+   * หากไม่ระบุ (หรือเป็น 0) ระบบจะใช้ผลรวมน้ำหนักกรัมของวัตถุดิบทั้งหมดในสูตรอัตโนมัติ
    */
   batchYieldGrams?: number;
   /**
-   * น้ำหนักเนื้อไอติมที่ตักเสิร์ฟต่อ 1 ถ้วย เมื่อสั่ง 1 รส (กรัม/ถ้วย) เช่น 80 กรัม หรือ 100 กรัม
+   * น้ำหนัก/ปริมาณต่อ 1 ชิ้น/หน่วยขาย (กรัม)
    */
   gramsPerCup?: number;
-  /**
-   * น้ำหนักเนื้อไอติมที่ตักต่อ 1 รส เมื่อลูกค้าสั่ง 2 รสใน 1 ถ้วย (กรัม/รส) เช่น 40 กรัม หรือ 50 กรัม
-   */
   gramsPerHalfCup?: number;
-  halfScoopRatio: number; // สัดส่วนการใช้เนื้อไอติมเมื่อลูกค้าสั่ง 2 รสใน 1 ถ้วย (ค่าเริ่มต้น 0.50 ของ 1 ถ้วย)
+  halfScoopRatio: number;
   ingredients: RecipeIngredientLine[];
   /**
-   * รายการแต่ละ "ครั้งที่ทำ / เติม Stock" ของรสชาตินี้
-   * เนื่องจากแต่ละครั้งที่ทำอาจใช้ปริมาณกรัมของวัตถุดิบไม่เท่ากัน หรือใช้วัตถุดิบคนละล็อต
+   * รายการแต่ละ "รอบการผลิต / เติม Stock" ของสินค้านี้
    */
   productionRuns?: FlavorProductionRun[];
   notes?: string;

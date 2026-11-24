@@ -33,7 +33,7 @@ interface Props {
 }
 
 const resolveImageUrl = (imgUrl?: string) => {
-  if (!imgUrl) return './images/holy-cow.png';
+  if (!imgUrl) return '';
   if (imgUrl.startsWith('http://') || imgUrl.startsWith('https://')) return imgUrl;
   if (imgUrl.startsWith('/')) return '.' + imgUrl;
   return './' + imgUrl;
@@ -41,20 +41,22 @@ const resolveImageUrl = (imgUrl?: string) => {
 
 export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) => {
   const [selectedRecipeId, setSelectedRecipeId] = useState<string>(state.recipes[0]?.id || '');
-  // 'master' = แก้สูตรตั้งต้นของรสนั้น, '<runId>' = แก้ปริมาณกรัม/ล็อตของ "ครั้งที่ทำ / เติม Stock" รอบนั้นโดยเฉพาะ
+  // 'master' = แก้สูตรตั้งต้นของสินค้านี้, '<runId>' = แก้ปริมาณกรัม/ล็อตของ "รอบการผลิต / เติม Stock" รอบนั้นโดยเฉพาะ
   const [selectedRunId, setSelectedRunId] = useState<string>('master');
   const [syncingFlavors, setSyncingFlavors] = useState(false);
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
 
-  // Modal เพิ่มรสชาติใหม่
+  // Modal เพิ่มสินค้าใหม่
   const [showNewFlavorModal, setShowNewFlavorModal] = useState(false);
   const [newFlavorName, setNewFlavorName] = useState('');
-  const [newFlavorCat, setNewFlavorCat] = useState<FlavorCategory>('Original');
+  const [newFlavorCat, setNewFlavorCat] = useState<FlavorCategory>('ทั่วไป');
+  const [newFlavorPrice, setNewFlavorPrice] = useState<string>('0');
+  const [newFlavorUnit, setNewFlavorUnit] = useState<string>('ชิ้น');
 
   // Modal เพิ่มวัตถุดิบใหม่พร้อมใส่ล็อตราคาซื้อแรกได้ทันทีจากหน้าสูตร
   const [showQuickNewIngModal, setShowQuickNewIngModal] = useState(false);
   const [newIngName, setNewIngName] = useState('');
-  const [newIngCat, setNewIngCat] = useState<Ingredient['category']>('flavoring');
+  const [newIngCat, setNewIngCat] = useState<Ingredient['category']>('วัตถุดิบหลัก');
   const [newIngVendor, setNewIngVendor] = useState('');
   const [newIngWeight, setNewIngWeight] = useState('1000');
   const [newIngPrice, setNewIngPrice] = useState('');
@@ -74,7 +76,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
     try {
       const cloudFlavors = await fetchPosFlavorsFromCloud(state.settings);
       if (cloudFlavors.length === 0) {
-        setSyncNotice('เชื่อมต่อสำเร็จ (ใช้รายการรสชาติมาตรฐาน 8 รสของ REFV POS)');
+        setSyncNotice('เชื่อมต่อสำเร็จ (ใช้รายการสินค้ามาตรฐาน 8 รสของ POS)');
         setSyncingFlavors(false);
         return;
       }
@@ -90,7 +92,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
               id: 'rec-' + Date.now() + '-' + addedCount,
               name: cf.name,
               category: cf.category,
-              image: '/images/holy-cow.png',
+              image: '/images/',
               mode: 'per_cup',
               batchYieldCups: 1,
               halfScoopRatio: 0.5,
@@ -109,8 +111,8 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
 
       setSyncNotice(
         addedCount > 0
-          ? `ดึงรสชาติใหม่จากชีท REFV POS เพิ่ม ${addedCount} รสชาติเรียบร้อยแล้ว!`
-          : `รสชาติในระบบตรงกับชีท REFV POS ทั้งหมด (${cloudFlavors.length} รสชาติ) แล้ว`
+          ? `ดึงสินค้าใหม่จากชีท POS เพิ่ม ${addedCount} สินค้าเรียบร้อยแล้ว!`
+          : `สินค้าในระบบตรงกับชีท POS ทั้งหมด (${cloudFlavors.length} สินค้า) แล้ว`
       );
     } finally {
       setSyncingFlavors(false);
@@ -124,8 +126,9 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
     const newRec: FlavorRecipe = {
       id: newId,
       name: newFlavorName.trim(),
-      category: newFlavorCat,
-      image: '/images/holy-cow.png',
+      category: newFlavorCat.trim() || 'ทั่วไป',
+      sellingPrice: Math.max(0, parseFloat(newFlavorPrice) || 0),
+      unitLabel: newFlavorUnit.trim() || 'ชิ้น',
       mode: 'per_cup',
       batchYieldCups: 1,
       halfScoopRatio: 0.5,
@@ -137,6 +140,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
     }));
     setSelectedRecipeId(newId);
     setNewFlavorName('');
+    setNewFlavorPrice('0');
     setShowNewFlavorModal(false);
   };
 
@@ -223,7 +227,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
       date: todayStr,
       label:
         nextRunNo === 1
-          ? `ครั้งที่ 1 (ปั่นรอบแรก)`
+          ? `ครั้งที่ 1 (ผลิตรอบแรก)`
           : `ครั้งที่ ${nextRunNo} (เติม Stock)`,
       batchYieldGrams: selectedRecipe.batchYieldGrams,
       ingredients: JSON.parse(JSON.stringify(sourceLines)),
@@ -472,13 +476,13 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
 
   return (
     <div className="space-y-6">
-      {/* ส่วนหัว: สรุปต้นทุนต่อถ้วยของทุกรสชาติ */}
+      {/* ส่วนหัว: สรุปต้นทุนต่อชิ้นของทุกสินค้า */}
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-[#eae3cf]">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 className="text-lg font-extrabold text-[#0d3a57] flex items-center gap-2">
               <IceCream className="w-5 h-5 text-[#118cd1]" />
-              สูตรไอติมแต่ละรสชาติ & ต้นทุนต่อถ้วย (Flavor BOM & Cost per Cup)
+              สูตรสินค้าแต่ละสินค้า & ต้นทุนต่อชิ้น (Flavor BOM & Cost per Cup)
             </h2>
             <p className="text-sm text-[#6b8799] mt-0.5">
               สามารถเพิ่มวัตถุดิบใหม่ และเลือกระบุได้ว่าแต่ละวัตถุดิบจะดึงราคาจาก <b>การซื้อครั้งไหน (Lot ไหน)</b>
@@ -501,14 +505,14 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
               <RefreshCw
                 className={`w-3.5 h-3.5 text-[#118cd1] ${syncingFlavors ? 'animate-spin' : ''}`}
               />
-              Sync รสชาติจากชีท REFV POS
+              Sync สินค้าจากชีท POS
             </button>
 
             <button
               onClick={() => setShowNewFlavorModal(true)}
               className="inline-flex items-center gap-2 bg-[#118cd1] hover:bg-[#0e78b5] text-white font-bold px-3.5 py-2 rounded-xl text-xs transition cursor-pointer"
             >
-              <Plus className="w-3.5 h-3.5" /> เพิ่มรสชาติใหม่
+              <Plus className="w-3.5 h-3.5" /> เพิ่มสินค้าใหม่
             </button>
           </div>
         </div>
@@ -520,7 +524,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
           </div>
         )}
 
-        {/* การ์ดแสดงรสชาติทั้ง 8+ รส พร้อมต้นทุนต่อถ้วย */}
+        {/* การ์ดแสดงสินค้าทั้ง 8+ รส พร้อมต้นทุนต่อชิ้น */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mt-4">
           {state.recipes.map((rec) => {
             const cost = calculateRecipeUnitCost(rec, state, sim);
@@ -541,7 +545,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                     src={resolveImageUrl(rec.image)}
                     alt={rec.name}
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = './images/holy-cow.png';
+                      (e.target as HTMLImageElement).src = './images/';
                       (e.target as HTMLImageElement).style.opacity = '0.3';
                     }}
                     className="w-14 h-14 rounded-xl object-cover bg-[#90d4ec]/30 shrink-0 border border-[#eae3cf]"
@@ -554,28 +558,28 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                       {rec.name}
                     </h3>
                     <p className="text-[11px] text-[#6b8799]">
-                      น้ำหนัก {cost.gramsPerFullCup.toFixed(1)} กรัม/ถ้วย
+                      น้ำหนัก {cost.gramsPerFullCup.toFixed(1)} กรัม/ชิ้น
                     </p>
                   </div>
                 </div>
 
                 <div className="mt-3 pt-2.5 border-t border-[#eae3cf] space-y-1 text-xs">
                   <div className="flex justify-between text-[#6b8799]">
-                    <span>ทุนเนื้อไอติม (1 รส):</span>
+                    <span>ทุนวัตถุดิบ (1 ชิ้น):</span>
                     <b className="text-[#0d3a57]">{formatBaht(cost.ingredientCostPerFullCup)}</b>
                   </div>
                   <div className="flex justify-between text-[#6b8799]">
-                    <span>ทุนแพ็กเกจจิ้ง (แก้ว+ช้อน):</span>
+                    <span>ทุนบรรจุภัณฑ์:</span>
                     <b className="text-[#0d3a57]">{formatBaht(cost.packagingCostPerCup)}</b>
                   </div>
                   <div className="flex justify-between items-baseline pt-1 border-t border-dashed border-[#eae3cf]">
-                    <span className="font-bold text-[#0d3a57]">ต้นทุนรวม/ถ้วย:</span>
+                    <span className="font-bold text-[#0d3a57]">ต้นทุนรวม/ชิ้น:</span>
                     <span className="text-base font-black text-[#118cd1]">
                       {formatBaht(cost.totalFullCupCost)}
                     </span>
                   </div>
                   <div className="flex justify-between text-[11px] text-[#1a9a5b] font-bold">
-                    <span>กำไรต่อถ้วย:</span>
+                    <span>กำไรต่อชิ้น:</span>
                     <span>
                       +{formatBaht(cost.grossProfitSingle)} ({cost.grossMarginPct.toFixed(0)}%)
                     </span>
@@ -587,7 +591,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
         </div>
       </div>
 
-      {/* ส่วนแก้ไขสูตรของรสชาติที่เลือก */}
+      {/* ส่วนแก้ไขสูตรของสินค้าที่เลือก */}
       {selectedRecipe && selectedCost && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* ซ้าย (2 คอลัมน์): ตารางวัตถุดิบในสูตร พร้อมตัวเลือกว่าใช้การซื้อครั้งไหน */}
@@ -598,7 +602,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                   src={resolveImageUrl(selectedRecipe.image)}
                   alt={selectedRecipe.name}
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = './images/holy-cow.png';
+                    (e.target as HTMLImageElement).src = './images/';
                     (e.target as HTMLImageElement).style.opacity = '0.3';
                   }}
                   className="w-12 h-12 rounded-xl object-cover bg-[#90d4ec]/30 border border-[#eae3cf]"
@@ -607,13 +611,43 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                   <h3 className="text-lg font-extrabold text-[#0d3a57]">
                     สูตรการผลิต: {selectedRecipe.name}
                   </h3>
-                  <p className="text-xs text-[#6b8799]">
-                    เลือก <b>การซื้อครั้งไหน (Lot)</b> และปรับปริมาณกรัมเพื่อดูต้นทุนต่อถ้วยตามราคาวัตถุดิบรอบนั้นๆ
-                  </p>
+                  <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs">
+                    <label className="flex items-center gap-1 bg-[#fef9ec] px-2.5 py-1 rounded-lg border border-[#eae3cf]">
+                      <span className="text-[#6b8799] font-bold">ราคาขาย (฿):</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={selectedRecipe.sellingPrice ?? selectedCost.sellingPriceSingle}
+                        onChange={(e) =>
+                          handleUpdateRecipeField('sellingPrice', Math.max(0, parseFloat(e.target.value) || 0))
+                        }
+                        className="w-16 bg-white border border-[#eae3cf] rounded px-1.5 py-0.5 font-black text-[#118cd1] text-right"
+                      />
+                    </label>
+                    <label className="flex items-center gap-1 bg-[#fef9ec] px-2.5 py-1 rounded-lg border border-[#eae3cf]">
+                      <span className="text-[#6b8799] font-bold">หมวดหมู่:</span>
+                      <input
+                        type="text"
+                        value={selectedRecipe.category || ''}
+                        onChange={(e) => handleUpdateRecipeField('category', e.target.value)}
+                        className="w-24 bg-white border border-[#eae3cf] rounded px-1.5 py-0.5 font-bold text-[#0d3a57]"
+                      />
+                    </label>
+                    <label className="flex items-center gap-1 bg-[#fef9ec] px-2.5 py-1 rounded-lg border border-[#eae3cf]">
+                      <span className="text-[#6b8799] font-bold">หน่วยขาย:</span>
+                      <input
+                        type="text"
+                        value={selectedRecipe.unitLabel || 'ชิ้น'}
+                        onChange={(e) => handleUpdateRecipeField('unitLabel', e.target.value)}
+                        className="w-16 bg-white border border-[#eae3cf] rounded px-1.5 py-0.5 font-bold text-[#0d3a57]"
+                      />
+                    </label>
+                  </div>
                 </div>
               </div>
 
-              {/* เลือกโหมดการกรอกสูตร: ต่อ 1 ถ้วย หรือ ต่อ 1 หม้อปั่น */}
+              {/* เลือกโหมดการกรอกสูตร: ต่อ 1 ชิ้น หรือ ต่อ 1 ล็อตผลิต */}
               <div className="flex items-center gap-2 bg-[#fef9ec] p-1.5 rounded-xl border border-[#eae3cf] text-xs font-bold">
                 <button
                   onClick={() => {
@@ -626,7 +660,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                       : 'text-[#6b8799]'
                   }`}
                 >
-                  กรอกสูตรต่อ 1 ถ้วย
+                  กรอกสูตรต่อ 1 ชิ้น
                 </button>
                 <button
                   onClick={() => {
@@ -644,12 +678,12 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                       : 'text-[#6b8799]'
                   }`}
                 >
-                  กรอกสูตรต่อ 1 หม้อปั่น (Batch)
+                  กรอกสูตรต่อ 1 ล็อตผลิต (Batch)
                 </button>
               </div>
             </div>
 
-            {/* แถบเลือก "ครั้งที่ทำ / การปั่นเติม Stock" ของรสชาตินี้ (แต่ละครั้งใช้ปริมาณกรัมไม่เท่ากันได้) */}
+            {/* แถบเลือก "ครั้งที่ทำ / การผลิตเติม Stock" ของสินค้านี้ (แต่ละครั้งใช้ปริมาณกรัมไม่เท่ากันได้) */}
             <div className="bg-[#fef9ec] p-3.5 rounded-xl border border-[#eae3cf] space-y-2.5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-xs font-extrabold text-[#0d3a57]">
@@ -739,18 +773,18 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
               <div className="bg-[#90d4ec]/20 p-4 rounded-xl border border-[#90d4ec] space-y-3 text-xs">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-extrabold text-sm text-[#0d3a57]">
-                    🥣 โหมดคำนวณต่อหม้อปั่น (คำนวณตามน้ำหนักกรัม)
+                    🥣 โหมดคำนวณต่อล็อตผลิต (คำนวณตามน้ำหนักกรัม)
                   </span>
                   <span className="px-2.5 py-1 rounded-lg bg-white border border-[#90d4ec] font-extrabold text-[#118cd1]">
-                    ต้นทุนเนื้อไอติม: {formatBaht(selectedCost.costPerGramOfFinishedIceCream, 4)} /
-                    กรัม (ตักได้ ~{selectedCost.yieldCups.toFixed(1)} ถ้วย/หม้อ)
+                    ต้นทุนวัตถุดิบ: {formatBaht(selectedCost.costPerGramOfFinishedIceCream, 4)} /
+                    กรัม (ตักได้ ~{selectedCost.yieldCups.toFixed(1)} ชิ้น/หม้อ)
                   </span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <label className="bg-white p-2.5 rounded-xl border border-[#eae3cf] flex flex-col justify-between gap-1">
                     <span className="font-bold text-[#6b8799]">
-                      1. น้ำหนักรวมที่ได้ต่อ 1 หม้อปั่น:
+                      1. น้ำหนักรวมที่ได้ต่อ 1 ล็อตผลิต:
                     </span>
                     <div className="flex items-center gap-1.5">
                       <input
@@ -782,7 +816,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
 
                   <label className="bg-white p-2.5 rounded-xl border border-[#eae3cf] flex flex-col justify-between gap-1">
                     <span className="font-bold text-[#6b8799]">
-                      2. ปริมาณตักเสิร์ฟต่อ 1 ถ้วย (สั่ง 1 รส):
+                      2. ปริมาณปริมาณต่อ 1 ชิ้น (สั่ง 1 ชิ้น):
                     </span>
                     <div className="flex items-center gap-1.5">
                       <input
@@ -796,16 +830,16 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                         }}
                         className="w-full bg-[#fef9ec] border-2 border-[#118cd1] focus:outline-none rounded-lg px-2.5 py-1.5 text-right font-black text-[#118cd1]"
                       />
-                      <span className="font-bold text-[#0d3a57] shrink-0">กรัม / ถ้วย</span>
+                      <span className="font-bold text-[#0d3a57] shrink-0">กรัม / ชิ้น</span>
                     </div>
                     <span className="text-[10px] text-[#118cd1] font-bold">
-                      = ต้นทุน {formatBaht(selectedCost.ingredientCostPerFullCup)} / ถ้วย
+                      = ต้นทุน {formatBaht(selectedCost.ingredientCostPerFullCup)} / ชิ้น
                     </span>
                   </label>
 
                   <label className="bg-white p-2.5 rounded-xl border border-[#eae3cf] flex flex-col justify-between gap-1">
                     <span className="font-bold text-[#6b8799]">
-                      3. ปริมาณตักต่อรส (เมื่อสั่ง 2 รสใน 1 ถ้วย):
+                      3. ปริมาณตักต่อรส (เมื่อสั่ง 2 ชิ้นใน 1 ชิ้น):
                     </span>
                     <div className="flex items-center gap-1.5">
                       <input
@@ -834,7 +868,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
               </div>
             )}
 
-            {/* ตารางส่วนผสมของรสชาตินี้ พร้อม Dropdown เลือกล็อตการซื้อ */}
+            {/* ตารางส่วนผสมของสินค้านี้ พร้อม Dropdown เลือกล็อตการซื้อ */}
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
@@ -846,10 +880,10 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                     <th className="py-2.5 px-2.5 text-right">ราคา/กรัม</th>
                     <th className="py-2.5 px-2.5 text-right">
                       {selectedRecipe.mode === 'per_cup'
-                        ? 'ปริมาณ (กรัม/ถ้วย)'
+                        ? 'ปริมาณ (กรัม/ชิ้น)'
                         : `ปริมาณ/หม้อ (รวม ${selectedCost.effectiveBatchGrams.toLocaleString()} g)`}
                     </th>
-                    <th className="py-2.5 px-2.5 text-right">ต้นทุน/ถ้วย</th>
+                    <th className="py-2.5 px-2.5 text-right">ต้นทุน/ชิ้น</th>
                     <th className="py-2.5 px-2 text-center">ลบ</th>
                   </tr>
                 </thead>
@@ -929,10 +963,10 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                 <tfoot>
                   <tr className="bg-[#fef9ec] font-extrabold text-[#0d3a57] border-t-2 border-[#eae3cf]">
                     <td colSpan={3} className="py-3 px-2.5">
-                      รวมต้นทุนเนื้อไอติมต่อ 1 ถ้วย ({selectedRecipe.name})
+                      รวมต้นทุนวัตถุดิบต่อ 1 ชิ้น ({selectedRecipe.name})
                     </td>
                     <td className="py-3 px-2.5 text-right">
-                      {selectedCost.gramsPerFullCup.toFixed(1)} g / ถ้วย
+                      {selectedCost.gramsPerFullCup.toFixed(1)} g / ชิ้น
                     </td>
                     <td className="py-3 px-2.5 text-right text-base text-[#118cd1]">
                       {formatBaht(selectedCost.ingredientCostPerFullCup, 2)}
@@ -1028,16 +1062,16 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
             </div>
           </div>
 
-          {/* ขวา (1 คอลัมน์): บัตรสรุปต้นทุนรวมต่อถ้วย (1 รส vs 2 รส + แพ็กเกจจิ้ง) */}
+          {/* ขวา (1 คอลัมน์): บัตรสรุปต้นทุนรวมต่อชิ้น (1 ชิ้น vs 2 ชิ้น + แพ็กเกจจิ้ง) */}
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-[#eae3cf] space-y-4">
             <h3 className="font-extrabold text-[#0d3a57] flex items-center gap-2">
               <Calculator className="w-5 h-5 text-[#118cd1]" />
-              สรุปโครงสร้างต้นทุนต่อถ้วย
+              สรุปโครงสร้างต้นทุนต่อชิ้น
             </h3>
 
             <div className="bg-[#fef9ec] rounded-xl p-4 border border-[#eae3cf] space-y-2.5 text-sm">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-[#6b8799]">หมวดราคาใน REFV POS:</span>
+                <span className="text-xs font-bold text-[#6b8799]">หมวดราคาใน POS:</span>
                 <select
                   value={selectedRecipe.category}
                   onChange={(e) =>
@@ -1052,7 +1086,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
               </div>
 
               <div className="flex justify-between text-xs pt-2 border-t border-[#eae3cf]">
-                <span className="text-[#6b8799]">1. ต้นทุนเนื้อไอติม (สั่ง 1 รสเต็มถ้วย):</span>
+                <span className="text-[#6b8799]">1. ต้นทุนวัตถุดิบ (สั่ง 1 ชิ้นเต็มถ้วย):</span>
                 <b className="text-[#0d3a57]">
                   {formatBaht(selectedCost.ingredientCostPerFullCup)}
                 </b>
@@ -1060,7 +1094,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
 
               <div className="flex justify-between text-xs">
                 <span className="text-[#6b8799]">
-                  • กรณีลูกค้าสั่ง 2 รสในถ้วยเดียว (ครึ่งถ้วย):
+                  • กรณีลูกค้าสั่ง 2 ชิ้นในถ้วยเดียว (ครึ่งถ้วย):
                 </span>
                 <b className="text-[#0d3a57]">
                   {formatBaht(selectedCost.ingredientCostPerHalfCup)}
@@ -1071,7 +1105,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                 <div className="flex justify-between text-xs font-bold text-[#0d3a57]">
                   <span className="flex items-center gap-1">
                     <Package className="w-3.5 h-3.5 text-[#118cd1]" />
-                    2. ต้นทุนแพ็กเกจจิ้งต่อ 1 ถ้วย (FIFO):
+                    2. ต้นทุนแพ็กเกจจิ้งต่อ 1 ชิ้น (FIFO):
                   </span>
                   <span>{formatBaht(selectedCost.packagingCostPerCup)}</span>
                 </div>
@@ -1089,29 +1123,29 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
               </div>
 
               <div className="pt-3 border-t-2 border-[#eae3cf] flex justify-between items-baseline">
-                <span className="font-extrabold text-[#0d3a57]">รวมต้นทุนทั้งสิ้น / 1 ถ้วย:</span>
+                <span className="font-extrabold text-[#0d3a57]">รวมต้นทุนทั้งสิ้น / 1 ชิ้น:</span>
                 <span className="text-xl font-black text-[#118cd1]">
                   {formatBaht(selectedCost.totalFullCupCost)}
                 </span>
               </div>
             </div>
 
-            {/* เปรียบเทียบกับราคาขายใน REFV POS */}
+            {/* เปรียบเทียบกับราคาขายใน POS */}
             <div className="bg-emerald-50/70 rounded-xl p-4 border border-emerald-200 space-y-2">
               <div className="flex items-center gap-1.5 text-xs font-extrabold text-emerald-800">
                 <Sparkles className="w-4 h-4 text-emerald-600" />
-                กำไรต่อถ้วยเมื่อขายใน REFV POS
+                กำไรต่อชิ้นเมื่อขายใน POS
               </div>
               <div className="flex justify-between text-xs">
-                <span className="text-emerald-900">ราคาขาย 1 รส ({selectedRecipe.category}):</span>
+                <span className="text-emerald-900">ราคาขาย 1 ชิ้น ({selectedRecipe.category}):</span>
                 <b className="text-emerald-950">{formatBaht(selectedCost.sellingPriceSingle)}</b>
               </div>
               <div className="flex justify-between text-xs">
-                <span className="text-emerald-900">หัก ต้นทุนเนื้อไอติม + แพ็กเกจ:</span>
+                <span className="text-emerald-900">หัก ต้นทุนวัตถุดิบ + แพ็กเกจ:</span>
                 <b className="text-rose-700">-{formatBaht(selectedCost.totalFullCupCost)}</b>
               </div>
               <div className="pt-2 border-t border-emerald-200 flex justify-between items-baseline">
-                <span className="text-xs font-extrabold text-emerald-900">กำไรขั้นต้น / ถ้วย:</span>
+                <span className="text-xs font-extrabold text-emerald-900">กำไรขั้นต้น / ชิ้น:</span>
                 <span className="text-lg font-black text-emerald-700">
                   +{formatBaht(selectedCost.grossProfitSingle)} (
                   {selectedCost.grossMarginPct.toFixed(1)}%)
@@ -1155,11 +1189,11 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                     onChange={(e) => setNewIngCat(e.target.value as Ingredient['category'])}
                     className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-semibold"
                   >
-                    <option value="flavoring">รสชาติหลัก / ผลไม้ / ช็อก</option>
-                    <option value="dairy">นม / ครีม (Dairy)</option>
-                    <option value="base">น้ำตาล / สารคงตัว (Base)</option>
-                    <option value="topping">ท็อปปิ้ง / ถั่ว</option>
-                    <option value="beverage">เครื่องดื่ม / กาแฟ</option>
+                    <option value="flavoring">วัตถุดิบหลัก</option>
+                    <option value="dairy">วัตถุดิบสด / แช่เย็น</option>
+                    <option value="base">วัตถุดิบแห้ง / ส่วนผสม</option>
+                    <option value="topping">ส่วนเสริม / ตกแต่ง</option>
+                    <option value="beverage">เครื่องดื่ม / อื่นๆ</option>
                   </select>
                 </div>
                 <div>
@@ -1251,56 +1285,79 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
         </div>
       )}
 
-      {/* Modal สร้างรสชาติใหม่ */}
+      {/* Modal สร้างสินค้าใหม่ */}
       {showNewFlavorModal && (
         <div className="fixed inset-0 bg-[#0d3a57]/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-[#eae3cf]">
-            <h3 className="text-lg font-extrabold text-[#0d3a57]">เพิ่มรสชาติไอติมใหม่</h3>
+            <h3 className="text-lg font-extrabold text-[#0d3a57]">เพิ่มสินค้า / เมนูใหม่</h3>
             <form onSubmit={handleCreateFlavor} className="space-y-3.5 mt-4">
               <div>
                 <label className="block text-xs font-bold text-[#6b8799] mb-1">
-                  ชื่อรสชาติ (ให้ตรงกับใน REFV POS) *
+                  ชื่อสินค้า / เมนู *
                 </label>
                 <input
                   type="text"
-                  placeholder="เช่น Yuzu Sorbet"
+                  placeholder="เช่น อเมริกาโน่เย็น, ครัวซองต์, เสื้อยืด"
                   value={newFlavorName}
                   onChange={(e) => setNewFlavorName(e.target.value)}
                   className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-semibold"
                   required
                 />
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-[#6b8799] mb-1">
+                    หมวดหมู่สินค้า
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="เช่น เครื่องดื่ม, ขนม, ทั่วไป"
+                    value={newFlavorCat}
+                    onChange={(e) => setNewFlavorCat(e.target.value)}
+                    className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-[#6b8799] mb-1">
+                    หน่วยขาย
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="เช่น ชิ้น, แก้ว, กล่อง"
+                    value={newFlavorUnit}
+                    onChange={(e) => setNewFlavorUnit(e.target.value)}
+                    className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-semibold"
+                  />
+                </div>
+              </div>
               <div>
-                <label className="block text-xs font-bold text-[#6b8799] mb-1">หมวดราคา</label>
-                <select
-                  value={newFlavorCat}
-                  onChange={(e) => setNewFlavorCat(e.target.value as FlavorCategory)}
-                  className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-semibold"
-                >
-                  <option value="Original">
-                    Original (฿{POS_SELLING_PRICE.Original.single})
-                  </option>
-                  <option value="Premium">
-                    Premium (฿{POS_SELLING_PRICE.Premium.single})
-                  </option>
-                  <option value="Signature">
-                    Signature (฿{POS_SELLING_PRICE.Signature.single})
-                  </option>
-                </select>
+                <label className="block text-xs font-bold text-[#6b8799] mb-1">
+                  ราคาขายต่อหน่วย (บาท) *
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  placeholder="เช่น 65"
+                  value={newFlavorPrice}
+                  onChange={(e) => setNewFlavorPrice(e.target.value)}
+                  className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-bold"
+                  required
+                />
               </div>
               <div className="flex justify-end gap-2 pt-3">
                 <button
                   type="button"
                   onClick={() => setShowNewFlavorModal(false)}
-                  className="px-4 py-2 rounded-xl font-bold text-sm text-[#6b8799]"
+                  className="px-4 py-2 rounded-xl font-bold text-sm text-[#6b8799] cursor-pointer"
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl font-bold text-sm bg-[#118cd1] text-white"
+                  className="px-5 py-2 rounded-xl font-bold text-sm bg-[#118cd1] text-white cursor-pointer"
                 >
-                  เพิ่มรสชาติ
+                  เพิ่มสินค้า
                 </button>
               </div>
             </form>

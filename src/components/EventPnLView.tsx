@@ -50,7 +50,7 @@ interface Props {
 
 const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, { label: string; badge: string }> = {
   venue: { label: 'ค่าเช่าสถานที่ / บูธ', badge: 'bg-purple-100 text-purple-800' },
-  ice_power: { label: 'ค่าน้ำแข็งแห้ง / ค่าไฟ / ตู้แช่', badge: 'bg-sky-100 text-sky-800' },
+  ice_power: { label: 'ค่าไฟ / น้ำแข็ง / อุปกรณ์หน้าบูธ', badge: 'bg-sky-100 text-sky-800' },
   transport: { label: 'ค่าขนส่ง / เดินทาง', badge: 'bg-amber-100 text-amber-800' },
   labor: { label: 'ค่าแรงพนักงาน / Part-time', badge: 'bg-emerald-100 text-emerald-800' },
   marketing: { label: 'ค่าป้าย / ตกแต่งบูธ / การตลาด', badge: 'bg-pink-100 text-pink-800' },
@@ -235,7 +235,7 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
         type: initialPosSales.length > 0 ? 'ok' : 'err',
         text:
           initialPosSales.length > 0
-            ? `สร้างบูธ "${newEvent.name}" และดึงยอดขายเฉพาะช่วง ${newEvent.startDate} (${newEvent.startTime}) ถึง ${newEvent.endDate} (${newEvent.endTime}) จำนวน ${initialPosSales.length} ถ้วย เรียบร้อยแล้ว!`
+            ? `สร้างบูธ "${newEvent.name}" และดึงยอดขายเฉพาะช่วง ${newEvent.startDate} (${newEvent.startTime}) ถึง ${newEvent.endDate} (${newEvent.endTime}) จำนวน ${initialPosSales.length} ชิ้น เรียบร้อยแล้ว!`
             : `สร้างบูธ "${newEvent.name}" เรียบร้อยแล้ว (ยังไม่พบรายการขายในช่วงเวลา ${newEvent.startDate} ${newEvent.startTime} - ${newEvent.endDate} ${newEvent.endTime} สามารถกด Sync ภายหลังได้)`,
       });
     }
@@ -504,7 +504,7 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
       id: 'bb-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
       recipeId,
       batchNumber,
-      label: batchNumber === 1 ? 'รอบที่ 1 (เตรียมเปิดบูธ)' : `รอบที่ ${batchNumber} (ปั่นเติม Stock)`,
+      label: batchNumber === 1 ? 'รอบที่ 1 (เตรียมเปิดบูธ)' : `รอบที่ ${batchNumber} (ผลิตเติม Stock)`,
       ingredients: defaultIngredients,
     };
 
@@ -1197,7 +1197,7 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
       if (allCloudSales.length === 0) {
         setSyncMessage({
           type: 'err',
-          text: `เชื่อมต่อสำเร็จ (${source}) แต่ยังไม่พบรายการขายในชีท Sales หรือคุณสามารถอัปโหลดไฟล์ CSV จาก REFV POS ได้ทันที`,
+          text: `เชื่อมต่อสำเร็จ (${source}) แต่ยังไม่พบรายการขายในชีท Sales หรือคุณสามารถอัปโหลดไฟล์ CSV จาก POS ได้ทันที`,
         });
         setSyncing(false);
         return;
@@ -1216,7 +1216,7 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
       if (matched.length === 0 && filterByDate) {
         setSyncMessage({
           type: 'err',
-          text: `พบข้อมูลใน REFV POS ทั้งหมด ${allCloudSales.length} ถ้วย แต่ไม่มีรายการที่ตรงกับวันที่ ${selectedEvent.startDate} ถึง ${selectedEvent.endDate} (กดปุ่ม "ดึงทุกรายการในชีท" ได้หากต้องการนำเข้าทั้งหมด)`,
+          text: `พบข้อมูลใน POS ทั้งหมด ${allCloudSales.length} ชิ้น แต่ไม่มีรายการที่ตรงกับวันที่ ${selectedEvent.startDate} ถึง ${selectedEvent.endDate} (กดปุ่ม "ดึงทุกรายการในชีท" ได้หากต้องการนำเข้าทั้งหมด)`,
         });
         setSyncing(false);
         return;
@@ -1224,7 +1224,7 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
 
       applyPosSalesToSelectedEvent(
         matched,
-        `Sync จาก ${source} สำเร็จ: ดึงยอดขายจำนวน ${matched.length} ถ้วย เรียบร้อยแล้ว!`
+        `Sync จาก ${source} สำเร็จ: ดึงยอดขายจำนวน ${matched.length} ชิ้น เรียบร้อยแล้ว!`
       );
     } catch (err) {
       setSyncMessage({
@@ -1260,7 +1260,7 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
       if (parsed.length === 0) {
         setSyncMessage({
           type: 'err',
-          text: 'ไม่พบข้อมูลที่ถูกต้องในไฟล์ CSV กรุณาใช้ไฟล์ที่กด Download CSV จาก REFV POS',
+          text: 'ไม่พบข้อมูลที่ถูกต้องในไฟล์ CSV กรุณาใช้ไฟล์ที่กด Download CSV จาก POS',
         });
         return;
       }
@@ -1276,17 +1276,17 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
       if (matched.length > 0) {
         applyPosSalesToSelectedEvent(
           matched,
-          `นำเข้าจากไฟล์ "${file.name}" สำเร็จ (กรองตามช่วงเวลาบูธได้ ${matched.length} ถ้วย จากทั้งหมด ${parsed.length} ถ้วย)`
+          `นำเข้าจากไฟล์ "${file.name}" สำเร็จ (กรองตามช่วงเวลาบูธได้ ${matched.length} ชิ้น จากทั้งหมด ${parsed.length} ชิ้น)`
         );
       } else {
         if (
           window.confirm(
-            `ในไฟล์ CSV มีทั้งหมด ${parsed.length} ถ้วย แต่เป็นคนละวันที่กับบูธนี้ (${selectedEvent.startDate} - ${selectedEvent.endDate})\nต้องการนำเข้าทั้ง ${parsed.length} ถ้วยเข้าสู่บูธนี้เลยหรือไม่?`
+            `ในไฟล์ CSV มีทั้งหมด ${parsed.length} ชิ้น แต่เป็นคนละวันที่กับบูธนี้ (${selectedEvent.startDate} - ${selectedEvent.endDate})\nต้องการนำเข้าทั้ง ${parsed.length} ชิ้นเข้าสู่บูธนี้เลยหรือไม่?`
           )
         ) {
           applyPosSalesToSelectedEvent(
             parsed,
-            `นำเข้าข้อมูลทั้งหมด ${parsed.length} ถ้วย จากไฟล์ "${file.name}" เรียบร้อยแล้ว`
+            `นำเข้าข้อมูลทั้งหมด ${parsed.length} ชิ้น จากไฟล์ "${file.name}" เรียบร้อยแล้ว`
           );
         }
       }
@@ -1367,7 +1367,7 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
 
                 <div className="mt-3 pt-3 border-t border-[#eae3cf] flex items-center justify-between text-sm">
                   <span className="text-xs text-[#6b8799] font-semibold">
-                    ขาย {evPnl?.totalCupsSold || 0} ถ้วย ({formatBaht(evPnl?.netRevenue || 0, 0)})
+                    ขาย {evPnl?.totalCupsSold || 0} ชิ้น ({formatBaht(evPnl?.netRevenue || 0, 0)})
                   </span>
                   <span
                     className={`font-extrabold ${
@@ -1391,7 +1391,7 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
         </div>
       ) : (
         <>
-          {/* แผงควบคุมบูธที่เลือก + Sync REFV POS */}
+          {/* แผงควบคุมบูธที่เลือก + Sync POS */}
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-[#eae3cf] space-y-4">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#eae3cf]">
               <div className="space-y-2 flex-1">
@@ -1482,7 +1482,7 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
                 </div>
               </div>
 
-              {/* ปุ่ม Sync กับ REFV POS */}
+              {/* ปุ่ม Sync กับ POS */}
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => handleSyncFromRefvPosCloud(true)}
@@ -1490,7 +1490,7 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
                   className="inline-flex items-center gap-2 bg-[#118cd1] hover:bg-[#0e78b5] disabled:opacity-50 text-white font-bold px-4 py-2.5 rounded-xl shadow-sm transition cursor-pointer text-sm"
                 >
                   <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-                  {syncing ? 'กำลังดึงข้อมูล...' : 'Sync ยอดขายจาก REFV POS (ตามช่วงเวลาบูธ)'}
+                  {syncing ? 'กำลังดึงข้อมูล...' : 'Sync ยอดขายจาก POS (ตามช่วงเวลาบูธ)'}
                 </button>
 
                 <button
@@ -1552,7 +1552,7 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
                   <div className="flex justify-between">
                     <span>จำนวนที่ขายได้:</span>
                     <b className="text-[#0d3a57]">
-                      {pnl.totalCupsSold} ถ้วย ({pnl.totalOrders} ออเดอร์)
+                      {pnl.totalCupsSold} ชิ้น ({pnl.totalOrders} ออเดอร์)
                     </b>
                   </div>
                   <div className="flex justify-between">
@@ -1573,7 +1573,7 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
               {/* 2. ต้นทุนวัตถุดิบ + แพ็กเกจจิ้ง */}
               <div className="bg-[#fef9ec] rounded-2xl p-4 border border-[#eae3cf]">
                 <div className="flex items-center justify-between text-xs font-bold text-[#6b8799]">
-                  <span>2. ต้นทุนเนื้อไอติม + แพ็กเกจ</span>
+                  <span>2. ต้นทุนวัตถุดิบ + แพ็กเกจ</span>
                   <IceCream className="w-4 h-4 text-[#118cd1]" />
                 </div>
                 <div className="text-2xl font-extrabold text-[#0d3a57] mt-1">
@@ -1581,7 +1581,7 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
                 </div>
                 <div className="mt-2 text-xs text-[#6b8799] space-y-0.5">
                   <div className="flex justify-between">
-                    <span>ค่าเนื้อไอติม (ตามล็อตที่เลือก):</span>
+                    <span>ค่าวัตถุดิบ (ตามล็อตที่เลือก):</span>
                     <b className="text-[#0d3a57]">{formatBaht(pnl.totalIngredientCost)}</b>
                   </div>
                   <div className="flex justify-between">
@@ -1589,14 +1589,14 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
                     <b className="text-[#0d3a57]">{formatBaht(pnl.totalPackagingCost)}</b>
                   </div>
                   <div className="flex justify-between text-[#118cd1] font-semibold">
-                    <span>เฉลี่ยต่อถ้วย:</span>
+                    <span>เฉลี่ยต่อชิ้น:</span>
                     <span>
                       {formatBaht(
                         pnl.totalCupsSold > 0
                           ? (pnl.totalIngredientCost + pnl.totalPackagingCost) / pnl.totalCupsSold
                           : 0
                       )}
-                      /ถ้วย
+                      /ชิ้น
                     </span>
                   </div>
                 </div>
@@ -1664,12 +1664,12 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
                     </b>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-[#6b8799]">กำไรสุทธิเฉลี่ยต่อถ้วย:</span>
+                    <span className="text-[#6b8799]">กำไรสุทธิเฉลี่ยต่อชิ้น:</span>
                     <b className="text-[#0d3a57]">
                       {formatSignedBaht(
                         pnl.totalCupsSold > 0 ? pnl.netProfit / pnl.totalCupsSold : 0
                       )}
-                      /ถ้วย
+                      /ชิ้น
                     </b>
                   </div>
                 </div>
@@ -1685,7 +1685,7 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
                 <div>
                   <h3 className="font-extrabold text-[#0d3a57] flex items-center gap-2">
                     <Package className="w-5 h-5 text-[#118cd1]" />
-                    การเลือกตัดสต็อกแพ็กเกจจิ้งตามล็อตที่สั่งซื้อ ({pnl.totalCupsSold} ถ้วย)
+                    การเลือกตัดสต็อกแพ็กเกจจิ้งตามล็อตที่สั่งซื้อ ({pnl.totalCupsSold} ชิ้น)
                   </h3>
                   <p className="text-xs text-[#6b8799] mt-0.5">
                     เลือกได้เลยว่าใช้ของจากการสั่งซื้อครั้งไหน และสามารถเพิ่มได้มากกว่า 1 เจ้าในบูธเดียว (เช่น ของหมดกลางทางแล้วซื้อเพิ่มหน้างาน)
@@ -1732,9 +1732,9 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
                               {u.unit}
                             </span>
                             <span className="text-xs font-normal text-[#6b8799] ml-1.5">
-                              (ตามถ้วย POS {u.posQuantityNeeded.toLocaleString()}{' '}
+                              (ตามจำนวนที่ขาย POS {u.posQuantityNeeded.toLocaleString()}{' '}
                               {u.extraQuantityNeeded > 0
-                                ? `+ ใช้เพิ่ม/ช้อนชิม ${u.extraQuantityNeeded.toLocaleString()}`
+                                ? `+ ใช้เพิ่ม/ของแถม/ถุงหิ้ว ${u.extraQuantityNeeded.toLocaleString()}`
                                 : ''}
                               )
                             </span>
@@ -1742,10 +1742,10 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
                           <span className="text-[#118cd1]">{formatBaht(u.totalCost)}</span>
                         </div>
 
-                        {/* ช่องกรอกจำนวนที่ใช้เพิ่มในบูธนี้ เช่น ช้อนชิม / ลูกค้าขอเพิ่ม / ของเสีย */}
+                        {/* ช่องกรอกจำนวนที่ใช้เพิ่มในบูธนี้ เช่น ของแถม/ถุงหิ้ว / ลูกค้าขอเพิ่ม / ของเสีย */}
                         <div className="flex flex-wrap items-center justify-between gap-2 bg-white/80 px-3 py-1.5 rounded-lg border border-dashed border-[#eae3cf] text-xs">
                           <span className="text-[#6b8799] font-semibold">
-                            + บวกใช้เพิ่มในบูธนี้ (เช่น ช้อนชิม / ขอเพิ่ม / เสีย):
+                            + บวกใช้เพิ่มในบูธนี้ (เช่น ของแถม/ถุงหิ้ว / ขอเพิ่ม / เสีย):
                           </span>
                           <div className="flex items-center gap-1.5">
                             <input
@@ -1887,7 +1887,7 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
                                 <span>
                                   {diffFromNeeded > 0
                                     ? `⚠️ ระบุจำนวนรวมไว้ ${allocatedSum.toLocaleString()} ${u.unit} (ยังขาดอีก ${diffFromNeeded.toLocaleString()} ${u.unit} จากยอดใช้จริง ${u.totalQuantityNeeded.toLocaleString()} ${u.unit})`
-                                    : `ℹ️ ระบุจำนวนรวมไว้ ${allocatedSum.toLocaleString()} ${u.unit} (มากกว่ายอดตามถ้วย ${Math.abs(diffFromNeeded).toLocaleString()} ${u.unit})`}
+                                    : `ℹ️ ระบุจำนวนรวมไว้ ${allocatedSum.toLocaleString()} ${u.unit} (มากกว่ายอดตามจำนวนที่ขาย ${Math.abs(diffFromNeeded).toLocaleString()} ${u.unit})`}
                                 </span>
                                 {allocations.length > 0 && (
                                   <button
@@ -2475,13 +2475,13 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
             )}
           </div>
 
-          {/* ตารางสรุปยอดขายและต้นทุนวัตถุดิบแยกตามรสชาติในบูธนี้ */}
+          {/* ตารางสรุปยอดขายและต้นทุนวัตถุดิบแยกตามสินค้าในบูธนี้ */}
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-[#eae3cf] space-y-4">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
               <div>
                 <h3 className="font-extrabold text-[#0d3a57] flex items-center gap-2">
                   <IceCream className="w-5 h-5 text-[#118cd1]" />
-                  สรุปยอดขายและต้นทุนวัตถุดิบแยกตามรสชาติ (Flavor Costing Breakdown)
+                  สรุปยอดขายและต้นทุนวัตถุดิบแยกตามสินค้า (Flavor Costing Breakdown)
                 </h3>
                 <p className="text-xs text-[#6b8799] mt-0.5">
                   เลือกได้ว่าจะให้คิดต้นทุนเฉพาะรสที่ตักขายไปจริงใน POS อัตโนมัติ หรือเลือกติ๊กเองว่าบูธนี้ปั่นรสอะไรไปกี่หม้อ
@@ -2499,7 +2499,7 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
                         : 'text-[#6b8799]'
                     }`}
                   >
-                    1. คิดเฉพาะรสและถ้วยที่ขายใน POS อัตโนมัติ
+                    1. คิดเฉพาะรสและชิ้นที่ขายใน POS อัตโนมัติ
                   </button>
                   <button
                     type="button"
@@ -2514,7 +2514,7 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
                   </button>
                 </div>
                 <span className="text-sm font-extrabold text-[#118cd1]">
-                  รวมต้นทุนเนื้อไอติม: {formatBaht(pnl.totalIngredientCost)}
+                  รวมต้นทุนวัตถุดิบ: {formatBaht(pnl.totalIngredientCost)}
                 </span>
               </div>
             </div>
@@ -2607,12 +2607,12 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
                               className="bg-[#118cd1] hover:bg-[#0e78b5] text-white font-bold text-xs px-3.5 py-1.5 rounded-xl inline-flex items-center gap-1 transition cursor-pointer"
                             >
                               <Plus className="w-3.5 h-3.5" />
-                              {hasBatches ? '+ ปั่นเพิ่มอีก 1 รอบ' : '+ บันทึกการปั่นรสชาตินี้'}
+                              {hasBatches ? '+ ปั่นเพิ่มอีก 1 รอบ' : '+ บันทึกการปั่นสินค้านี้'}
                             </button>
                           </div>
                         </div>
 
-                        {/* แสดงรายการแต่ละรอบการปั่นของรสชาตินี้ */}
+                        {/* แสดงรายการแต่ละรอบการปั่นของสินค้านี้ */}
                         {hasBatches && !isFlavorCollapsed && (
                           <div className="space-y-3 mt-3">
                             {batchesForFlavor.map((batch) => {
@@ -2835,15 +2835,15 @@ const isBatchCollapsed = collapsedBatches[batch.id];
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
                   <tr className="border-b-2 border-[#eae3cf] text-xs text-[#6b8799] uppercase">
-                    <th className="py-2.5 px-3">รสชาติ (Flavor)</th>
+                    <th className="py-2.5 px-3">สินค้า (Flavor)</th>
                     <th className="py-2.5 px-3">หมวด</th>
-                    <th className="py-2.5 px-3 text-center">สั่งเดี่ยว (1 รส)</th>
-                    <th className="py-2.5 px-3 text-center">สั่งคู่ (2 รส)</th>
+                    <th className="py-2.5 px-3 text-center">สั่งเดี่ยว (1 ชิ้น)</th>
+                    <th className="py-2.5 px-3 text-center">สั่งคู่ (2 ชิ้น)</th>
                     <th className="py-2.5 px-3 text-center">Affogato</th>
                     <th className="py-2.5 px-3 text-right">เทียบเท่าถ้วยเต็ม</th>
                     <th className="py-2.5 px-3 text-right">ยอดขายรสนี้</th>
                     <th className="py-2.5 px-3 text-right">ต้นทุนวัตถุดิบ</th>
-                    <th className="py-2.5 px-3 text-right">กำไรขั้นต้น (เฉพาะเนื้อไอติม)</th>
+                    <th className="py-2.5 px-3 text-right">กำไรขั้นต้น (เฉพาะสินค้า)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#eae3cf]">
@@ -2862,16 +2862,16 @@ const isBatchCollapsed = collapsedBatches[batch.id];
                           </span>
                         </td>
                         <td className="py-2.5 px-3 text-center font-semibold">
-                          {fl.fullScoopCount} ถ้วย
+                          {fl.fullScoopCount} ชิ้น
                         </td>
                         <td className="py-2.5 px-3 text-center font-semibold">
                           {fl.halfScoopCount} ครั้ง
                         </td>
                         <td className="py-2.5 px-3 text-center font-semibold">
-                          {fl.affogatoCount} ถ้วย
+                          {fl.affogatoCount} ชิ้น
                         </td>
                         <td className="py-2.5 px-3 text-right font-bold text-[#118cd1]">
-                          {fl.equivalentFullCups.toFixed(1)} ถ้วย
+                          {fl.equivalentFullCups.toFixed(1)} ชิ้น
                         </td>
                         <td className="py-2.5 px-3 text-right font-bold">
                           {formatBaht(fl.revenueAttributed)}
@@ -2900,11 +2900,11 @@ const isBatchCollapsed = collapsedBatches[batch.id];
               >
                 {showRawPosRows ? (
                   <>
-                    <ChevronUp className="w-4 h-4" /> ซ่อนรายการขายรายถ้วยจาก REFV POS
+                    <ChevronUp className="w-4 h-4" /> ซ่อนรายการขายรายถ้วยจาก POS
                   </>
                 ) : (
                   <>
-                    <ChevronDown className="w-4 h-4" /> ดูรายการขายรายถ้วยจาก REFV POS ทั้งหมด (
+                    <ChevronDown className="w-4 h-4" /> ดูรายการขายรายถ้วยจาก POS ทั้งหมด (
                     {selectedEvent.posSales.length} แถว)
                   </>
                 )}
@@ -3024,7 +3024,7 @@ const isBatchCollapsed = collapsedBatches[batch.id];
                               : 'bg-white text-[#0d3a57] border-[#eae3cf] hover:border-[#118cd1]'
                           }`}
                         >
-                          {d} ({availableDatesMap[d]} ถ้วย)
+                          {d} ({availableDatesMap[d]} ชิ้น)
                         </button>
                       );
                     })}
@@ -3098,7 +3098,7 @@ const isBatchCollapsed = collapsedBatches[batch.id];
                 ) : previewMatchedSales.length > 0 ? (
                   <div className="flex items-center justify-between font-bold">
                     <span>
-                      ✅ พบรายการขายตรงช่วงเวลานี้: {previewMatchedSales.length.toLocaleString()} ถ้วย
+                      ✅ พบรายการขายตรงช่วงเวลานี้: {previewMatchedSales.length.toLocaleString()} ชิ้น
                     </span>
                     <span className="text-emerald-700">
                       ยอดขายรวม {formatBaht(previewMatchedRevenue)}

@@ -341,7 +341,7 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
               <div className="flex flex-wrap items-center gap-3">
                 <span className="flex items-center gap-1.5 font-bold text-[#0d3a57]">
                   <TrendingUp className="w-4 h-4 text-[#118cd1]" />
-                  ภาพรวม {overallSummary.eventCount} บูธ ({overallSummary.totalCups.toLocaleString()} ถ้วย):
+                  ภาพรวม {overallSummary.eventCount} บูธ ({overallSummary.totalCups.toLocaleString()} ชิ้น):
                 </span>
                 <span>
                   ยอดขาย: <b className="text-[#0d3a57]">{formatBaht(overallSummary.totalRevenue)}</b>
@@ -382,7 +382,7 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
           <PosCashierView
             state={state}
             onRecordSale={handleRecordPosSale}
-            promptPayNumber={state.settings.promptPayNumber || '0812345678'}
+            promptPayNumber={state.settings.promptPayNumber || ''}
           />
         )}
 
