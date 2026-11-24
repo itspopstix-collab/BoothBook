@@ -21,6 +21,7 @@ import {
   flushOfflineSyncQueue,
   getActiveBackend,
   getPendingOrdersCount,
+  hydratePendingOrdersFromNative,
   isOnline as checkOnline,
 } from './services/offlineSync';
 import {
@@ -138,9 +139,12 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
     }
   }, [isStaff]);
 
-  // โหลดข้อมูลล่าสุดจาก Supabase ตอนเปิดแอป
+  // โหลดข้อมูลล่าสุดจาก iOS Native Storage / IndexedDB และ Cloud ตอนเปิดแอป
   useEffect(() => {
     let mounted = true;
+    hydratePendingOrdersFromNative().then((pending) => {
+      if (mounted) setPendingSyncCount(pending.length);
+    });
     loadStateFromDiskOrCloud(state).then(({ state: loadedState }) => {
       if (!mounted) return;
       setState(loadedState);

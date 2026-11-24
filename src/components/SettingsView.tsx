@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { AppDatabaseState, CloudStorageBackend } from '../types';
 import { fetchAllPosSalesFromCloud } from '../services/posSync';
 import { clearDemoTransactionsOnly, resetToDemoState } from '../services/storage';
+import { getStorageEngineLabel } from '../services/nativeStorage';
 import {
   Link2,
   Download,
@@ -234,9 +235,12 @@ export const SettingsView: React.FC<Props> = ({
 
         {/* กล่องสถานะ Offline Backup & Sync Queue */}
         <div className="bg-emerald-50/80 rounded-2xl p-4 border border-emerald-200 space-y-2.5">
+          <div className="text-xs font-extrabold text-emerald-950">
+            พื้นที่จัดเก็บในเครื่องปัจจุบัน: <span className="text-[#118cd1]">{getStorageEngineLabel()}</span>
+          </div>
           <ul className="text-xs text-emerald-900 space-y-1 list-disc pl-5 font-medium">
             <li>
-              <b>สำรองข้อมูลในเครื่องอัตโนมัติ (Local Storage):</b> ทุกออเดอร์และข้อมูลจะถูกเก็บไว้ในเบราว์เซอร์ของเครื่องนี้ทันที แม้ไม่มีอินเทอร์เน็ตก็ยังกดขายหน้าร้านต่อได้ตามปกติ
+              <b>สำรองข้อมูลถาวรในเครื่องอัตโนมัติ:</b> บนแอป iOS ข้อมูลจะถูกเขียนลง <b>iOS Native Filesystem (Directory.Data)</b> ซึ่ง iOS ห้ามลบทิ้งตราบใดที่ไม่ลบแอป ส่วนบนเว็บจะเก็บคู่ใน <b>IndexedDB + Local Storage</b>
             </li>
             <li>
               <b>ซิงค์ขึ้น {activeBackendLabel} อัตโนมัติเมื่อต่อเน็ต:</b> หากเน็ตหลุด ออเดอร์จะถูกเก็บเข้าคิวรอซิงค์ไว้ และจะถูกส่งขึ้น <b>{activeBackendLabel}</b> อัตโนมัติทันทีที่กลับมาต่อ Wi-Fi/เน็ต

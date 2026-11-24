@@ -8,6 +8,7 @@ import {
   pullStateFromActiveCloud,
   pushStateToActiveCloud,
 } from './offlineSync';
+import { persistJson, readPersistedJson } from './nativeStorage';
 
 const STORAGE_KEY = 'boothbook_db_clean_v2';
 try {
@@ -70,18 +71,30 @@ export function loadAppState(): AppDatabaseState {
 export async function loadStateFromDiskOrCloud(
   currentState: AppDatabaseState
 ): Promise<{ state: AppDatabaseState; source: 'local' | 'cloud' | 'seed' }> {
+  // 1. กู้คืนจากพื้นที่ถาวรของอุปกรณ์ก่อนเสมอ (iOS Native Directory.Data / IndexedDB)
+  let bestLocalState = currentState;
   try {
-    const cloudData = await pullStateFromActiveCloud(currentState.settings);
+    const persisted = await readPersistedJson<AppDatabaseState>(STORAGE_KEY);
+    if (persisted && Array.isArray(persisted.recipes) && Array.isArray(persisted.events)) {
+      bestLocalState = ensureEventSnapshots(persisted);
+    }
+  } catch {
+    // ignore
+  }
+
+  // 2. ถ้าออนไลน์อยู่ ลองดึงข้อมูลล่าสุดจาก Cloud (Supabase หรือ Google Sheets)
+  try {
+    const cloudData = await pullStateFromActiveCloud(bestLocalState.settings);
     if (cloudData && Array.isArray(cloudData.recipes)) {
       const normalized = ensureEventSnapshots(cloudData);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+      await persistJson(STORAGE_KEY, normalized);
       return { state: normalized, source: 'cloud' };
     }
   } catch (err) {
-    console.warn('Could not pull from cloud, using local backup:', err);
+    console.warn('Could not pull from cloud, using native/local backup:', err);
   }
 
-  return { state: currentState, source: 'local' };
+  return { state: bestLocalState, source: 'local' };
 }
 
 export async function pushDatabaseToGoogleSheets(state: AppDatabaseState): Promise<boolean> {
@@ -107,12 +120,8 @@ export function saveAppState(
   state: AppDatabaseState,
   onStatusChange?: (status: SyncStatusInfo) => void
 ): void {
-  // 1. สำรองข้อมูลลง Local Storage ของเครื่องนี้ทันทีเสมอ (ทำงานได้ 100% แม้ไม่มีเน็ต)
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (err) {
-    console.error('Failed to save to localStorage:', err);
-  }
+  // 1. สำรองข้อมูลลงพื้นที่ถาวรของเครื่องนี้ทันที (iOS Native Directory.Data / IndexedDB + localStorage)
+  void persistJson(STORAGE_KEY, state);
 
   const timeStr = new Date().toLocaleTimeString('th-TH');
   const backendLabel =

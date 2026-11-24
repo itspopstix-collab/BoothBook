@@ -4,6 +4,7 @@ import {
   pushStateToSupabase,
   recordPosSaleToSupabase,
 } from './supabase';
+import { persistJson, readPersistedJson } from './nativeStorage';
 
 const PENDING_ORDERS_KEY = 'boothbook_pending_orders_v1';
 const STATE_DIRTY_KEY = 'boothbook_state_dirty_v1';
@@ -39,11 +40,16 @@ export function getPendingOrdersCount(): number {
 }
 
 function savePendingOrders(list: PendingPosOrder[]): void {
-  try {
-    localStorage.setItem(PENDING_ORDERS_KEY, JSON.stringify(list));
-  } catch {
-    // ignore storage quota errors
+  void persistJson(PENDING_ORDERS_KEY, list);
+}
+
+/** กู้คืนคิวออเดอร์ออฟไลน์จาก iOS Native Storage / IndexedDB ตอนเปิดแอป */
+export async function hydratePendingOrdersFromNative(): Promise<PendingPosOrder[]> {
+  const persisted = await readPersistedJson<PendingPosOrder[]>(PENDING_ORDERS_KEY);
+  if (Array.isArray(persisted)) {
+    return persisted;
   }
+  return getPendingOrders();
 }
 
 export function markStateDirty(dirty = true): void {
