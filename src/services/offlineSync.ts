@@ -264,3 +264,62 @@ export async function flushOfflineSyncQueue(
     stateSynced,
   };
 }
+
+/**
+ * ตรวจสอบและซิงค์รายการที่ค้างทั้งหมดขึ้น Cloud ก่อนอนุญาตให้ล้างข้อมูลในเครื่อง
+ * (ทำได้เมื่อออนไลน์เท่านั้น)
+ */
+export async function verifyAndSyncAllToCloud(state: AppDatabaseState): Promise<{
+  ok: boolean;
+  syncedOrders: number;
+  remainingOrders: number;
+  backendLabel: string;
+  verifiedAt: string;
+  error?: string;
+}> {
+  const backendLabel =
+    getActiveBackend(state.settings) === 'google_sheets' ? 'Google Sheets' : 'Supabase';
+
+  if (!isOnline()) {
+    return {
+      ok: false,
+      syncedOrders: 0,
+      remainingOrders: getPendingOrdersCount(),
+      backendLabel,
+      verifiedAt: '',
+      error: 'กรุณาเชื่อมต่ออินเทอร์เน็ตก่อนดำเนินการ',
+    };
+  }
+
+  const flushRes = await flushOfflineSyncQueue(state);
+  if (flushRes.remainingOrders > 0) {
+    return {
+      ok: false,
+      syncedOrders: flushRes.syncedOrders,
+      remainingOrders: flushRes.remainingOrders,
+      backendLabel,
+      verifiedAt: '',
+      error: `ยังมี ${flushRes.remainingOrders} ออเดอร์ที่ซิงค์ขึ้น ${backendLabel} ไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อแล้วลองใหม่`,
+    };
+  }
+
+  const stateOk = await pushStateToActiveCloud(state);
+  if (!stateOk) {
+    return {
+      ok: false,
+      syncedOrders: flushRes.syncedOrders,
+      remainingOrders: 0,
+      backendLabel,
+      verifiedAt: '',
+      error: `ไม่สามารถยืนยันการบันทึกข้อมูลขึ้น ${backendLabel} ได้ กรุณาตรวจสอบการตั้งค่า Cloud`,
+    };
+  }
+
+  return {
+    ok: true,
+    syncedOrders: flushRes.syncedOrders,
+    remainingOrders: 0,
+    backendLabel,
+    verifiedAt: new Date().toLocaleTimeString('th-TH'),
+  };
+}

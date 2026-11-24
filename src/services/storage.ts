@@ -160,6 +160,10 @@ export function saveAppState(
   }, 1000);
 }
 
+export function saveLocalStateOnly(state: AppDatabaseState): void {
+  void persistJson(STORAGE_KEY, state);
+}
+
 export function resetToDemoState(): AppDatabaseState {
   const seed = ensureEventSnapshots(createInitialSeedState());
   saveAppState(seed);

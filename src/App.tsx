@@ -8,6 +8,7 @@ import {
   pullDatabaseFromGoogleSheets,
   pushDatabaseToGoogleSheets,
   saveAppState,
+  saveLocalStateOnly,
   SyncStatusInfo,
 } from './services/storage';
 import { runFifoSimulation } from './services/fifoEngine';
@@ -165,6 +166,15 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
     setState((prev) => {
       const next = updater(prev);
       saveAppState(next, (status) => setSyncStatus(status));
+      return next;
+    });
+  };
+
+  /** ลบรายการเก่าเฉพาะในเครื่องนี้เพื่อคืนความจำ (ไม่เขียนทับ Cloud เพื่อให้ Cloud เก็บประวัติครบ 100%) */
+  const handlePruneLocalState = (updater: (prev: AppDatabaseState) => AppDatabaseState) => {
+    setState((prev) => {
+      const next = updater(prev);
+      saveLocalStateOnly(next);
       return next;
     });
   };
@@ -519,9 +529,11 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
           <SettingsView
             state={state}
             onUpdateState={handleUpdateState}
+            onPruneLocalState={handlePruneLocalState}
             onPushCloud={handleManualCloudPush}
             onPullCloud={handleManualCloudPull}
             onFlushOfflineQueue={() => handleFlushOfflineQueue()}
+            onPendingCountChange={(cnt) => setPendingSyncCount(cnt)}
             pendingSyncCount={pendingSyncCount}
             isOnline={online}
             cloudBusy={cloudBusy}
