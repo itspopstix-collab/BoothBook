@@ -18,6 +18,12 @@ import { SettingsView } from './components/SettingsView';
 import { PosCashierView } from './components/PosCashierView';
 import { signOut } from './services/supabase';
 import {
+  flushOfflineSyncQueue,
+  getActiveBackend,
+  getPendingOrdersCount,
+  isOnline as checkOnline,
+} from './services/offlineSync';
+import {
   BarChart3,
   Package,
   IceCream,
@@ -32,6 +38,9 @@ import {
   X,
   PanelLeftClose,
   PanelLeftOpen,
+  Wifi,
+  WifiOff,
+  RefreshCw,
 } from 'lucide-react';
 
 type ActiveTab = 'pos' | 'events' | 'inventory' | 'recipes' | 'settings';
@@ -46,13 +55,63 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
   const [activeTab, setActiveTab] = useState<ActiveTab>(isStaff ? 'pos' : 'events');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [online, setOnline] = useState<boolean>(() => checkOnline());
+  const [pendingSyncCount, setPendingSyncCount] = useState<number>(() => getPendingOrdersCount());
   const [syncStatus, setSyncStatus] = useState<SyncStatusInfo>({
     diskSaved: true,
     cloudSynced: true,
     lastSavedAt: new Date().toLocaleTimeString('th-TH'),
-    message: 'เชื่อมต่อฐานข้อมูล Supabase เรียบร้อย',
+    message: 'สำรองข้อมูลในเครื่องพร้อมซิงค์ Cloud',
   });
   const [cloudBusy, setCloudBusy] = useState(false);
+
+  const activeBackend = getActiveBackend(state.settings);
+  const activeBackendLabel = activeBackend === 'google_sheets' ? 'Google Sheets' : 'Supabase';
+
+  const handleFlushOfflineQueue = async (targetState: AppDatabaseState = state) => {
+    if (!checkOnline()) return;
+    setCloudBusy(true);
+    try {
+      const res = await flushOfflineSyncQueue(targetState);
+      setPendingSyncCount(res.remainingOrders);
+      const t = new Date().toLocaleTimeString('th-TH');
+      if (res.syncedOrders > 0 || res.stateSynced) {
+        setSyncStatus({
+          diskSaved: true,
+          cloudSynced: res.remainingOrders === 0,
+          lastSavedAt: t,
+          pendingCount: res.remainingOrders,
+          offline: false,
+          message: `ซิงค์รายการที่ค้างขึ้น ${activeBackendLabel} แล้ว ${res.syncedOrders} รายการ (${t})`,
+        });
+      }
+    } finally {
+      setCloudBusy(false);
+    }
+  };
+
+  // ตรวจจับสัญญาณอินเทอร์เน็ต: พอต่อ Wi-Fi/เน็ตกลับมา ซิงค์รายการค้างขึ้น Cloud อัตโนมัติทันที
+  useEffect(() => {
+    const onOnline = () => {
+      setOnline(true);
+      handleFlushOfflineQueue();
+    };
+    const onOffline = () => {
+      setOnline(false);
+      setSyncStatus((prev) => ({
+        ...prev,
+        cloudSynced: false,
+        offline: true,
+        message: 'ไม่มีอินเทอร์เน็ต — ทำงานโหมดออฟไลน์ (เก็บออเดอร์ลงเครื่องไว้รอซิงค์อัตโนมัติ)',
+      }));
+    };
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
+  }, [state]);
 
   // Auto-switch to pos tab if staff
   useEffect(() => {
@@ -354,22 +413,45 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
                 </span>
               </div>
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span
+                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold border ${
+                    online
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                      : 'bg-amber-50 text-amber-800 border-amber-300'
+                  }`}
+                >
+                  {online ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+                  {online ? `ออนไลน์ · ${activeBackendLabel}` : 'ออฟไลน์ (สำรองในเครื่อง)'}
+                </span>
+
+                {pendingSyncCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => handleFlushOfflineQueue()}
+                    disabled={!online || cloudBusy}
+                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50 flex items-center gap-1 cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${cloudBusy ? 'animate-spin' : ''}`} />
+                    รอซิงค์ {pendingSyncCount} ออเดอร์
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={handleManualCloudPull}
-                  disabled={cloudBusy}
-                  className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-[#eae3cf] bg-white hover:bg-gray-50 flex items-center gap-1 cursor-pointer"
+                  disabled={!online || cloudBusy}
+                  className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-[#eae3cf] bg-white hover:bg-gray-50 disabled:opacity-50 flex items-center gap-1 cursor-pointer"
                 >
-                  <CloudDownload className="w-3.5 h-3.5 text-[#118cd1]" /> ดึง Cloud
+                  <CloudDownload className="w-3.5 h-3.5 text-[#118cd1]" /> ดึงจาก {activeBackendLabel}
                 </button>
                 <button
                   type="button"
                   onClick={handleManualCloudPush}
-                  disabled={cloudBusy}
-                  className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-[#118cd1] text-white hover:bg-[#0f7ebc] flex items-center gap-1 cursor-pointer shadow-xs"
+                  disabled={!online || cloudBusy}
+                  className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-[#118cd1] text-white hover:bg-[#0f7ebc] disabled:opacity-50 flex items-center gap-1 cursor-pointer shadow-xs"
                 >
-                  <CloudUpload className="w-3.5 h-3.5" /> เซฟ Cloud
+                  <CloudUpload className="w-3.5 h-3.5" /> เซฟขึ้น {activeBackendLabel}
                 </button>
               </div>
             </div>
@@ -383,6 +465,7 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
             state={state}
             onRecordSale={handleRecordPosSale}
             promptPayNumber={state.settings.promptPayNumber || ''}
+            onPendingChange={(cnt) => setPendingSyncCount(cnt)}
           />
         )}
 
@@ -416,6 +499,9 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
             onUpdateState={handleUpdateState}
             onPushCloud={handleManualCloudPush}
             onPullCloud={handleManualCloudPull}
+            onFlushOfflineQueue={() => handleFlushOfflineQueue()}
+            pendingSyncCount={pendingSyncCount}
+            isOnline={online}
             cloudBusy={cloudBusy}
           />
         )}

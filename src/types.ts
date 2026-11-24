@@ -281,7 +281,10 @@ export interface EventPnLResult {
   profitMarginPct: number;
 }
 
+export type CloudStorageBackend = 'supabase' | 'google_sheets';
+
 export interface PosConnectionSettings {
+  storageBackend?: CloudStorageBackend;
   sheetId: string;
   appsScriptUrl: string;
   shopName: string;

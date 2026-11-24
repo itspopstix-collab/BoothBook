@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { AppDatabaseState } from '../types';
+import { AppDatabaseState, CloudStorageBackend } from '../types';
 import { fetchAllPosSalesFromCloud } from '../services/posSync';
 import { clearDemoTransactionsOnly, resetToDemoState } from '../services/storage';
 import {
@@ -14,6 +14,11 @@ import {
   CloudUpload,
   CloudDownload,
   HardDrive,
+  Database,
+  FileSpreadsheet,
+  Wifi,
+  WifiOff,
+  RefreshCw,
 } from 'lucide-react';
 
 interface Props {
@@ -21,6 +26,9 @@ interface Props {
   onUpdateState: (updater: (prev: AppDatabaseState) => AppDatabaseState) => void;
   onPushCloud?: () => Promise<void>;
   onPullCloud?: () => Promise<void>;
+  onFlushOfflineQueue?: () => Promise<void>;
+  pendingSyncCount?: number;
+  isOnline?: boolean;
   cloudBusy?: boolean;
 }
 
@@ -29,8 +37,14 @@ export const SettingsView: React.FC<Props> = ({
   onUpdateState,
   onPushCloud,
   onPullCloud,
+  onFlushOfflineQueue,
+  pendingSyncCount = 0,
+  isOnline = true,
   cloudBusy,
 }) => {
+  const [storageBackend, setStorageBackend] = useState<CloudStorageBackend>(
+    state.settings.storageBackend || 'supabase'
+  );
   const [sheetId, setSheetId] = useState(state.settings.sheetId);
   const [appsScriptUrl, setAppsScriptUrl] = useState(state.settings.appsScriptUrl);
   const [shopName, setShopName] = useState(state.settings.shopName);
@@ -40,6 +54,19 @@ export const SettingsView: React.FC<Props> = ({
   const [testing, setTesting] = useState(false);
 
   const importRef = useRef<HTMLInputElement | null>(null);
+
+  const activeBackendLabel = storageBackend === 'google_sheets' ? 'Google Sheets' : 'Supabase';
+
+  const handleSelectBackend = (backend: CloudStorageBackend) => {
+    setStorageBackend(backend);
+    onUpdateState((prev) => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        storageBackend: backend,
+      },
+    }));
+  };
 
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +80,7 @@ export const SettingsView: React.FC<Props> = ({
     onUpdateState((prev) => ({
       ...prev,
       settings: {
+        storageBackend,
         sheetId: cleanedSheetId,
         appsScriptUrl: appsScriptUrl.trim(),
         shopName: shopName.trim() || 'BoothBook',
@@ -63,7 +91,7 @@ export const SettingsView: React.FC<Props> = ({
 
     setTestStatus({
       type: 'ok',
-      msg: 'บันทึกการตั้งค่าลงไฟล์ data/database.json และซิงค์เรียบร้อยแล้ว',
+      msg: `บันทึกการตั้งค่าลงเครื่องและเตรียมซิงค์กับ ${activeBackendLabel} เรียบร้อยแล้ว`,
     });
   };
 
@@ -124,64 +152,145 @@ export const SettingsView: React.FC<Props> = ({
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      {/* กล่องแสดงสถานะการจัดเก็บข้อมูล 2 ชั้น (ไฟล์ในเครื่อง + Google Sheets) */}
-      <div className="bg-emerald-50/80 rounded-2xl p-5 border border-emerald-200 space-y-3">
-        <div className="flex items-center gap-2 text-emerald-900 font-extrabold text-base">
-          <HardDrive className="w-5 h-5 text-emerald-700" />
-          <span>ระบบจัดเก็บข้อมูลอัตโนมัติ 2 ชั้น (ไม่หายแม้เปลี่ยนเบราว์เซอร์หรือเปิดเครื่องอื่น)</span>
+      {/* เลือกวิธีการเก็บข้อมูลบน Cloud + ระบบสำรองออฟไลน์ในเครื่อง */}
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#eae3cf] space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <HardDrive className="w-5 h-5 text-[#118cd1]" />
+            <div>
+              <h2 className="text-lg font-extrabold text-[#0d3a57]">
+                ระบบจัดเก็บข้อมูล (Offline-First + เลือก Cloud ได้ 2 แบบ)
+              </h2>
+              <p className="text-xs text-[#6b8799]">
+                รองรับการติดตั้งและใช้งานบนทุกอุปกรณ์ (มือถือ / แท็บเล็ต / คอม) โดยสำรองข้อมูลไว้ในเครื่องนี้เสมอ
+              </p>
+            </div>
+          </div>
+
+          <span
+            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold border ${
+              isOnline
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                : 'bg-amber-50 text-amber-800 border-amber-300'
+            }`}
+          >
+            {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
+            {isOnline ? 'ออนไลน์พร้อมซิงค์' : 'ออฟไลน์ (สำรองในเครื่อง)'}
+          </span>
         </div>
-        <ul className="text-xs text-emerald-900 space-y-1.5 list-disc pl-5 font-medium">
-          <li>
-            <b>ชั้นที่ 1 (ไฟล์จริงในเครื่องนี้):</b> ทุกครั้งที่คุณแก้สูตรหรือเพิ่มรายการซื้อของ ระบบจะเซฟลงไฟล์{' '}
-            <code className="bg-white px-1.5 py-0.5 rounded border border-emerald-200 font-bold">
-              data/database.json
-            </code>{' '}
-            ในโฟลเดอร์โปรเจกต์ทันที (เปิดเบราว์เซอร์ไหนในเครื่องนี้ก็เห็นข้อมูลเดียวกันทั้งหมด)
-          </li>
-          <li>
-            <b>ชั้นที่ 2 (ซิงค์ขึ้น Google Sheets):</b> ระบบจะส่งข้อมูลทั้งหมดขึ้นไปเก็บใน Google Sheet ของร้าน (เพียงนำโค้ดในไฟล์{' '}
-            <code className="bg-white px-1.5 py-0.5 rounded border border-emerald-200 font-bold">
-              google-apps-script.gs
-            </code>{' '}
-            ไปวางใน Extensions &gt; Apps Script ของชีทคุณ) เวลาไปเปิดที่คอมเครื่องอื่นก็กดดึงข้อมูลกลับมาได้ครบ 100%
-          </li>
-        </ul>
-        <div className="flex flex-wrap gap-2.5 pt-1">
-          {onPushCloud && (
-            <button
-              type="button"
-              onClick={onPushCloud}
-              disabled={cloudBusy}
-              className="inline-flex items-center gap-2 bg-[#118cd1] hover:bg-[#0e78b5] text-white font-bold px-4 py-2 rounded-xl text-xs transition cursor-pointer"
-            >
-              <CloudUpload className="w-4 h-4" />
-              ส่งข้อมูลทั้งหมดขึ้น Google Sheets เดี๋ยวนี้
-            </button>
-          )}
-          {onPullCloud && (
-            <button
-              type="button"
-              onClick={onPullCloud}
-              disabled={cloudBusy}
-              className="inline-flex items-center gap-2 bg-white hover:bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold px-4 py-2 rounded-xl text-xs transition cursor-pointer"
-            >
-              <CloudDownload className="w-4 h-4 text-[#118cd1]" />
-              ดึงข้อมูลล่าสุดจาก Google Sheets ลงเครื่องนี้
-            </button>
-          )}
+
+        {/* ตัวเลือก Cloud 2 แบบ */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => handleSelectBackend('supabase')}
+            className={`text-left p-4 rounded-2xl border-2 transition cursor-pointer space-y-1.5 ${
+              storageBackend === 'supabase'
+                ? 'border-[#118cd1] bg-[#118cd1]/5 shadow-xs'
+                : 'border-[#eae3cf] bg-[#fef9ec]/40 hover:border-[#90d4ec]'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-extrabold text-sm text-[#0d3a57] flex items-center gap-2">
+                <Database className="w-4 h-4 text-[#118cd1]" />
+                1. Supabase Cloud
+              </span>
+              {storageBackend === 'supabase' && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#118cd1] text-white">
+                  กำลังใช้งาน
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-[#6b8799]">
+              ฐานข้อมูลจริง แยกสิทธิ์ Owner / Staff POS อัตโนมัติ ซิงค์หลายเครื่องได้พร้อมกันแบบ Real-time
+            </p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSelectBackend('google_sheets')}
+            className={`text-left p-4 rounded-2xl border-2 transition cursor-pointer space-y-1.5 ${
+              storageBackend === 'google_sheets'
+                ? 'border-[#118cd1] bg-[#118cd1]/5 shadow-xs'
+                : 'border-[#eae3cf] bg-[#fef9ec]/40 hover:border-[#90d4ec]'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-extrabold text-sm text-[#0d3a57] flex items-center gap-2">
+                <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                2. Google Sheets
+              </span>
+              {storageBackend === 'google_sheets' && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#118cd1] text-white">
+                  กำลังใช้งาน
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-[#6b8799]">
+              ส่งออเดอร์และสำรองข้อมูลลง Google Sheet ของร้านผ่าน Apps Script Web App URL
+            </p>
+          </button>
+        </div>
+
+        {/* กล่องสถานะ Offline Backup & Sync Queue */}
+        <div className="bg-emerald-50/80 rounded-2xl p-4 border border-emerald-200 space-y-2.5">
+          <ul className="text-xs text-emerald-900 space-y-1 list-disc pl-5 font-medium">
+            <li>
+              <b>สำรองข้อมูลในเครื่องอัตโนมัติ (Local Storage):</b> ทุกออเดอร์และข้อมูลจะถูกเก็บไว้ในเบราว์เซอร์ของเครื่องนี้ทันที แม้ไม่มีอินเทอร์เน็ตก็ยังกดขายหน้าร้านต่อได้ตามปกติ
+            </li>
+            <li>
+              <b>ซิงค์ขึ้น {activeBackendLabel} อัตโนมัติเมื่อต่อเน็ต:</b> หากเน็ตหลุด ออเดอร์จะถูกเก็บเข้าคิวรอซิงค์ไว้ และจะถูกส่งขึ้น <b>{activeBackendLabel}</b> อัตโนมัติทันทีที่กลับมาต่อ Wi-Fi/เน็ต
+            </li>
+          </ul>
+
+          <div className="flex flex-wrap items-center gap-2.5 pt-1">
+            {pendingSyncCount > 0 && onFlushOfflineQueue && (
+              <button
+                type="button"
+                onClick={onFlushOfflineQueue}
+                disabled={!isOnline || cloudBusy}
+                className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-2 rounded-xl text-xs transition cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw className={`w-4 h-4 ${cloudBusy ? 'animate-spin' : ''}`} />
+                ซิงค์ออเดอร์ที่ค้างอยู่ ({pendingSyncCount} รายการ)
+              </button>
+            )}
+            {onPushCloud && (
+              <button
+                type="button"
+                onClick={onPushCloud}
+                disabled={!isOnline || cloudBusy}
+                className="inline-flex items-center gap-2 bg-[#118cd1] hover:bg-[#0e78b5] text-white font-bold px-4 py-2 rounded-xl text-xs transition cursor-pointer disabled:opacity-50"
+              >
+                <CloudUpload className="w-4 h-4" />
+                ส่งข้อมูลทั้งหมดขึ้น {activeBackendLabel} เดี๋ยวนี้
+              </button>
+            )}
+            {onPullCloud && (
+              <button
+                type="button"
+                onClick={onPullCloud}
+                disabled={!isOnline || cloudBusy}
+                className="inline-flex items-center gap-2 bg-white hover:bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold px-4 py-2 rounded-xl text-xs transition cursor-pointer disabled:opacity-50"
+              >
+                <CloudDownload className="w-4 h-4 text-[#118cd1]" />
+                ดึงข้อมูลล่าสุดจาก {activeBackendLabel} ลงเครื่องนี้
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* การเชื่อมต่อกับ POS */}
+      {/* ตั้งค่าร้านค้า & ช่องทางเชื่อมต่อ */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#eae3cf] space-y-4">
         <div className="flex items-center gap-2.5">
           <Link2 className="w-5 h-5 text-[#118cd1]" />
           <div>
             <h2 className="text-lg font-extrabold text-[#0d3a57]">
-              การเชื่อมต่อกับระบบ POS (Google Sheets & Apps Script)
+              ข้อมูลร้านค้า & การเชื่อมต่อ ({activeBackendLabel})
             </h2>
             <p className="text-xs text-[#6b8799]">
-              ตั้งค่าชื่อร้าน เบอร์พร้อมเพย์สำหรับสแกน QR หน้า POS และตัวเลือกเชื่อมต่อ Google Sheet (ถ้ามี)
+              ตั้งค่าชื่อร้าน เบอร์พร้อมเพย์สำหรับสแกน QR หน้า POS และลิงก์ Google Sheet (กรณีใช้โหมด Google Sheets)
             </p>
           </div>
         </div>

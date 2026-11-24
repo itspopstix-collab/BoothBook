@@ -1,6 +1,13 @@
-import { AppDatabaseState, IngredientLot, PackagingLot, PosConnectionSettings } from '../types';
+import { AppDatabaseState, PosConnectionSettings } from '../types';
 import { createInitialSeedState } from './seedData';
-import { pullStateFromSupabase, pushStateToSupabase } from './supabase';
+import {
+  getActiveBackend,
+  getPendingOrdersCount,
+  isOnline,
+  markStateDirty,
+  pullStateFromActiveCloud,
+  pushStateToActiveCloud,
+} from './offlineSync';
 
 const STORAGE_KEY = 'boothbook_db_clean_v2';
 try {
@@ -15,6 +22,8 @@ export type SyncStatusInfo = {
   cloudSynced: boolean;
   lastSavedAt: string;
   message: string;
+  pendingCount?: number;
+  offline?: boolean;
 };
 
 let saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -55,44 +64,39 @@ export function loadAppState(): AppDatabaseState {
 }
 
 /**
- * ดึงข้อมูลล่าสุดจาก Supabase (ถ้ามี) หรือใช้ข้อมูลในเครื่อง
+ * โหลดข้อมูลล่าสุดจาก Cloud ที่เลือก (Supabase หรือ Google Sheets)
+ * หากออฟไลน์หรือยังไม่มีข้อมูลบน Cloud จะใช้ข้อมูลสำรองใน Local Storage ของเครื่องทันที
  */
 export async function loadStateFromDiskOrCloud(
   currentState: AppDatabaseState
-): Promise<{ state: AppDatabaseState; source: 'disk' | 'cloud' | 'seed' }> {
+): Promise<{ state: AppDatabaseState; source: 'local' | 'cloud' | 'seed' }> {
   try {
-    const cloudData = await pullStateFromSupabase();
+    const cloudData = await pullStateFromActiveCloud(currentState.settings);
     if (cloudData && Array.isArray(cloudData.recipes)) {
       const normalized = ensureEventSnapshots(cloudData);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
       return { state: normalized, source: 'cloud' };
     }
   } catch (err) {
-    console.warn('Could not pull from Supabase:', err);
+    console.warn('Could not pull from cloud, using local backup:', err);
   }
 
-  return { state: currentState, source: 'seed' };
+  return { state: currentState, source: 'local' };
 }
 
-export async function saveToDiskFile(state: AppDatabaseState): Promise<boolean> {
-  return true;
-}
-
-/** ส่งข้อมูลขึ้น Supabase */
 export async function pushDatabaseToGoogleSheets(state: AppDatabaseState): Promise<boolean> {
   try {
-    return await pushStateToSupabase(state);
+    return await pushStateToActiveCloud(state);
   } catch {
     return false;
   }
 }
 
-/** ดึงข้อมูลจาก Supabase */
 export async function pullDatabaseFromGoogleSheets(
-  _settings?: PosConnectionSettings
+  settings: PosConnectionSettings
 ): Promise<AppDatabaseState | null> {
   try {
-    const st = await pullStateFromSupabase();
+    const st = await pullStateFromActiveCloud(settings);
     return st && Array.isArray(st.recipes) ? ensureEventSnapshots(st) : null;
   } catch {
     return null;
@@ -103,6 +107,7 @@ export function saveAppState(
   state: AppDatabaseState,
   onStatusChange?: (status: SyncStatusInfo) => void
 ): void {
+  // 1. สำรองข้อมูลลง Local Storage ของเครื่องนี้ทันทีเสมอ (ทำงานได้ 100% แม้ไม่มีเน็ต)
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (err) {
@@ -110,6 +115,23 @@ export function saveAppState(
   }
 
   const timeStr = new Date().toLocaleTimeString('th-TH');
+  const backendLabel =
+    getActiveBackend(state.settings) === 'google_sheets' ? 'Google Sheets' : 'Supabase';
+
+  if (!isOnline()) {
+    markStateDirty(true);
+    if (onStatusChange) {
+      onStatusChange({
+        diskSaved: true,
+        cloudSynced: false,
+        lastSavedAt: timeStr,
+        offline: true,
+        pendingCount: getPendingOrdersCount(),
+        message: `โหมดออฟไลน์: สำรองข้อมูลในเครื่องแล้ว (รอซิงค์ขึ้น ${backendLabel} เมื่อต่อเน็ต)`,
+      });
+    }
+    return;
+  }
 
   if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
   saveDebounceTimer = setTimeout(async () => {
@@ -119,9 +141,11 @@ export function saveAppState(
         diskSaved: true,
         cloudSynced: cloudOk,
         lastSavedAt: new Date().toLocaleTimeString('th-TH'),
+        offline: !isOnline(),
+        pendingCount: getPendingOrdersCount(),
         message: cloudOk
-          ? `บันทึกข้อมูลและซิงค์กับ Supabase สำเร็จ (${new Date().toLocaleTimeString('th-TH')})`
-          : `บันทึกข้อมูลในเครื่องแล้ว (${timeStr})`,
+          ? `สำรองในเครื่อง + ซิงค์ขึ้น ${backendLabel} สำเร็จ (${new Date().toLocaleTimeString('th-TH')})`
+          : `สำรองในเครื่องแล้ว (รอซิงค์ขึ้น ${backendLabel} ภายหลัง)`,
       });
     }
   }, 1000);

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { AppDatabaseState, PosSaleRow } from '../types';
 import { getRecipeSellingPrice } from '../services/fifoEngine';
 import { generatePromptPayPayload, generateQrDataUrl } from '../services/promptpay';
-import { recordPosSaleToSupabase } from '../services/supabase';
+import { getActiveBackend, queuePosSaleAndSync } from '../services/offlineSync';
 import { formatBaht } from '../services/storage';
 import {
   ShoppingBag,
@@ -21,6 +21,7 @@ interface PosCashierViewProps {
   state: AppDatabaseState;
   onRecordSale: (sale: PosSaleRow) => void;
   promptPayNumber?: string;
+  onPendingChange?: (pendingCount: number) => void;
 }
 
 interface CartItem {
@@ -36,6 +37,7 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
   state,
   onRecordSale,
   promptPayNumber = '',
+  onPendingChange,
 }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [payMethod, setPayMethod] = useState<'cash' | 'qr'>('qr');
@@ -126,6 +128,8 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
       ).padStart(3, '0')}`;
 
       let seq = 0;
+      let allSynced = true;
+      let latestPending = 0;
       for (const item of cart) {
         for (let q = 0; q < item.qty; q++) {
           const saleRow: PosSaleRow = {
@@ -145,11 +149,20 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
           };
 
           onRecordSale(saleRow);
-          await recordPosSaleToSupabase(saleRow, activeEvent.id);
+          const res = await queuePosSaleAndSync(saleRow, activeEvent.id, state.settings);
+          if (!res.syncedNow) allSynced = false;
+          latestPending = res.pendingCount;
         }
       }
 
-      setSuccessToast(`บันทึกคำสั่งซื้อ #${orderBatchId} เรียบร้อย (${formatBaht(cartTotal)})`);
+      onPendingChange?.(latestPending);
+      const backendName =
+        getActiveBackend(state.settings) === 'google_sheets' ? 'Google Sheets' : 'Supabase';
+      setSuccessToast(
+        allSynced
+          ? `บันทึก #${orderBatchId} เรียบร้อย (${formatBaht(cartTotal)}) · ซิงค์ ${backendName} แล้ว`
+          : `บันทึก #${orderBatchId} ลงเครื่องแล้ว (${formatBaht(cartTotal)}) · รอซิงค์เมื่อต่อเน็ต (${latestPending} รายการ)`
+      );
       setCart([]);
       setCashReceived(0);
       setTimeout(() => setSuccessToast(null), 3500);
