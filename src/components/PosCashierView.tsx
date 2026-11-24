@@ -39,7 +39,6 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
   onRecordSale,
   promptPayNumber = '0812345678',
 }) => {
-  const [flavorsPerCup, setFlavorsPerCup] = useState<1 | 2>(1);
   const [selectedPicks, setSelectedPicks] = useState<
     { name: string; category: FlavorCategory; image?: string }[]
   >([]);
@@ -74,16 +73,13 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
     return Array.from(set);
   }, [availableFlavors]);
 
-  const requiredCount = flavorsPerCup;
+  const requiredCount = 1;
 
   const currentItemPrice = useMemo(() => {
     if (selectedPicks.length === 0) return 0;
-    if (flavorsPerCup === 1) {
-      const cat = selectedPicks[0]?.category || 'Original';
-      return PRICE_TABLE.g1[cat] || 89;
-    }
-    return selectedPicks.reduce((sum, p) => sum + (PRICE_TABLE.g2[p.category] || 45), 0);
-  }, [flavorsPerCup, selectedPicks]);
+    const cat = selectedPicks[0]?.category || 'Original';
+    return PRICE_TABLE.g1[cat] || 89;
+  }, [selectedPicks]);
 
   const cartTotal = useMemo(() => {
     return cart.reduce((sum, item) => sum + item.price, 0);
@@ -118,7 +114,7 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
     const newItem: CartItem = {
       id: `cart-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       type: 'gelato',
-      cups: flavorsPerCup,
+      cups: 1,
       flavors: [...selectedPicks],
       price: currentItemPrice,
     };
@@ -199,41 +195,8 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* ซ้าย: เมนูรสชาติและตัวเลือก (8 คอลัมน์) */}
+        {/* ซ้าย: เมนูสินค้า (8 คอลัมน์) */}
         <div className="lg:col-span-8 space-y-4">
-          {/* Controls: Flavors per cup */}
-          <div className="bg-white p-4 rounded-2xl border border-[#eae3cf] shadow-sm">
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setFlavorsPerCup(1);
-                  setSelectedPicks((prev) => prev.slice(0, 1));
-                }}
-                className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all cursor-pointer ${
-                  flavorsPerCup === 1
-                    ? 'bg-[#118cd1] text-white shadow-sm'
-                    : 'bg-[#fef9ec] text-[#0d3a57] hover:bg-[#f6eed5]'
-                }`}
-              >
-                🍨 1 รสชาติ (1 Scoop)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setFlavorsPerCup(2);
-                }}
-                className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all cursor-pointer ${
-                  flavorsPerCup === 2
-                    ? 'bg-[#118cd1] text-white shadow-sm'
-                    : 'bg-[#fef9ec] text-[#0d3a57] hover:bg-[#f6eed5]'
-                }`}
-              >
-                🍨🍨 2 รสชาติ (2 Scoops)
-              </button>
-            </div>
-          </div>
-
           {/* Product Selection Grid by Category */}
           <div className="space-y-6">
             {availableFlavors.length === 0 ? (
@@ -248,10 +211,7 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
                 const catFlavors = availableFlavors.filter((f) => (f.category || 'ทั่วไป') === cat);
                 if (catFlavors.length === 0) return null;
 
-                const priceLabel =
-                  flavorsPerCup === 1
-                    ? formatBaht(PRICE_TABLE.g1[cat] || 89)
-                    : `${formatBaht(PRICE_TABLE.g2[cat] || 45)}/scoop`;
+                const priceLabel = formatBaht(PRICE_TABLE.g1[cat] || 89);
 
               return (
                 <div key={cat} className="space-y-2">
@@ -283,7 +243,7 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
                         >
                           {isPicked && (
                             <span className="absolute top-2 right-2 w-6 h-6 rounded-full bg-[#118cd1] text-white text-xs font-black flex items-center justify-center shadow">
-                              {flavorsPerCup === 2 ? pickIdx + 1 : '✓'}
+                              ✓
                             </span>
                           )}
 
@@ -324,12 +284,12 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
           <div className="sticky bottom-4 z-10 bg-white/95 backdrop-blur-md p-4 rounded-2xl border border-[#eae3cf] shadow-xl flex items-center justify-between gap-4">
             <div>
               <div className="text-xs text-[#6b8799]">
-                เลือกรสชาติ: <b className="text-[#0d3a57]">{selectedPicks.length}/{requiredCount}</b>
+                รายการที่เลือก: <b className="text-[#0d3a57]">{selectedPicks.length}/{requiredCount}</b>
               </div>
               <div className="text-sm font-bold text-[#0d3a57] truncate max-w-xs sm:max-w-md">
                 {selectedPicks.length > 0
                   ? selectedPicks.map((p) => p.name).join(' + ')
-                  : `กรุณาเลือกรสชาติ ${requiredCount} รส`}
+                  : 'แตะเลือกสินค้าเพื่อใส่ตะกร้า'}
               </div>
             </div>
 
