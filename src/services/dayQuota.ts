@@ -90,21 +90,24 @@ export function loadPurchasedPackage(): PurchasedPackageState | null {
 
 export function addPurchasedDayPack(
   pack: DayPassPack,
-  storage: { id: string; provider: string; label: string; quota: number | 'unlimited'; price: number }
+  storage: { id: string; provider: string; label: string; quota: number | 'unlimited'; price: number },
+  quantity = 1
 ): PurchasedPackageState {
+  const safeQty = Math.max(1, Math.floor(quantity || 1));
   const prev = loadPurchasedPackage();
   const prevDays = prev && typeof prev.boothQuota === 'number' ? prev.boothQuota : 0;
-  const nextTotalDays = prevDays + pack.quota;
+  const addedDays = pack.quota * safeQty;
+  const nextTotalDays = prevDays + addedDays;
 
   const nextPkg: PurchasedPackageState = {
     boothId: pack.id,
-    boothLabel: pack.label,
+    boothLabel: safeQty > 1 ? `${pack.label} × ${safeQty}` : pack.label,
     boothQuota: nextTotalDays,
     storageId: storage.id,
     storageProvider: storage.provider,
     storageLabel: storage.label,
     billQuota: storage.quota,
-    totalPaid: pack.price + storage.price,
+    totalPaid: pack.price * safeQty + storage.price,
     activatedAt: new Date().toLocaleDateString('th-TH', {
       day: 'numeric',
       month: 'short',

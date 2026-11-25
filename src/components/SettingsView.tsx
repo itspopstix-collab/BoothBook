@@ -82,6 +82,7 @@ export const SettingsView: React.FC<Props> = ({
   // Modal เลือกแพ็กเกจ (UI Preview / Mockup)
   const [showPackageModal, setShowPackageModal] = useState(false);
   const [selectedBoothPack, setSelectedBoothPack] = useState<string>('day-30');
+  const [selectedBoothQty, setSelectedBoothQty] = useState<number>(1);
   const [selectedStoragePlan, setSelectedStoragePlan] = useState<string>('gs-free');
   const boothCarouselRef = useRef<HTMLDivElement>(null);
   const storageCarouselRef = useRef<HTMLDivElement>(null);
@@ -106,10 +107,11 @@ export const SettingsView: React.FC<Props> = ({
 
   const activeBoothObj = DAY_PASS_PACKS.find((p) => p.id === selectedBoothPack) || DAY_PASS_PACKS[0];
   const activeStorageObj = STORAGE_PLANS.find((p) => p.id === selectedStoragePlan) || STORAGE_PLANS[0];
-  const totalPackagePrice = activeBoothObj.price + activeStorageObj.price;
+  const totalAddedDays = activeBoothObj.quota * selectedBoothQty;
+  const totalPackagePrice = activeBoothObj.price * selectedBoothQty + activeStorageObj.price;
 
   const handleConfirmMockPackage = () => {
-    const nextPkg = addPurchasedDayPack(activeBoothObj, activeStorageObj);
+    const nextPkg = addPurchasedDayPack(activeBoothObj, activeStorageObj, selectedBoothQty);
     setPurchasedPackage(nextPkg);
     // สลับระบบเก็บข้อมูลให้ตรงกับแพ็กเกจที่เลือกอัตโนมัติ
     handleSelectBackend(activeStorageObj.id === 'gs-free' ? 'google_sheets' : 'supabase');
@@ -898,10 +900,25 @@ export const SettingsView: React.FC<Props> = ({
                   {DAY_PASS_PACKS.map((pack) => {
                     const isSelected = selectedBoothPack === pack.id;
                     return (
-                      <button
+                      <div
                         key={pack.id}
-                        type="button"
-                        onClick={() => setSelectedBoothPack(pack.id)}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => {
+                          if (selectedBoothPack !== pack.id) {
+                            setSelectedBoothPack(pack.id);
+                            setSelectedBoothQty(1);
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            if (selectedBoothPack !== pack.id) {
+                              setSelectedBoothPack(pack.id);
+                              setSelectedBoothQty(1);
+                            }
+                          }
+                        }}
                         className={`min-w-[225px] sm:min-w-[240px] shrink-0 snap-start text-left p-4 rounded-2xl border-2 transition cursor-pointer flex flex-col justify-between gap-3 ${
                           isSelected
                             ? 'border-[#118cd1] bg-[#118cd1]/5 shadow-sm'
@@ -953,13 +970,44 @@ export const SettingsView: React.FC<Props> = ({
                           </div>
                         </div>
 
-                        <div className="pt-2 border-t border-[#eae3cf]/70 flex items-baseline justify-between">
-                          <span className="text-[11px] font-bold text-[#6b8799]">ราคา</span>
-                          <span className="text-lg font-black text-[#118cd1]">
-                            ฿{pack.price.toLocaleString()}
-                          </span>
+                        <div className="pt-2 border-t border-[#eae3cf]/70 space-y-2">
+                          <div className="flex items-baseline justify-between">
+                            <span className="text-[11px] font-bold text-[#6b8799]">ราคา</span>
+                            <span className="text-lg font-black text-[#118cd1]">
+                              ฿{pack.price.toLocaleString()}
+                            </span>
+                          </div>
+                          {isSelected && (
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex items-center justify-between gap-2 bg-white border border-[#90d4ec] rounded-xl px-2.5 py-1.5"
+                            >
+                              <span className="text-[11px] font-bold text-[#0d3a57]">
+                                จำนวน ({pack.quota * selectedBoothQty} วัน)
+                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedBoothQty((q) => Math.max(1, q - 1))}
+                                  className="w-6 h-6 rounded-lg bg-[#fef9ec] hover:bg-[#90d4ec]/40 text-[#0d3a57] font-black text-xs flex items-center justify-center cursor-pointer"
+                                >
+                                  -
+                                </button>
+                                <span className="w-5 text-center text-xs font-black text-[#118cd1]">
+                                  {selectedBoothQty}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedBoothQty((q) => q + 1)}
+                                  className="w-6 h-6 rounded-lg bg-[#118cd1] hover:bg-[#0e78b5] text-white font-black text-xs flex items-center justify-center cursor-pointer"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -1106,7 +1154,7 @@ export const SettingsView: React.FC<Props> = ({
             <div className="bg-[#fef9ec] border-t border-[#eae3cf] px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <div className="text-[11px] font-bold text-[#6b8799]">
-                  {activeBoothObj.label} ({activeBoothObj.daysLabel}) + {activeStorageObj.provider} ({activeStorageObj.label})
+                  {activeBoothObj.label} × {selectedBoothQty} ({totalAddedDays} วันขายจริง) + {activeStorageObj.provider} ({activeStorageObj.label})
                 </div>
                 <div className="text-xl font-black text-[#0d3a57]">
                   ยอดรวมทั้งสิ้น: <span className="text-[#118cd1]">฿{totalPackagePrice.toLocaleString()}</span>
@@ -1126,7 +1174,7 @@ export const SettingsView: React.FC<Props> = ({
                   onClick={handleConfirmMockPackage}
                   className="px-6 py-2.5 rounded-xl font-black text-sm bg-[#118cd1] hover:bg-[#0e78b5] text-white shadow-md transition active:scale-95 cursor-pointer"
                 >
-                  ซื้อวันเพิ่ม +{activeBoothObj.quota} วัน (฿{totalPackagePrice.toLocaleString()})
+                  ซื้อวันเพิ่ม +{totalAddedDays} วัน (฿{totalPackagePrice.toLocaleString()})
                 </button>
               </div>
             </div>

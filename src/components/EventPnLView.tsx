@@ -86,6 +86,7 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
     actionLabel: string;
   } | null>(null);
   const [selectedTopupPackId, setSelectedTopupPackId] = useState<string>('day-7');
+  const [selectedTopupQty, setSelectedTopupQty] = useState<number>(1);
 
   const purchasedPkg = (() => {
     void quotaVersion;
@@ -3291,11 +3292,26 @@ const isBatchCollapsed = collapsedBatches[batch.id];
                   {DAY_PASS_PACKS.map((pack) => {
                     const isSelected = selectedTopupPackId === pack.id;
                     return (
-                      <button
+                      <div
                         key={pack.id}
-                        type="button"
-                        onClick={() => setSelectedTopupPackId(pack.id)}
-                        className={`min-w-[185px] shrink-0 snap-start text-left p-3.5 rounded-2xl border-2 transition cursor-pointer flex flex-col justify-between gap-2 ${
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => {
+                          if (selectedTopupPackId !== pack.id) {
+                            setSelectedTopupPackId(pack.id);
+                            setSelectedTopupQty(1);
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            if (selectedTopupPackId !== pack.id) {
+                              setSelectedTopupPackId(pack.id);
+                              setSelectedTopupQty(1);
+                            }
+                          }
+                        }}
+                        className={`min-w-[195px] shrink-0 snap-start text-left p-3.5 rounded-2xl border-2 transition cursor-pointer flex flex-col justify-between gap-2 ${
                           isSelected
                             ? 'border-[#118cd1] bg-[#118cd1]/5 shadow-xs'
                             : 'border-[#eae3cf] bg-[#fef9ec]/40 hover:border-[#90d4ec]'
@@ -3330,11 +3346,42 @@ const isBatchCollapsed = collapsedBatches[batch.id];
                             <div className="text-[10px] font-bold text-emerald-700">{pack.discount}</div>
                           )}
                         </div>
-                        <div className="pt-1.5 border-t border-[#eae3cf]/70 flex items-baseline justify-between">
-                          <span className="text-[10px] text-[#6b8799] font-bold">ราคา</span>
-                          <span className="text-base font-black text-[#118cd1]">฿{pack.price}</span>
+                        <div className="pt-1.5 border-t border-[#eae3cf]/70 space-y-1.5">
+                          <div className="flex items-baseline justify-between">
+                            <span className="text-[10px] text-[#6b8799] font-bold">ราคา</span>
+                            <span className="text-base font-black text-[#118cd1]">฿{pack.price}</span>
+                          </div>
+                          {isSelected && (
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex items-center justify-between gap-1.5 bg-white border border-[#90d4ec] rounded-lg px-2 py-1"
+                            >
+                              <span className="text-[10px] font-bold text-[#0d3a57]">
+                                จำนวน ({pack.quota * selectedTopupQty} วัน)
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedTopupQty((q) => Math.max(1, q - 1))}
+                                  className="w-5 h-5 rounded bg-[#fef9ec] hover:bg-[#90d4ec]/40 text-[#0d3a57] font-black text-[11px] flex items-center justify-center cursor-pointer"
+                                >
+                                  -
+                                </button>
+                                <span className="w-4 text-center text-[11px] font-black text-[#118cd1]">
+                                  {selectedTopupQty}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedTopupQty((q) => q + 1)}
+                                  className="w-5 h-5 rounded bg-[#118cd1] hover:bg-[#0e78b5] text-white font-black text-[11px] flex items-center justify-center cursor-pointer"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -3343,6 +3390,8 @@ const isBatchCollapsed = collapsedBatches[batch.id];
               {(() => {
                 const chosenPack =
                   DAY_PASS_PACKS.find((p) => p.id === selectedTopupPackId) || DAY_PASS_PACKS[0];
+                const totalDays = chosenPack.quota * selectedTopupQty;
+                const totalPrice = chosenPack.price * selectedTopupQty;
                 return (
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#eae3cf]">
                     <button
@@ -3355,20 +3404,24 @@ const isBatchCollapsed = collapsedBatches[batch.id];
                     <button
                       type="button"
                       onClick={() => {
-                        addPurchasedDayPack(chosenPack, {
-                          id: 'gs-free',
-                          provider: 'Google Sheets',
-                          label: 'ไม่จำกัดบิล',
-                          quota: 'unlimited',
-                          price: 0,
-                        });
+                        addPurchasedDayPack(
+                          chosenPack,
+                          {
+                            id: 'gs-free',
+                            provider: 'Google Sheets',
+                            label: 'ไม่จำกัดบิล',
+                            quota: 'unlimited',
+                            price: 0,
+                          },
+                          selectedTopupQty
+                        );
                         setQuotaVersion((v) => v + 1);
                         setQuotaAlertInfo(null);
                       }}
                       className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-black text-xs bg-[#118cd1] hover:bg-[#0e78b5] text-white shadow-md transition active:scale-95 cursor-pointer"
                     >
                       <Sparkles className="w-4 h-4" />
-                      ซื้อวันเพิ่ม +{chosenPack.quota} วัน (฿{chosenPack.price})
+                      ซื้อวันเพิ่ม +{totalDays} วัน (฿{totalPrice.toLocaleString()})
                     </button>
                   </div>
                 );
