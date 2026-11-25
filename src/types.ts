@@ -65,6 +65,7 @@ export interface FlavorRecipe {
   name: string; // ชื่อสินค้า / เมนู
   category: FlavorCategory; // หมวดหมู่สินค้า (ตั้งชื่อได้อิสระ)
   sellingPrice?: number; // ราคาขายต่อหน่วย (บาท)
+  priceCategoryId?: string; // หมวดราคาที่เลือก ('Original', 'Premium', 'Signature', custom id, หรือ 'custom')
   unitLabel?: string; // หน่วยขาย เช่น "ชิ้น", "แก้ว", "กล่อง", "ชุด"
   image?: string;
   mode: 'per_cup' | 'per_batch';
@@ -293,6 +294,14 @@ export interface PosConnectionSettings {
   shopName: string;
   branchName: string;
   promptPayNumber?: string;
+  priceCategories?: PriceCategoryOption[];
+}
+
+export interface PriceCategoryOption {
+  id: string;
+  name: string;
+  singlePrice: number;
+  halfPrice?: number;
 }
 
 export type UserRole = 'owner' | 'staff';

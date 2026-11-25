@@ -94,6 +94,9 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
   const [ingCatFilter, setIngCatFilter] = useState<string>('ทั้งหมด');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('ทั้งหมด');
   const [customPriceModeByRecipe, setCustomPriceModeByRecipe] = useState<Record<string, boolean>>({});
+  const [showAddPriceCatForm, setShowAddPriceCatForm] = useState(false);
+  const [newPriceCatName, setNewPriceCatName] = useState('');
+  const [newPriceCatSingle, setNewPriceCatSingle] = useState('');
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [recipeOrCatSearch, setRecipeOrCatSearch] = useState('');
   const [addingBottomCategory, setAddingBottomCategory] = useState(false);
@@ -1119,46 +1122,205 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
               <div className="bg-[#fef9ec] rounded-xl p-4 border border-[#eae3cf] space-y-2.5 text-sm">
                 {(() => {
                   const effectivePrice = selectedCost.sellingPriceSingle;
-                  const matchedTier = (['Original', 'Premium', 'Signature'] as const).find(
-                    (tier) => POS_SELLING_PRICE[tier].single === effectivePrice
+                  const allPriceCategories = [
+                    { id: 'Original', name: 'Original', singlePrice: 79, halfPrice: 40, isBuiltIn: true },
+                    { id: 'Premium', name: 'Premium', singlePrice: 89, halfPrice: 45, isBuiltIn: true },
+                    { id: 'Signature', name: 'Signature', singlePrice: 99, halfPrice: 50, isBuiltIn: true },
+                    ...(state.settings.priceCategories || []).map((c) => ({
+                      ...c,
+                      isBuiltIn: false,
+                    })),
+                  ];
+
+                  const explicitCatId = selectedRecipe.priceCategoryId;
+                  const matchedById = explicitCatId
+                    ? allPriceCategories.find((c) => c.id === explicitCatId)
+                    : undefined;
+                  const matchedByPrice = allPriceCategories.find(
+                    (c) => c.singlePrice === effectivePrice
                   );
                   const isCustomPriceMode =
-                    customPriceModeByRecipe[selectedRecipe.id] ?? !matchedTier;
-                  const selectValue = isCustomPriceMode ? 'custom' : (matchedTier || 'Original');
+                    customPriceModeByRecipe[selectedRecipe.id] ??
+                    (explicitCatId === 'custom' || (!matchedById && !matchedByPrice));
+                  const selectValue = isCustomPriceMode
+                    ? 'custom'
+                    : (matchedById?.id || matchedByPrice?.id || 'custom');
+                  const selectedCustomCat = allPriceCategories.find(
+                    (c) => !c.isBuiltIn && c.id === selectValue
+                  );
+
+                  const handleSaveNewPriceCategory = (e: React.FormEvent) => {
+                    e.preventDefault();
+                    const trimmed = newPriceCatName.trim();
+                    const priceVal = Math.max(0, parseFloat(newPriceCatSingle) || 0);
+                    if (!trimmed) return;
+                    const newCatId = 'pcat-' + Date.now();
+                    onUpdateState((prev) => ({
+                      ...prev,
+                      settings: {
+                        ...prev.settings,
+                        priceCategories: [
+                          ...(prev.settings.priceCategories || []),
+                          { id: newCatId, name: trimmed, singlePrice: priceVal },
+                        ],
+                      },
+                      recipes: prev.recipes.map((r) =>
+                        r.id === selectedRecipe.id
+                          ? { ...r, priceCategoryId: newCatId, sellingPrice: priceVal }
+                          : r
+                      ),
+                    }));
+                    setCustomPriceModeByRecipe((prev) => ({
+                      ...prev,
+                      [selectedRecipe.id]: false,
+                    }));
+                    setNewPriceCatName('');
+                    setNewPriceCatSingle('');
+                    setShowAddPriceCatForm(false);
+                  };
 
                   return (
                     <div className="space-y-2">
                       <div className="flex justify-between items-center gap-2">
                         <span className="text-xs font-bold text-[#6b8799]">หมวดราคาใน POS:</span>
-                        <select
-                          value={selectValue}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            if (val === 'custom') {
-                              setCustomPriceModeByRecipe((prev) => ({
-                                ...prev,
-                                [selectedRecipe.id]: true,
-                              }));
-                              if (typeof selectedRecipe.sellingPrice !== 'number') {
-                                handleUpdateRecipeField('sellingPrice', effectivePrice);
+                        <div className="flex items-center gap-1.5">
+                          <select
+                            value={selectValue}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === '__add_new__') {
+                                setShowAddPriceCatForm(true);
+                                return;
                               }
-                            } else {
-                              setCustomPriceModeByRecipe((prev) => ({
-                                ...prev,
-                                [selectedRecipe.id]: false,
-                              }));
-                              const tierPrice = POS_SELLING_PRICE[val]?.single ?? 79;
-                              handleUpdateRecipeField('sellingPrice', tierPrice);
-                            }
-                          }}
-                          className="bg-white border border-[#eae3cf] rounded-lg px-2.5 py-1 text-xs font-extrabold text-[#118cd1]"
-                        >
-                          <option value="Original">Original (฿79 / ฿40)</option>
-                          <option value="Premium">Premium (฿89 / ฿45)</option>
-                          <option value="Signature">Signature (฿99 / ฿50)</option>
-                          <option value="custom">ระบุราคาเอง</option>
-                        </select>
+                              setShowAddPriceCatForm(false);
+                              if (val === 'custom') {
+                                setCustomPriceModeByRecipe((prev) => ({
+                                  ...prev,
+                                  [selectedRecipe.id]: true,
+                                }));
+                                onUpdateState((prev) => ({
+                                  ...prev,
+                                  recipes: prev.recipes.map((r) =>
+                                    r.id === selectedRecipe.id
+                                      ? {
+                                          ...r,
+                                          priceCategoryId: 'custom',
+                                          sellingPrice:
+                                            typeof r.sellingPrice === 'number'
+                                              ? r.sellingPrice
+                                              : effectivePrice,
+                                        }
+                                      : r
+                                  ),
+                                }));
+                              } else {
+                                const picked = allPriceCategories.find((c) => c.id === val);
+                                const tierPrice = picked?.singlePrice ?? 79;
+                                setCustomPriceModeByRecipe((prev) => ({
+                                  ...prev,
+                                  [selectedRecipe.id]: false,
+                                }));
+                                onUpdateState((prev) => ({
+                                  ...prev,
+                                  recipes: prev.recipes.map((r) =>
+                                    r.id === selectedRecipe.id
+                                      ? { ...r, priceCategoryId: val, sellingPrice: tierPrice }
+                                      : r
+                                  ),
+                                }));
+                              }
+                            }}
+                            className="bg-white border border-[#eae3cf] rounded-lg px-2.5 py-1 text-xs font-extrabold text-[#118cd1]"
+                          >
+                            {allPriceCategories.map((cat) => (
+                              <option key={cat.id} value={cat.id}>
+                                {cat.halfPrice !== undefined
+                                  ? `${cat.name} (฿${cat.singlePrice} / ฿${cat.halfPrice})`
+                                  : `${cat.name} (฿${cat.singlePrice})`}
+                              </option>
+                            ))}
+                            <option value="__add_new__">+ เพิ่มหมวดราคาใหม่...</option>
+                            <option value="custom">ระบุราคาเอง</option>
+                          </select>
+                          {selectedCustomCat && (
+                            <button
+                              type="button"
+                              title={`ลบหมวดราคา "${selectedCustomCat.name}"`}
+                              onClick={() => {
+                                onUpdateState((prev) => ({
+                                  ...prev,
+                                  settings: {
+                                    ...prev.settings,
+                                    priceCategories: (prev.settings.priceCategories || []).filter(
+                                      (c) => c.id !== selectedCustomCat.id
+                                    ),
+                                  },
+                                  recipes: prev.recipes.map((r) =>
+                                    r.priceCategoryId === selectedCustomCat.id
+                                      ? { ...r, priceCategoryId: 'custom' }
+                                      : r
+                                  ),
+                                }));
+                              }}
+                              className="p-1 rounded-md text-rose-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
+
+                      {showAddPriceCatForm && (
+                        <form
+                          onSubmit={handleSaveNewPriceCategory}
+                          className="bg-white rounded-xl p-2.5 border border-[#118cd1]/30 space-y-2"
+                        >
+                          <div className="text-[11px] font-bold text-[#0d3a57]">
+                            เพิ่มหมวดราคาใหม่
+                          </div>
+                          <div className="grid grid-cols-5 gap-2">
+                            <input
+                              type="text"
+                              placeholder="ชื่อหมวด (เช่น Special)"
+                              value={newPriceCatName}
+                              onChange={(e) => setNewPriceCatName(e.target.value)}
+                              className="col-span-3 border border-[#eae3cf] rounded-lg px-2 py-1 text-xs font-semibold focus:outline-none focus:border-[#118cd1]"
+                              required
+                              autoFocus
+                            />
+                            <input
+                              type="number"
+                              min={0}
+                              step="any"
+                              placeholder="ราคา (฿)"
+                              value={newPriceCatSingle}
+                              onChange={(e) => setNewPriceCatSingle(e.target.value)}
+                              className="col-span-2 border border-[#eae3cf] rounded-lg px-2 py-1 text-xs font-bold text-right focus:outline-none focus:border-[#118cd1]"
+                              required
+                            />
+                          </div>
+                          <div className="flex justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowAddPriceCatForm(false);
+                                setNewPriceCatName('');
+                                setNewPriceCatSingle('');
+                              }}
+                              className="px-2.5 py-1 rounded-lg text-[11px] font-bold text-[#6b8799] hover:bg-slate-100"
+                            >
+                              ยกเลิก
+                            </button>
+                            <button
+                              type="submit"
+                              className="px-3 py-1 rounded-lg text-[11px] font-bold bg-[#118cd1] text-white hover:bg-[#0e76b2]"
+                            >
+                              บันทึกหมวดราคา
+                            </button>
+                          </div>
+                        </form>
+                      )}
+
                       {isCustomPriceMode && (
                         <div className="flex justify-between items-center gap-2">
                           <span className="text-xs font-bold text-[#6b8799]">ราคาขายที่ระบุเอง (฿):</span>
@@ -1172,10 +1334,18 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                                 : effectivePrice
                             }
                             onChange={(e) =>
-                              handleUpdateRecipeField(
-                                'sellingPrice',
-                                Math.max(0, parseFloat(e.target.value) || 0)
-                              )
+                              onUpdateState((prev) => ({
+                                ...prev,
+                                recipes: prev.recipes.map((r) =>
+                                  r.id === selectedRecipe.id
+                                    ? {
+                                        ...r,
+                                        priceCategoryId: 'custom',
+                                        sellingPrice: Math.max(0, parseFloat(e.target.value) || 0),
+                                      }
+                                    : r
+                                ),
+                              }))
                             }
                             className="w-24 text-right bg-white border border-[#eae3cf] rounded-lg px-2.5 py-1 text-xs font-extrabold text-[#118cd1] focus:outline-none focus:border-[#118cd1]"
                           />
