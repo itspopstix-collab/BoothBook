@@ -74,7 +74,7 @@ export const SettingsView: React.FC<Props> = ({
 
   // Modal เลือกแพ็กเกจ (UI Preview / Mockup)
   const [showPackageModal, setShowPackageModal] = useState(false);
-  const [selectedBoothPack, setSelectedBoothPack] = useState<string>('pack-7');
+  const [selectedBoothPack, setSelectedBoothPack] = useState<string>('day-30');
   const [selectedStoragePlan, setSelectedStoragePlan] = useState<string>('gs-free');
   const boothCarouselRef = useRef<HTMLDivElement>(null);
   const storageCarouselRef = useRef<HTMLDivElement>(null);
@@ -102,11 +102,50 @@ export const SettingsView: React.FC<Props> = ({
   });
 
   const BOOTH_PACKS = [
-    { id: 'pack-1', label: '1 รอบออกบูธ', desc: 'ทดลองออกบูธ · ไม่เกิน 15 วัน/งาน', price: 69, quota: 1 as number | 'unlimited' },
-    { id: 'pack-3', label: '3 รอบออกบูธ', desc: 'เฉลี่ยรอบละ 63฿ · ไม่เกิน 15 วัน/งาน', price: 189, quota: 3 as number | 'unlimited' },
-    { id: 'pack-7', label: '7 รอบออกบูธ', desc: 'เฉลี่ยรอบละ 57฿ · ไม่เกิน 15 วัน/งาน', price: 399, badge: 'ยอดนิยม', quota: 7 as number | 'unlimited' },
-    { id: 'pack-15', label: '15 รอบออกบูธ', desc: 'เฉลี่ยรอบละ ~51฿ · ไม่เกิน 15 วัน/งาน', price: 769, quota: 15 as number | 'unlimited' },
-    { id: 'pack-unlimited', label: 'ออกบูธไม่จำกัดรอบ (รายปี)', desc: 'ออกบูธไม่จำกัดจำนวนรอบ · ไม่เกิน 15 วัน/งาน', price: 1690, badge: 'คุ้มที่สุด', quota: 'unlimited' as number | 'unlimited' },
+    {
+      id: 'day-1',
+      label: '1 วัน',
+      daysLabel: '1 วันขายจริง',
+      price: 39,
+      avgPerDay: '฿39.00',
+      discount: null as string | null,
+      badge: 'เหมาะกับลองใช้ / งานวันเดียว',
+      highlightBadge: false,
+      quota: 1 as number | 'unlimited',
+    },
+    {
+      id: 'day-7',
+      label: '1 สัปดาห์',
+      daysLabel: '7 วันขายจริง',
+      price: 149,
+      avgPerDay: '฿21.29',
+      discount: 'ลด 45.4% (ประหยัด ฿124)',
+      badge: 'ออกบูธในห้าง 1 รอบ',
+      highlightBadge: false,
+      quota: 7 as number | 'unlimited',
+    },
+    {
+      id: 'day-15',
+      label: 'คุ้มค่า',
+      daysLabel: '15 วันขายจริง',
+      price: 249,
+      avgPerDay: '฿16.60',
+      discount: 'ลด 57.4% (ประหยัด ฿336)',
+      badge: 'ออกบูธต่อเนื่องหลายงาน',
+      highlightBadge: false,
+      quota: 15 as number | 'unlimited',
+    },
+    {
+      id: 'day-30',
+      label: 'เหมาสุดคุ้ม',
+      daysLabel: '30 วันขายจริง',
+      price: 349,
+      avgPerDay: '฿11.63',
+      discount: 'ลด 70.2% (ประหยัด ฿821)',
+      badge: 'ยอดนิยม',
+      highlightBadge: true,
+      quota: 30 as number | 'unlimited',
+    },
   ];
 
   const STORAGE_PLANS = [
@@ -358,10 +397,10 @@ export const SettingsView: React.FC<Props> = ({
               แพ็กเกจปัจจุบัน: ฟรี (Free Plan)
             </div>
             <h2 className="text-lg sm:text-xl font-black tracking-tight">
-              อัปเกรด BoothBook เพื่อปลดล็อกรอบออกบูธและ Cloud
+              อัปเกรด BoothBook เพื่อปลดล็อกวันขายจริงและ Cloud
             </h2>
             <p className="text-xs text-white/85">
-              เลือกแพ็กเกจจำนวนรอบออกบูธได้ตามต้องการ เริ่มต้นเพียง 69฿ · เก็บข้อมูลลง Google Sheets ของร้านฟรีตลอดชีพ
+              เลือกแพ็กเกจตามจำนวนวันขายจริง เริ่มต้นเพียง ฿39 (1 วัน) หรือเหมา 30 วัน เฉลี่ยวันละ ฿11.63 · เก็บข้อมูลลง Google Sheets ฟรี
             </p>
           </div>
 
@@ -407,11 +446,11 @@ export const SettingsView: React.FC<Props> = ({
           {/* แถบแสดงสิทธิ์คงเหลือ */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-white/15 text-xs">
             <div className="bg-white/10 rounded-xl px-3.5 py-2.5">
-              <div className="text-[11px] text-white/70 font-semibold">โควตารอบออกบูธ</div>
+              <div className="text-[11px] text-white/70 font-semibold">โควตาวันขายจริง</div>
               <div className="text-sm font-black mt-0.5">
                 {purchasedPackage.boothQuota === 'unlimited'
-                  ? 'ไม่จำกัดรอบ (ตลอดชีพ)'
-                  : `ใช้ไป ${state.events.length} / ${purchasedPackage.boothQuota} รอบ`}
+                  ? 'ไม่จำกัดวันขายจริง'
+                  : `${purchasedPackage.boothQuota} วันขายจริง`}
               </div>
             </div>
             <div className="bg-white/10 rounded-xl px-3.5 py-2.5">
@@ -882,7 +921,7 @@ export const SettingsView: React.FC<Props> = ({
                 <div>
                   <h3 className="text-lg font-black">เลือกแพ็กเกจ BoothBook</h3>
                   <p className="text-xs text-white/80">
-                    ปรับเลือกจำนวนรอบออกบูธและโควตาบิล Cloud ได้ตามสไตล์ร้านคุณ
+                    เลือกแพ็กเกจตามจำนวนวันขายจริงและระบบเก็บข้อมูล Cloud ได้ตามสไตล์ร้านคุณ
                   </p>
                 </div>
               </div>
@@ -897,15 +936,15 @@ export const SettingsView: React.FC<Props> = ({
 
             {/* Modal Body */}
             <div className="p-5 sm:p-6 space-y-6 max-h-[72vh] overflow-y-auto">
-              {/* ส่วนที่ 1: จำนวนรอบออกบูธ (Carousel) */}
+              {/* ส่วนที่ 1: จำนวนวันขายจริง (Carousel) */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <div>
                     <h4 className="text-sm font-black text-[#0d3a57]">
-                      1. เลือกจำนวนรอบออกบูธ (รายปี)
+                      1. เลือกแพ็กเกจวันขายจริง
                     </h4>
                     <span className="text-[11px] font-bold text-[#6b8799]">
-                      แต่ละ Event เลือกระยะเวลาได้ไม่เกิน 15 วัน · เลื่อนซ้าย-ขวาเพื่อเลือก
+                      คิดตามจำนวนวันขายจริง · เลื่อนซ้าย-ขวาเพื่อเลือก
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
@@ -939,21 +978,23 @@ export const SettingsView: React.FC<Props> = ({
                         key={pack.id}
                         type="button"
                         onClick={() => setSelectedBoothPack(pack.id)}
-                        className={`min-w-[205px] sm:min-w-[220px] shrink-0 snap-start text-left p-4 rounded-2xl border-2 transition cursor-pointer flex flex-col justify-between gap-3 ${
+                        className={`min-w-[225px] sm:min-w-[240px] shrink-0 snap-start text-left p-4 rounded-2xl border-2 transition cursor-pointer flex flex-col justify-between gap-3 ${
                           isSelected
                             ? 'border-[#118cd1] bg-[#118cd1]/5 shadow-sm'
                             : 'border-[#eae3cf] bg-[#fef9ec]/40 hover:border-[#90d4ec]'
                         }`}
                       >
-                        <div className="space-y-1.5">
+                        <div className="space-y-2">
                           <div className="flex items-center justify-between gap-2">
-                            {pack.badge ? (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300">
-                                {pack.badge}
-                              </span>
-                            ) : (
-                              <span className="text-[10px] font-bold text-[#6b8799]">แพ็กเกจบูธ</span>
-                            )}
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${
+                                pack.highlightBadge
+                                  ? 'bg-amber-100 text-amber-900 border-amber-300'
+                                  : 'bg-white text-[#0d3a57] border-[#eae3cf]'
+                              }`}
+                            >
+                              {pack.badge}
+                            </span>
                             <span
                               className={`w-5 h-5 rounded-full flex items-center justify-center border shrink-0 ${
                                 isSelected
@@ -964,17 +1005,34 @@ export const SettingsView: React.FC<Props> = ({
                               {isSelected && <Check className="w-3 h-3" />}
                             </span>
                           </div>
-                          <div className="font-extrabold text-base text-[#0d3a57]">
-                            {pack.label}
+
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className="font-extrabold text-base text-[#0d3a57]">
+                              {pack.label}
+                            </span>
+                            <span className="text-[11px] font-black text-[#118cd1] bg-[#118cd1]/10 px-2 py-0.5 rounded-md">
+                              {pack.daysLabel}
+                            </span>
                           </div>
-                          <p className="text-[11px] text-[#6b8799] leading-snug">{pack.desc}</p>
+
+                          <div className="space-y-0.5 text-[11px]">
+                            <div className="text-[#6b8799] font-semibold">
+                              เฉลี่ยต่อวัน: <b className="text-[#0d3a57]">{pack.avgPerDay}</b>
+                            </div>
+                            {pack.discount ? (
+                              <div className="text-emerald-700 font-extrabold">
+                                {pack.discount}
+                              </div>
+                            ) : (
+                              <div className="text-[#6b8799]/70 font-medium">ราคามาตรฐานรายวัน</div>
+                            )}
+                          </div>
                         </div>
 
                         <div className="pt-2 border-t border-[#eae3cf]/70 flex items-baseline justify-between">
-                          <span className="text-[11px] font-bold text-[#6b8799]">ราคาต่อปี</span>
+                          <span className="text-[11px] font-bold text-[#6b8799]">ราคา</span>
                           <span className="text-lg font-black text-[#118cd1]">
                             ฿{pack.price.toLocaleString()}
-                            <span className="text-[11px] font-bold text-[#6b8799] ml-0.5">/ปี</span>
                           </span>
                         </div>
                       </button>
@@ -1124,7 +1182,7 @@ export const SettingsView: React.FC<Props> = ({
             <div className="bg-[#fef9ec] border-t border-[#eae3cf] px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <div className="text-[11px] font-bold text-[#6b8799]">
-                  {activeBoothObj.label} + {activeStorageObj.provider} ({activeStorageObj.label})
+                  {activeBoothObj.label} ({activeBoothObj.daysLabel}) + {activeStorageObj.provider} ({activeStorageObj.label})
                 </div>
                 <div className="text-xl font-black text-[#0d3a57]">
                   ยอดรวมทั้งสิ้น: <span className="text-[#118cd1]">฿{totalPackagePrice.toLocaleString()}</span>
