@@ -4,6 +4,13 @@ import { fetchAllPosSalesFromCloud } from '../services/posSync';
 import { getStorageEngineLabel } from '../services/nativeStorage';
 import { resyncRangeAndVerifyCloud } from '../services/offlineSync';
 import {
+  DAY_PASS_PACKS,
+  PurchasedPackageState,
+  addPurchasedDayPack,
+  calcTotalUsedEventDays,
+  loadPurchasedPackage,
+} from '../services/dayQuota';
+import {
   connectAndCreateGoogleSheet,
   getGoogleClientId,
   saveGoogleClientId,
@@ -82,71 +89,11 @@ export const SettingsView: React.FC<Props> = ({
     if (!ref.current) return;
     ref.current.scrollBy({ left: dir === 'left' ? -240 : 240, behavior: 'smooth' });
   };
-  const [purchasedPackage, setPurchasedPackage] = useState<{
-    boothId: string;
-    boothLabel: string;
-    boothQuota: number | 'unlimited';
-    storageId: string;
-    storageProvider: string;
-    storageLabel: string;
-    billQuota: number | 'unlimited';
-    totalPaid: number;
-    activatedAt: string;
-  } | null>(() => {
-    try {
-      const raw = localStorage.getItem('boothbook_preview_package_v1');
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [purchasedPackage, setPurchasedPackage] = useState<PurchasedPackageState | null>(() =>
+    loadPurchasedPackage()
+  );
 
-  const BOOTH_PACKS = [
-    {
-      id: 'day-1',
-      label: '1 วัน',
-      daysLabel: '1 วันขายจริง',
-      price: 39,
-      avgPerDay: '฿39.00',
-      discount: null as string | null,
-      badge: 'เหมาะกับลองใช้ / งานวันเดียว',
-      highlightBadge: false,
-      quota: 1 as number | 'unlimited',
-    },
-    {
-      id: 'day-7',
-      label: '1 สัปดาห์',
-      daysLabel: '7 วันขายจริง',
-      price: 149,
-      avgPerDay: '฿21.29',
-      discount: 'ลด 45.4% (ประหยัด ฿124)',
-      badge: 'ออกบูธในห้าง 1 รอบ',
-      highlightBadge: false,
-      quota: 7 as number | 'unlimited',
-    },
-    {
-      id: 'day-15',
-      label: 'คุ้มค่า',
-      daysLabel: '15 วันขายจริง',
-      price: 249,
-      avgPerDay: '฿16.60',
-      discount: 'ลด 57.4% (ประหยัด ฿336)',
-      badge: 'ออกบูธต่อเนื่องหลายงาน',
-      highlightBadge: false,
-      quota: 15 as number | 'unlimited',
-    },
-    {
-      id: 'day-30',
-      label: 'เหมาสุดคุ้ม',
-      daysLabel: '30 วันขายจริง',
-      price: 349,
-      avgPerDay: '฿11.63',
-      discount: 'ลด 70.2% (ประหยัด ฿821)',
-      badge: 'ยอดนิยม',
-      highlightBadge: true,
-      quota: 30 as number | 'unlimited',
-    },
-  ];
+  const usedEventDays = useMemo(() => calcTotalUsedEventDays(state.events || []), [state.events]);
 
   const STORAGE_PLANS = [
     { id: 'gs-free', provider: 'Google Sheets', label: 'ไม่จำกัดบิล', desc: 'เก็บลง Google Sheet ของร้านเอง', price: 0, badge: 'ฟรี', quota: 'unlimited' as number | 'unlimited' },
@@ -157,32 +104,13 @@ export const SettingsView: React.FC<Props> = ({
     // { id: 'sb-unlimited', provider: 'Supabase Cloud', label: 'Unlimited ตลอดชีพ', desc: 'ไม่จำกัดจำนวนบิล ใช้งานได้ตลอดไป', price: 149, badge: 'แนะนำ', quota: 'unlimited' as number | 'unlimited' },
   ];
 
-  const activeBoothObj = BOOTH_PACKS.find((p) => p.id === selectedBoothPack) || BOOTH_PACKS[0];
+  const activeBoothObj = DAY_PASS_PACKS.find((p) => p.id === selectedBoothPack) || DAY_PASS_PACKS[0];
   const activeStorageObj = STORAGE_PLANS.find((p) => p.id === selectedStoragePlan) || STORAGE_PLANS[0];
   const totalPackagePrice = activeBoothObj.price + activeStorageObj.price;
 
   const handleConfirmMockPackage = () => {
-    const nextPkg = {
-      boothId: activeBoothObj.id,
-      boothLabel: activeBoothObj.label,
-      boothQuota: activeBoothObj.quota,
-      storageId: activeStorageObj.id,
-      storageProvider: activeStorageObj.provider,
-      storageLabel: activeStorageObj.label,
-      billQuota: activeStorageObj.quota,
-      totalPaid: totalPackagePrice,
-      activatedAt: new Date().toLocaleDateString('th-TH', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      }),
-    };
+    const nextPkg = addPurchasedDayPack(activeBoothObj, activeStorageObj);
     setPurchasedPackage(nextPkg);
-    try {
-      localStorage.setItem('boothbook_preview_package_v1', JSON.stringify(nextPkg));
-    } catch {
-      // ignore
-    }
     // สลับระบบเก็บข้อมูลให้ตรงกับแพ็กเกจที่เลือกอัตโนมัติ
     handleSelectBackend(activeStorageObj.id === 'gs-free' ? 'google_sheets' : 'supabase');
     setShowPackageModal(false);
@@ -438,7 +366,7 @@ export const SettingsView: React.FC<Props> = ({
                 className="inline-flex items-center gap-1.5 bg-amber-400 hover:bg-amber-300 text-[#0d3a57] font-black px-4 py-2 rounded-xl text-xs shadow transition cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                เปลี่ยน / ซื้อเพิ่ม
+                ซื้อวันเพิ่ม
               </button>
             </div>
           </div>
@@ -446,11 +374,12 @@ export const SettingsView: React.FC<Props> = ({
           {/* แถบแสดงสิทธิ์คงเหลือ */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-white/15 text-xs">
             <div className="bg-white/10 rounded-xl px-3.5 py-2.5">
-              <div className="text-[11px] text-white/70 font-semibold">โควตาวันขายจริง</div>
+              <div className="text-[11px] text-white/70 font-semibold">โควตาวันขายจริงคงเหลือ</div>
               <div className="text-sm font-black mt-0.5">
-                {purchasedPackage.boothQuota === 'unlimited'
-                  ? 'ไม่จำกัดวันขายจริง'
-                  : `${purchasedPackage.boothQuota} วันขายจริง`}
+                เหลือ {Math.max(0, purchasedPackage.boothQuota - usedEventDays).toLocaleString()} วัน{' '}
+                <span className="text-[11px] font-semibold text-white/75">
+                  (ใช้ไป {usedEventDays}/{purchasedPackage.boothQuota})
+                </span>
               </div>
             </div>
             <div className="bg-white/10 rounded-xl px-3.5 py-2.5">
@@ -971,7 +900,7 @@ export const SettingsView: React.FC<Props> = ({
                   ref={boothCarouselRef}
                   className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 >
-                  {BOOTH_PACKS.map((pack) => {
+                  {DAY_PASS_PACKS.map((pack) => {
                     const isSelected = selectedBoothPack === pack.id;
                     return (
                       <button
@@ -1202,7 +1131,7 @@ export const SettingsView: React.FC<Props> = ({
                   onClick={handleConfirmMockPackage}
                   className="px-6 py-2.5 rounded-xl font-black text-sm bg-[#118cd1] hover:bg-[#0e78b5] text-white shadow-md transition active:scale-95 cursor-pointer"
                 >
-                  ยืนยันเลือกแพ็กเกจนี้ (฿{totalPackagePrice.toLocaleString()})
+                  ซื้อวันเพิ่ม +{activeBoothObj.quota} วัน (฿{totalPackagePrice.toLocaleString()})
                 </button>
               </div>
             </div>

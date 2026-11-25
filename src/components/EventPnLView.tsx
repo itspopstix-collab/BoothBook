@@ -21,6 +21,13 @@ import {
   parseRefvPosCsvText,
 } from '../services/posSync';
 import {
+  DAY_PASS_PACKS,
+  addPurchasedDayPack,
+  calcEventDays,
+  calcTotalUsedEventDays,
+  loadPurchasedPackage,
+} from '../services/dayQuota';
+import {
   Calendar,
   MapPin,
   RefreshCw,
@@ -40,6 +47,10 @@ import {
   ChevronUp,
   Scale,
   BarChart3,
+  Crown,
+  Sparkles,
+  Check,
+  X,
 } from 'lucide-react';
 
 interface Props {
@@ -57,22 +68,6 @@ const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, { label: string; badge: s
   other: { label: 'ค่าใช้จ่ายอื่นๆ', badge: 'bg-slate-100 text-slate-800' },
 };
 
-const MAX_EVENT_DAYS = 15;
-
-function addDaysIso(isoDate: string, days: number): string {
-  if (!isoDate) return isoDate;
-  const [y, m, d] = isoDate.split('-').map(Number);
-  if (!y || !m || !d) return isoDate;
-  const dt = new Date(Date.UTC(y, m - 1, d + days));
-  return dt.toISOString().slice(0, 10);
-}
-
-function isExceedingMaxEventDays(startDate: string, endDate: string): boolean {
-  if (!startDate || !endDate) return false;
-  const maxEnd = addDaysIso(startDate, MAX_EVENT_DAYS - 1);
-  return endDate > maxEnd;
-}
-
 export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => {
   const [selectedEventId, setSelectedEventId] = useState<string>(
     state.events[state.events.length - 1]?.id || ''
@@ -81,6 +76,24 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [showRawPosRows, setShowRawPosRows] = useState(false);
+
+  // ระบบเช็คโควตาวันขายจริงก่อนสร้าง/ขยาย Event
+  const [quotaVersion, setQuotaVersion] = useState(0);
+  const [quotaAlertInfo, setQuotaAlertInfo] = useState<{
+    neededDays: number;
+    remainingDays: number;
+    shortfallDays: number;
+    actionLabel: string;
+  } | null>(null);
+  const [selectedTopupPackId, setSelectedTopupPackId] = useState<string>('day-7');
+
+  const purchasedPkg = (() => {
+    void quotaVersion;
+    return loadPurchasedPackage();
+  })();
+  const totalPurchasedDays = purchasedPkg?.boothQuota ?? 0;
+  const totalUsedDays = calcTotalUsedEventDays(state.events || []);
+  const remainingDays = Math.max(0, totalPurchasedDays - totalUsedDays);
 
   // ฟอร์มสร้าง Event ใหม่
   const today = new Date().toISOString().slice(0, 10);
@@ -193,8 +206,19 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEvName.trim()) return;
-    if (isExceedingMaxEventDays(newEvStart, newEvEnd || newEvStart)) {
-      window.alert(`แต่ละ Event เลือกระยะเวลาได้ไม่เกิน ${MAX_EVENT_DAYS} วันครับ`);
+    const neededDays = calcEventDays(newEvStart, newEvEnd || newEvStart);
+    if (remainingDays < neededDays) {
+      const shortfall = neededDays - remainingDays;
+      const suggested =
+        DAY_PASS_PACKS.find((p) => p.quota >= shortfall) ||
+        DAY_PASS_PACKS[DAY_PASS_PACKS.length - 1];
+      setSelectedTopupPackId(suggested.id);
+      setQuotaAlertInfo({
+        neededDays,
+        remainingDays,
+        shortfallDays: shortfall,
+        actionLabel: 'สร้างงานออกบูธใหม่',
+      });
       return;
     }
     const newId = 'ev-' + Date.now();
@@ -1320,35 +1344,36 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
     value: string
   ) => {
     if (!selectedEvent) return;
-    if (field === 'startDate') {
-      const maxEnd = addDaysIso(value, MAX_EVENT_DAYS - 1);
-      const nextEnd =
-        selectedEvent.endDate < value
-          ? value
-          : selectedEvent.endDate > maxEnd
-          ? maxEnd
-          : selectedEvent.endDate;
+    if (field === 'startDate' || field === 'endDate') {
+      const nextStart = field === 'startDate' ? value : selectedEvent.startDate;
+      let nextEnd = field === 'endDate' ? value : selectedEvent.endDate;
+      if (nextEnd < nextStart) nextEnd = nextStart;
+
+      const oldDays = calcEventDays(selectedEvent.startDate, selectedEvent.endDate);
+      const newDays = calcEventDays(nextStart, nextEnd);
+      const extraNeeded = newDays - oldDays;
+      if (extraNeeded > 0 && remainingDays < extraNeeded) {
+        const shortfall = extraNeeded - remainingDays;
+        const suggested =
+          DAY_PASS_PACKS.find((p) => p.quota >= shortfall) ||
+          DAY_PASS_PACKS[DAY_PASS_PACKS.length - 1];
+        setSelectedTopupPackId(suggested.id);
+        setQuotaAlertInfo({
+          neededDays: newDays,
+          remainingDays: remainingDays + oldDays,
+          shortfallDays: shortfall,
+          actionLabel: 'ขยายช่วงวัน Event',
+        });
+        return;
+      }
+
       onUpdateState((prev) => ({
         ...prev,
         events: prev.events.map((ev) =>
-          ev.id === selectedEvent.id ? { ...ev, startDate: value, endDate: nextEnd } : ev
+          ev.id === selectedEvent.id ? { ...ev, startDate: nextStart, endDate: nextEnd } : ev
         ),
       }));
       return;
-    }
-    if (field === 'endDate') {
-      if (value < selectedEvent.startDate) return;
-      if (isExceedingMaxEventDays(selectedEvent.startDate, value)) {
-        window.alert(`แต่ละ Event เลือกระยะเวลาได้ไม่เกิน ${MAX_EVENT_DAYS} วันครับ`);
-        const clamped = addDaysIso(selectedEvent.startDate, MAX_EVENT_DAYS - 1);
-        onUpdateState((prev) => ({
-          ...prev,
-          events: prev.events.map((ev) =>
-            ev.id === selectedEvent.id ? { ...ev, endDate: clamped } : ev
-          ),
-        }));
-        return;
-      }
     }
     onUpdateState((prev) => ({
       ...prev,
@@ -1520,7 +1545,6 @@ export const EventPnLView: React.FC<Props> = ({ state, sim, onUpdateState }) => 
                       type="date"
                       value={selectedEvent.endDate}
                       min={selectedEvent.startDate}
-                      max={addDaysIso(selectedEvent.startDate, MAX_EVENT_DAYS - 1)}
                       onChange={(e) => handleUpdateEventDates('endDate', e.target.value)}
                       className="bg-transparent font-bold focus:outline-none"
                     />
@@ -3093,9 +3117,7 @@ const isBatchCollapsed = collapsedBatches[batch.id];
                     onChange={(e) => {
                       const nextStart = e.target.value;
                       setNewEvStart(nextStart);
-                      const maxEnd = addDaysIso(nextStart, MAX_EVENT_DAYS - 1);
                       if (newEvEnd < nextStart) setNewEvEnd(nextStart);
-                      else if (newEvEnd > maxEnd) setNewEvEnd(maxEnd);
                     }}
                     className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-semibold"
                     required
@@ -3103,26 +3125,35 @@ const isBatchCollapsed = collapsedBatches[batch.id];
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-[#6b8799] mb-1">
-                    วันที่สิ้นสุดงาน * <span className="text-[10px] font-semibold text-[#118cd1]">(ไม่เกิน 15 วัน)</span>
+                    วันที่สิ้นสุดงาน *
                   </label>
                   <input
                     type="date"
                     value={newEvEnd}
                     min={newEvStart}
-                    max={addDaysIso(newEvStart, MAX_EVENT_DAYS - 1)}
-                    onChange={(e) => {
-                      const nextEnd = e.target.value;
-                      if (isExceedingMaxEventDays(newEvStart, nextEnd)) {
-                        window.alert(`แต่ละ Event เลือกระยะเวลาได้ไม่เกิน ${MAX_EVENT_DAYS} วันครับ`);
-                        setNewEvEnd(addDaysIso(newEvStart, MAX_EVENT_DAYS - 1));
-                      } else {
-                        setNewEvEnd(nextEnd);
-                      }
-                    }}
+                    onChange={(e) => setNewEvEnd(e.target.value)}
                     className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-semibold"
                     required
                   />
                 </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-xl bg-[#fef9ec] border border-[#eae3cf] text-xs">
+                <span className="font-bold text-[#0d3a57]">
+                  ต้องใช้โควตา:{' '}
+                  <b className="text-[#118cd1]">
+                    {calcEventDays(newEvStart, newEvEnd || newEvStart)} วันขายจริง
+                  </b>
+                </span>
+                <span
+                  className={`font-black ${
+                    remainingDays >= calcEventDays(newEvStart, newEvEnd || newEvStart)
+                      ? 'text-emerald-700'
+                      : 'text-rose-600'
+                  }`}
+                >
+                  โควตาวันคงเหลือ: {remainingDays.toLocaleString()} วัน
+                </span>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -3207,6 +3238,142 @@ const isBatchCollapsed = collapsedBatches[batch.id];
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal แจ้งเตือนโควตาวันขายจริงไม่พอ + กดซื้อวันเพิ่มได้ทันที */}
+      {quotaAlertInfo && (
+        <div
+          className="fixed inset-0 z-[60] bg-[#0d3a57]/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+          onClick={() => setQuotaAlertInfo(null)}
+        >
+          <div
+            className="bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-[#eae3cf] overflow-hidden my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="bg-gradient-to-r from-amber-500 to-rose-500 px-6 py-4 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <AlertCircle className="w-6 h-6 shrink-0" />
+                <div>
+                  <h3 className="text-base sm:text-lg font-black">โควตาวันขายจริงไม่เพียงพอ</h3>
+                  <p className="text-xs text-white/90">
+                    สำหรับ{quotaAlertInfo.actionLabel}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setQuotaAlertInfo(null)}
+                className="p-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 sm:p-6 space-y-4">
+              <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-900 space-y-1">
+                <div>
+                  งานนี้ต้องใช้ <b>{quotaAlertInfo.neededDays.toLocaleString()} วันขายจริง</b> แต่คุณมีโควตาคงเหลือ{' '}
+                  <b>{quotaAlertInfo.remainingDays.toLocaleString()} วัน</b>
+                </div>
+                <div className="font-black text-rose-700">
+                  ยังขาดอีก {quotaAlertInfo.shortfallDays.toLocaleString()} วัน — กรุณาเลือกซื้อวันเพิ่มด้านล่างได้เลยครับ
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-xs font-black text-[#0d3a57] flex items-center gap-1.5">
+                  <Crown className="w-4 h-4 text-amber-500" />
+                  เลือกแพ็กเกจซื้อวันเพิ่มทันที
+                </div>
+                <div className="flex gap-2.5 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {DAY_PASS_PACKS.map((pack) => {
+                    const isSelected = selectedTopupPackId === pack.id;
+                    return (
+                      <button
+                        key={pack.id}
+                        type="button"
+                        onClick={() => setSelectedTopupPackId(pack.id)}
+                        className={`min-w-[185px] shrink-0 snap-start text-left p-3.5 rounded-2xl border-2 transition cursor-pointer flex flex-col justify-between gap-2 ${
+                          isSelected
+                            ? 'border-[#118cd1] bg-[#118cd1]/5 shadow-xs'
+                            : 'border-[#eae3cf] bg-[#fef9ec]/40 hover:border-[#90d4ec]'
+                        }`}
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between gap-1.5">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${
+                                pack.highlightBadge
+                                  ? 'bg-amber-100 text-amber-900 border-amber-300'
+                                  : 'bg-white text-[#0d3a57] border-[#eae3cf]'
+                              }`}
+                            >
+                              {pack.badge}
+                            </span>
+                            <span
+                              className={`w-4 h-4 rounded-full flex items-center justify-center border shrink-0 ${
+                                isSelected
+                                  ? 'bg-[#118cd1] border-[#118cd1] text-white'
+                                  : 'border-[#cbd5e1] bg-white'
+                              }`}
+                            >
+                              {isSelected && <Check className="w-2.5 h-2.5" />}
+                            </span>
+                          </div>
+                          <div className="font-extrabold text-sm text-[#0d3a57]">
+                            {pack.label} <span className="text-xs text-[#118cd1]">(+{pack.quota} วัน)</span>
+                          </div>
+                          <div className="text-[10px] text-[#6b8799]">เฉลี่ย {pack.avgPerDay}/วัน</div>
+                          {pack.discount && (
+                            <div className="text-[10px] font-bold text-emerald-700">{pack.discount}</div>
+                          )}
+                        </div>
+                        <div className="pt-1.5 border-t border-[#eae3cf]/70 flex items-baseline justify-between">
+                          <span className="text-[10px] text-[#6b8799] font-bold">ราคา</span>
+                          <span className="text-base font-black text-[#118cd1]">฿{pack.price}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {(() => {
+                const chosenPack =
+                  DAY_PASS_PACKS.find((p) => p.id === selectedTopupPackId) || DAY_PASS_PACKS[0];
+                return (
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#eae3cf]">
+                    <button
+                      type="button"
+                      onClick={() => setQuotaAlertInfo(null)}
+                      className="px-4 py-2 rounded-xl font-bold text-xs text-[#6b8799] hover:bg-slate-100 cursor-pointer"
+                    >
+                      ปิดหน้าต่าง
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        addPurchasedDayPack(chosenPack, {
+                          id: 'gs-free',
+                          provider: 'Google Sheets',
+                          label: 'ไม่จำกัดบิล',
+                          quota: 'unlimited',
+                          price: 0,
+                        });
+                        setQuotaVersion((v) => v + 1);
+                        setQuotaAlertInfo(null);
+                      }}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-black text-xs bg-[#118cd1] hover:bg-[#0e78b5] text-white shadow-md transition active:scale-95 cursor-pointer"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      ซื้อวันเพิ่ม +{chosenPack.quota} วัน (฿{chosenPack.price})
+                    </button>
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         </div>
       )}
