@@ -93,6 +93,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
   const [ingSearch, setIngSearch] = useState('');
   const [ingCatFilter, setIngCatFilter] = useState<string>('ทั้งหมด');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('ทั้งหมด');
+  const [customPriceModeByRecipe, setCustomPriceModeByRecipe] = useState<Record<string, boolean>>({});
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [recipeOrCatSearch, setRecipeOrCatSearch] = useState('');
   const [addingBottomCategory, setAddingBottomCategory] = useState(false);
@@ -1140,20 +1141,73 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-[#fef9ec] rounded-xl p-4 border border-[#eae3cf] space-y-2.5 text-sm">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-[#6b8799]">หมวดราคาใน POS:</span>
-                  <select
-                    value={selectedRecipe.category}
-                    onChange={(e) =>
-                      handleUpdateRecipeField('category', e.target.value as FlavorCategory)
-                    }
-                    className="bg-white border border-[#eae3cf] rounded-lg px-2.5 py-1 text-xs font-extrabold text-[#118cd1]"
-                  >
-                    <option value="Original">Original (฿79 / ฿40)</option>
-                    <option value="Premium">Premium (฿89 / ฿45)</option>
-                    <option value="Signature">Signature (฿99 / ฿50)</option>
-                  </select>
-                </div>
+                {(() => {
+                  const effectivePrice = selectedCost.sellingPriceSingle;
+                  const matchedTier = (['Original', 'Premium', 'Signature'] as const).find(
+                    (tier) => POS_SELLING_PRICE[tier].single === effectivePrice
+                  );
+                  const isCustomPriceMode =
+                    customPriceModeByRecipe[selectedRecipe.id] ?? !matchedTier;
+                  const selectValue = isCustomPriceMode ? 'custom' : (matchedTier || 'Original');
+
+                  return (
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center gap-2">
+                        <span className="text-xs font-bold text-[#6b8799]">หมวดราคาใน POS:</span>
+                        <select
+                          value={selectValue}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === 'custom') {
+                              setCustomPriceModeByRecipe((prev) => ({
+                                ...prev,
+                                [selectedRecipe.id]: true,
+                              }));
+                              if (typeof selectedRecipe.sellingPrice !== 'number') {
+                                handleUpdateRecipeField('sellingPrice', effectivePrice);
+                              }
+                            } else {
+                              setCustomPriceModeByRecipe((prev) => ({
+                                ...prev,
+                                [selectedRecipe.id]: false,
+                              }));
+                              const tierPrice = POS_SELLING_PRICE[val]?.single ?? 79;
+                              handleUpdateRecipeField('sellingPrice', tierPrice);
+                            }
+                          }}
+                          className="bg-white border border-[#eae3cf] rounded-lg px-2.5 py-1 text-xs font-extrabold text-[#118cd1]"
+                        >
+                          <option value="Original">Original (฿79 / ฿40)</option>
+                          <option value="Premium">Premium (฿89 / ฿45)</option>
+                          <option value="Signature">Signature (฿99 / ฿50)</option>
+                          <option value="custom">ระบุราคาเอง</option>
+                        </select>
+                      </div>
+                      {isCustomPriceMode && (
+                        <div className="flex justify-between items-center gap-2">
+                          <span className="text-xs font-bold text-[#6b8799]">ราคาขายที่ระบุเอง (฿):</span>
+                          <input
+                            type="number"
+                            min={0}
+                            step="any"
+                            value={
+                              typeof selectedRecipe.sellingPrice === 'number'
+                                ? selectedRecipe.sellingPrice
+                                : effectivePrice
+                            }
+                            onChange={(e) =>
+                              handleUpdateRecipeField(
+                                'sellingPrice',
+                                Math.max(0, parseFloat(e.target.value) || 0)
+                              )
+                            }
+                            className="w-24 text-right bg-white border border-[#eae3cf] rounded-lg px-2.5 py-1 text-xs font-extrabold text-[#118cd1] focus:outline-none focus:border-[#118cd1]"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 <div className="flex justify-between text-xs pt-2 border-t border-[#eae3cf]">
                   <span className="text-[#6b8799]">1. ต้นทุนวัตถุดิบ (สั่ง 1 ชิ้นเต็มถ้วย):</span>
