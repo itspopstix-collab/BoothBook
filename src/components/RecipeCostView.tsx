@@ -30,6 +30,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  Upload,
+  X,
 } from 'lucide-react';
 
 interface Props {
@@ -40,10 +42,51 @@ interface Props {
 
 const resolveImageUrl = (imgUrl?: string) => {
   if (!imgUrl) return '';
-  if (imgUrl.startsWith('http://') || imgUrl.startsWith('https://')) return imgUrl;
+  if (
+    imgUrl.startsWith('data:') ||
+    imgUrl.startsWith('http://') ||
+    imgUrl.startsWith('https://')
+  ) {
+    return imgUrl;
+  }
   if (imgUrl.startsWith('/')) return '.' + imgUrl;
   return './' + imgUrl;
 };
+
+/** ย่อรูปเมนูอัตโนมัติ (สูงสุด 256×256px) เพื่อเก็บลง IndexedDB และซิงค์เข้า Google Sheet/Supabase ได้เบาและเร็ว */
+async function compressMenuImageToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('อ่านไฟล์รูปไม่สำเร็จ'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('ไฟล์นี้ไม่ใช่รูปภาพที่รองรับ'));
+      img.onload = () => {
+        const MAX = 256;
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('ไม่สามารถประมวลผลรูปภาพได้'));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, w, h);
+        const webp = canvas.toDataURL('image/webp', 0.78);
+        if (webp.startsWith('data:image/webp')) {
+          resolve(webp);
+        } else {
+          resolve(canvas.toDataURL('image/jpeg', 0.78));
+        }
+      };
+      img.src = String(reader.result || '');
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) => {
   const [activeSubTab, setActiveSubTab] = useState<'recipes' | 'ingredients'>('recipes');
@@ -73,6 +116,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
     }
   });
   const [selectedRecipeId, setSelectedRecipeId] = useState<string>(state.recipes[0]?.id || '');
+  const menuImageInputRef = useRef<HTMLInputElement | null>(null);
   // 'master' = แก้สูตรตั้งต้นของสินค้านี้, '<runId>' = แก้ปริมาณกรัม/ล็อตของ "รอบการผลิต / เติม Stock" รอบนั้นโดยเฉพาะ
   const [selectedRunId, setSelectedRunId] = useState<string>('master');
   const [syncingFlavors, setSyncingFlavors] = useState(false);
@@ -1021,15 +1065,20 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                           : 'border-[#eae3cf] bg-[#fef9ec]/40 hover:border-[#90d4ec]'
                       }`}
                     >
-                      <img
-                        src={resolveImageUrl(rec.image)}
-                        alt={rec.name}
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = './images/';
-                          (e.target as HTMLImageElement).style.opacity = '0.3';
-                        }}
-                        className="w-10 h-10 rounded-lg object-cover bg-[#90d4ec]/30 shrink-0 border border-[#eae3cf]"
-                      />
+                      {rec.image ? (
+                        <img
+                          src={resolveImageUrl(rec.image)}
+                          alt={rec.name}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                          className="w-10 h-10 rounded-lg object-cover bg-[#90d4ec]/30 shrink-0 border border-[#eae3cf]"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-[#90d4ec]/25 shrink-0 border border-[#eae3cf] flex items-center justify-center text-[#118cd1]">
+                          <IceCream className="w-4 h-4" />
+                        </div>
+                      )}
                       <div className="min-w-0 flex-1">
                         <div className="font-extrabold text-xs text-[#0d3a57] truncate">
                           {rec.name}
@@ -1182,15 +1231,60 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-[#eae3cf] space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#eae3cf]">
               <div className="flex items-center gap-3">
-                <img
-                  src={resolveImageUrl(selectedRecipe.image)}
-                  alt={selectedRecipe.name}
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = './images/';
-                    (e.target as HTMLImageElement).style.opacity = '0.3';
+                <input
+                  ref={menuImageInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = '';
+                    if (!file) return;
+                    try {
+                      const compressed = await compressMenuImageToDataUrl(file);
+                      handleUpdateRecipeField('image', compressed);
+                    } catch (err: any) {
+                      window.alert(err?.message || 'อัปโหลดรูปไม่สำเร็จ');
+                    }
                   }}
-                  className="w-12 h-12 rounded-xl object-cover bg-[#90d4ec]/30 border border-[#eae3cf]"
                 />
+                {selectedRecipe.image ? (
+                  <div className="relative group shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => menuImageInputRef.current?.click()}
+                      title="คลิกเพื่อเปลี่ยนรูปเมนู"
+                      className="block w-14 h-14 rounded-xl overflow-hidden border border-[#eae3cf] bg-[#90d4ec]/20 cursor-pointer relative"
+                    >
+                      <img
+                        src={resolveImageUrl(selectedRecipe.image)}
+                        alt={selectedRecipe.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <span className="inset-0 absolute bg-[#0d3a57]/50 text-white opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                        <Upload className="w-4 h-4" />
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateRecipeField('image', '')}
+                      title="ลบรูปเมนู"
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center shadow opacity-0 group-hover:opacity-100 transition cursor-pointer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => menuImageInputRef.current?.click()}
+                    title="คลิกเพื่ออัปโหลดรูปเมนู"
+                    className="w-14 h-14 rounded-xl border-2 border-dashed border-[#90d4ec] hover:border-[#118cd1] bg-[#fef9ec]/60 hover:bg-[#118cd1]/5 text-[#118cd1] shrink-0 flex flex-col items-center justify-center gap-0.5 transition cursor-pointer"
+                  >
+                    <Upload className="w-4 h-4" />
+                    <span className="text-[9px] font-black leading-none">อัปโหลด</span>
+                  </button>
+                )}
                 <div>
                   <h3 className="text-lg font-extrabold text-[#0d3a57]">
                     สูตรการผลิต: {selectedRecipe.name}
