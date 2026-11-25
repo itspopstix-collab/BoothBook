@@ -45,6 +45,16 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
   const [activeSubTab, setActiveSubTab] = useState<'recipes' | 'ingredients'>('recipes');
   const [ingSearch, setIngSearch] = useState('');
   const [ingCatFilter, setIngCatFilter] = useState<string>('ทั้งหมด');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('ทั้งหมด');
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [customCategories, setCustomCategories] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem('boothbook_recipe_categories_v1');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
   const [selectedRecipeId, setSelectedRecipeId] = useState<string>(state.recipes[0]?.id || '');
   // 'master' = แก้สูตรตั้งต้นของสินค้านี้, '<runId>' = แก้ปริมาณกรัม/ล็อตของ "รอบการผลิต / เติม Stock" รอบนั้นโดยเฉพาะ
   const [selectedRunId, setSelectedRunId] = useState<string>('master');
@@ -513,6 +523,48 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
     }));
   };
 
+  const productCategories = Array.from(
+    new Set([
+      ...customCategories,
+      ...state.recipes.map((r) => (r.category || '').trim()).filter(Boolean),
+    ])
+  );
+
+  const filteredRecipes =
+    selectedCategoryFilter === 'ทั้งหมด'
+      ? state.recipes
+      : state.recipes.filter((r) => (r.category || '').trim() === selectedCategoryFilter);
+
+  const handleAddCustomCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = newCategoryName.trim();
+    if (!trimmed) return;
+    if (!productCategories.includes(trimmed)) {
+      const next = [...customCategories, trimmed];
+      setCustomCategories(next);
+      try {
+        localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+    }
+    setSelectedCategoryFilter(trimmed);
+    setNewCategoryName('');
+  };
+
+  const handleDeleteCustomCategory = (catName: string) => {
+    const next = customCategories.filter((c) => c !== catName);
+    setCustomCategories(next);
+    try {
+      localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(next));
+    } catch {
+      // ignore
+    }
+    if (selectedCategoryFilter === catName) {
+      setSelectedCategoryFilter('ทั้งหมด');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* แถบสลับ Section: สูตรสินค้า vs คลังวัตถุดิบ */}
@@ -614,7 +666,49 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                   r.ingredients.some((l) => l.ingredientId === ing.id)
                 );
 
-                return (
+                const productCategories = Array.from(
+    new Set([
+      ...customCategories,
+      ...state.recipes.map((r) => (r.category || '').trim()).filter(Boolean),
+    ])
+  );
+
+  const filteredRecipes =
+    selectedCategoryFilter === 'ทั้งหมด'
+      ? state.recipes
+      : state.recipes.filter((r) => (r.category || '').trim() === selectedCategoryFilter);
+
+  const handleAddCustomCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = newCategoryName.trim();
+    if (!trimmed) return;
+    if (!productCategories.includes(trimmed)) {
+      const next = [...customCategories, trimmed];
+      setCustomCategories(next);
+      try {
+        localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+    }
+    setSelectedCategoryFilter(trimmed);
+    setNewCategoryName('');
+  };
+
+  const handleDeleteCustomCategory = (catName: string) => {
+    const next = customCategories.filter((c) => c !== catName);
+    setCustomCategories(next);
+    try {
+      localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(next));
+    } catch {
+      // ignore
+    }
+    if (selectedCategoryFilter === catName) {
+      setSelectedCategoryFilter('ทั้งหมด');
+    }
+  };
+
+  return (
                   <div
                     key={ing.id}
                     className="p-4 rounded-2xl border border-[#eae3cf] bg-[#fef9ec]/40 flex flex-col justify-between gap-3 hover:border-[#90d4ec] transition"
@@ -695,7 +789,91 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
 
       {/* SECTION B: สูตรสินค้า & ต้นทุนต่อชิ้น */}
       {activeSubTab === 'recipes' && (
-        <>
+        <div className="flex flex-col lg:flex-row gap-5 items-start">
+          {/* Tab ย่อยด้านซ้าย: Category ของสินค้า */}
+          <div className="w-full lg:w-60 shrink-0 bg-white rounded-2xl p-4 shadow-sm border border-[#eae3cf] space-y-3">
+            <div className="text-xs font-black text-[#0d3a57]">หมวดหมู่สินค้า (Category)</div>
+
+            <form onSubmit={handleAddCustomCategory} className="flex gap-1.5">
+              <input
+                type="text"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder="สร้าง Category ใหม่..."
+                className="flex-1 min-w-0 border border-[#eae3cf] rounded-xl px-2.5 py-1.5 text-xs font-semibold text-[#0d3a57] bg-[#fef9ec]/40 focus:outline-none focus:border-[#118cd1]"
+              />
+              <button
+                type="submit"
+                className="shrink-0 w-8 h-8 rounded-xl bg-[#118cd1] hover:bg-[#0e78b5] text-white flex items-center justify-center cursor-pointer"
+                title="เพิ่ม Category"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </form>
+
+            <div className="flex lg:flex-col gap-1.5 overflow-x-auto lg:overflow-x-visible pb-1 lg:pb-0">
+              <button
+                type="button"
+                onClick={() => setSelectedCategoryFilter('ทั้งหมด')}
+                className={`shrink-0 flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  selectedCategoryFilter === 'ทั้งหมด'
+                    ? 'bg-[#118cd1] text-white shadow-2xs'
+                    : 'bg-[#fef9ec]/50 text-[#0d3a57] hover:bg-[#90d4ec]/20'
+                }`}
+              >
+                <span>ทั้งหมด</span>
+                <span
+                  className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${
+                    selectedCategoryFilter === 'ทั้งหมด'
+                      ? 'bg-white/20 text-white'
+                      : 'bg-white text-[#6b8799]'
+                  }`}
+                >
+                  {state.recipes.length}
+                </span>
+              </button>
+
+              {productCategories.map((cat) => {
+                const count = state.recipes.filter((r) => (r.category || '').trim() === cat).length;
+                const isActive = selectedCategoryFilter === cat;
+                const canDelete = customCategories.includes(cat) && count === 0;
+                return (
+                  <div key={cat} className="shrink-0 flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCategoryFilter(cat)}
+                      className={`flex-1 flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                        isActive
+                          ? 'bg-[#118cd1] text-white shadow-2xs'
+                          : 'bg-[#fef9ec]/50 text-[#0d3a57] hover:bg-[#90d4ec]/20'
+                      }`}
+                    >
+                      <span className="truncate">{cat}</span>
+                      <span
+                        className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${
+                          isActive ? 'bg-white/20 text-white' : 'bg-white text-[#6b8799]'
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    </button>
+                    {canDelete && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteCustomCategory(cat)}
+                        className="p-1.5 rounded-lg text-[#6b8799] hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                        title="ลบหมวดหมู่ที่ว่าง"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex-1 min-w-0 w-full space-y-6">
       {/* ส่วนหัว: สรุปต้นทุนต่อชิ้นของทุกสินค้า */}
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-[#eae3cf]">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -711,7 +889,12 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
 
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() => setShowNewFlavorModal(true)}
+              onClick={() => {
+                if (selectedCategoryFilter !== 'ทั้งหมด') {
+                  setNewFlavorCat(selectedCategoryFilter);
+                }
+                setShowNewFlavorModal(true);
+              }}
               className="inline-flex items-center gap-2 bg-[#118cd1] hover:bg-[#0e78b5] text-white font-bold px-3.5 py-2 rounded-xl text-xs transition cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" /> เพิ่มสินค้าใหม่
@@ -727,12 +910,59 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
         )}
 
         {/* การ์ดแสดงสินค้าทั้ง 8+ รส พร้อมต้นทุนต่อชิ้น */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mt-4">
-          {state.recipes.map((rec) => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 mt-4">
+          {filteredRecipes.length === 0 ? (
+            <div className="sm:col-span-2 lg:col-span-3 text-center py-8 text-xs text-[#6b8799] bg-[#fef9ec]/40 rounded-2xl border border-dashed border-[#eae3cf]">
+              ยังไม่มีสินค้าในหมวดหมู่ &ldquo;{selectedCategoryFilter}&rdquo; — กดปุ่ม &ldquo;+ เพิ่มสินค้าใหม่&rdquo; เพื่อเพิ่มได้เลยครับ
+            </div>
+          ) : (
+          filteredRecipes.map((rec) => {
             const cost = calculateRecipeUnitCost(rec, state, sim);
             const isSelected = selectedRecipe?.id === rec.id;
 
-            return (
+            const productCategories = Array.from(
+    new Set([
+      ...customCategories,
+      ...state.recipes.map((r) => (r.category || '').trim()).filter(Boolean),
+    ])
+  );
+
+  const filteredRecipes =
+    selectedCategoryFilter === 'ทั้งหมด'
+      ? state.recipes
+      : state.recipes.filter((r) => (r.category || '').trim() === selectedCategoryFilter);
+
+  const handleAddCustomCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = newCategoryName.trim();
+    if (!trimmed) return;
+    if (!productCategories.includes(trimmed)) {
+      const next = [...customCategories, trimmed];
+      setCustomCategories(next);
+      try {
+        localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+    }
+    setSelectedCategoryFilter(trimmed);
+    setNewCategoryName('');
+  };
+
+  const handleDeleteCustomCategory = (catName: string) => {
+    const next = customCategories.filter((c) => c !== catName);
+    setCustomCategories(next);
+    try {
+      localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(next));
+    } catch {
+      // ignore
+    }
+    if (selectedCategoryFilter === catName) {
+      setSelectedCategoryFilter('ทั้งหมด');
+    }
+  };
+
+  return (
               <div
                 key={rec.id}
                 onClick={() => setSelectedRecipeId(rec.id)}
@@ -789,7 +1019,8 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                 </div>
               </div>
             );
-          })}
+          })
+          )}
         </div>
       </div>
 
@@ -920,7 +1151,49 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                     (s, l) => s + (Number(l.gramsPerBatch) || 0),
                     0
                   );
-                  return (
+                  const productCategories = Array.from(
+    new Set([
+      ...customCategories,
+      ...state.recipes.map((r) => (r.category || '').trim()).filter(Boolean),
+    ])
+  );
+
+  const filteredRecipes =
+    selectedCategoryFilter === 'ทั้งหมด'
+      ? state.recipes
+      : state.recipes.filter((r) => (r.category || '').trim() === selectedCategoryFilter);
+
+  const handleAddCustomCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = newCategoryName.trim();
+    if (!trimmed) return;
+    if (!productCategories.includes(trimmed)) {
+      const next = [...customCategories, trimmed];
+      setCustomCategories(next);
+      try {
+        localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+    }
+    setSelectedCategoryFilter(trimmed);
+    setNewCategoryName('');
+  };
+
+  const handleDeleteCustomCategory = (catName: string) => {
+    const next = customCategories.filter((c) => c !== catName);
+    setCustomCategories(next);
+    try {
+      localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(next));
+    } catch {
+      // ignore
+    }
+    if (selectedCategoryFilter === catName) {
+      setSelectedCategoryFilter('ทั้งหมด');
+    }
+  };
+
+  return (
                     <button
                       key={pr.id}
                       type="button"
@@ -1098,7 +1371,49 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                           a.purchaseDate.localeCompare(b.purchaseDate) || a.id.localeCompare(b.id)
                       );
 
-                    return (
+                    const productCategories = Array.from(
+    new Set([
+      ...customCategories,
+      ...state.recipes.map((r) => (r.category || '').trim()).filter(Boolean),
+    ])
+  );
+
+  const filteredRecipes =
+    selectedCategoryFilter === 'ทั้งหมด'
+      ? state.recipes
+      : state.recipes.filter((r) => (r.category || '').trim() === selectedCategoryFilter);
+
+  const handleAddCustomCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = newCategoryName.trim();
+    if (!trimmed) return;
+    if (!productCategories.includes(trimmed)) {
+      const next = [...customCategories, trimmed];
+      setCustomCategories(next);
+      try {
+        localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+    }
+    setSelectedCategoryFilter(trimmed);
+    setNewCategoryName('');
+  };
+
+  const handleDeleteCustomCategory = (catName: string) => {
+    const next = customCategories.filter((c) => c !== catName);
+    setCustomCategories(next);
+    try {
+      localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(next));
+    } catch {
+      // ignore
+    }
+    if (selectedCategoryFilter === catName) {
+      setSelectedCategoryFilter('ทั้งหมด');
+    }
+  };
+
+  return (
                       <tr key={line.ingredientId} className="hover:bg-[#fef9ec]/60">
                         <td className="py-2.5 px-2.5 font-extrabold text-[#0d3a57]">
                           {line.ingredientName}
@@ -1366,7 +1681,8 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
           </div>
         </div>
       )}
-        </>
+          </div>
+        </div>
       )}
 
       {/* Modal เพิ่มวัตถุดิบใหม่พร้อมใส่ล็อตราคาซื้อแรกได้ทันที */}
@@ -1524,11 +1840,17 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                   </label>
                   <input
                     type="text"
+                    list="boothbook-product-categories"
                     placeholder="เช่น เครื่องดื่ม, ขนม, ทั่วไป"
                     value={newFlavorCat}
                     onChange={(e) => setNewFlavorCat(e.target.value)}
                     className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-semibold"
                   />
+                  <datalist id="boothbook-product-categories">
+                    {productCategories.map((cat) => (
+                      <option key={cat} value={cat} />
+                    ))}
+                  </datalist>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-[#6b8799] mb-1">
