@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   AppDatabaseState,
   FlavorCategory,
@@ -27,6 +27,9 @@ import {
   Search,
   ArrowRight,
   GripVertical,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
 } from 'lucide-react';
 
 interface Props {
@@ -47,6 +50,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
   const [ingSearch, setIngSearch] = useState('');
   const [ingCatFilter, setIngCatFilter] = useState<string>('ทั้งหมด');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('ทั้งหมด');
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [recipeOrCatSearch, setRecipeOrCatSearch] = useState('');
   const [addingBottomCategory, setAddingBottomCategory] = useState(false);
   const [draftCategoryName, setDraftCategoryName] = useState('');
@@ -746,115 +750,6 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                   r.ingredients.some((l) => l.ingredientId === ing.id)
                 );
 
-                const flexibleMatch = (target: string, query: string): boolean => {
-    const q = query.trim().toLowerCase();
-    if (!q) return true;
-    const t = (target || '').toLowerCase();
-    const tokens = q.split(/\s+/).filter(Boolean);
-    return tokens.every((tok) => {
-      if (t.includes(tok)) return true;
-      // Subsequence match (flexible typing e.g. "amrc" -> "americano")
-      let ti = 0;
-      for (let qi = 0; qi < tok.length; qi++) {
-        const idx = t.indexOf(tok[qi], ti);
-        if (idx === -1) return false;
-        ti = idx + 1;
-      }
-      return true;
-    });
-  };
-
-  const rawCategoriesSet = Array.from(
-    new Set([
-      ...customCategories,
-      ...state.recipes.map((r) => (r.category || '').trim()).filter(Boolean),
-    ])
-  );
-
-  const productCategories = [
-    ...categoryOrder.filter((c) => rawCategoriesSet.includes(c)),
-    ...rawCategoriesSet.filter((c) => !categoryOrder.includes(c)),
-  ];
-
-  const visibleCategories = productCategories.filter((cat) => {
-    if (!recipeOrCatSearch.trim()) return true;
-    if (flexibleMatch(cat, recipeOrCatSearch)) return true;
-    return state.recipes.some(
-      (r) => (r.category || '').trim() === cat && flexibleMatch(r.name, recipeOrCatSearch)
-    );
-  });
-
-  const filteredRecipes = state.recipes.filter((r) => {
-    const catOk =
-      selectedCategoryFilter === 'ทั้งหมด' ||
-      (r.category || '').trim() === selectedCategoryFilter;
-    if (!catOk) return false;
-    if (!recipeOrCatSearch.trim()) return true;
-    return (
-      flexibleMatch(r.name, recipeOrCatSearch) ||
-      flexibleMatch(r.category || '', recipeOrCatSearch)
-    );
-  });
-
-  const saveCategoryOrder = (nextOrder: string[]) => {
-    setCategoryOrder(nextOrder);
-    try {
-      localStorage.setItem('boothbook_recipe_category_order_v1', JSON.stringify(nextOrder));
-    } catch {
-      // ignore
-    }
-  };
-
-  const handleCommitBottomCategory = () => {
-    const trimmed = draftCategoryName.trim();
-    setAddingBottomCategory(false);
-    setDraftCategoryName('');
-    if (!trimmed) return;
-    if (!rawCategoriesSet.includes(trimmed)) {
-      const nextCustom = [...customCategories, trimmed];
-      setCustomCategories(nextCustom);
-      try {
-        localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(nextCustom));
-      } catch {
-        // ignore
-      }
-      saveCategoryOrder([...productCategories, trimmed]);
-    }
-    setSelectedCategoryFilter(trimmed);
-  };
-
-  const handleDropCategory = (targetCat: string) => {
-    if (!draggedCategory || draggedCategory === targetCat) {
-      setDraggedCategory(null);
-      setDragOverCategory(null);
-      return;
-    }
-    const nextOrder = [...productCategories];
-    const fromIdx = nextOrder.indexOf(draggedCategory);
-    const toIdx = nextOrder.indexOf(targetCat);
-    if (fromIdx !== -1 && toIdx !== -1) {
-      nextOrder.splice(fromIdx, 1);
-      nextOrder.splice(toIdx, 0, draggedCategory);
-      saveCategoryOrder(nextOrder);
-    }
-    setDraggedCategory(null);
-    setDragOverCategory(null);
-  };
-
-  const handleDeleteCustomCategory = (catName: string) => {
-    const next = customCategories.filter((c) => c !== catName);
-    setCustomCategories(next);
-    try {
-      localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(next));
-    } catch {
-      // ignore
-    }
-    saveCategoryOrder(productCategories.filter((c) => c !== catName));
-    if (selectedCategoryFilter === catName) {
-      setSelectedCategoryFilter('ทั้งหมด');
-    }
-  };
-
   return (
                   <div
                     key={ing.id}
@@ -937,163 +832,218 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
       {/* SECTION B: สูตรสินค้า & ต้นทุนต่อชิ้น */}
       {activeSubTab === 'recipes' && (
         <div className="flex flex-col lg:flex-row gap-5 items-start">
-          {/* Tab ย่อยด้านซ้าย: Search & Category ของสินค้า */}
-          <div className="w-full lg:w-64 shrink-0 bg-white rounded-2xl p-4 shadow-sm border border-[#eae3cf] space-y-3">
-            <div className="text-xs font-black text-[#0d3a57]">หมวดหมู่สินค้า (Category)</div>
-
-            {/* ช่อง Search อย่างเดียว + ปุ่ม + เพิ่ม Category ด้านล่างสุด */}
-            <div className="flex gap-1.5">
-              <div className="relative flex-1 min-w-0">
-                <Search className="w-3.5 h-3.5 text-[#6b8799] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  type="text"
-                  value={recipeOrCatSearch}
-                  onChange={(e) => setRecipeOrCatSearch(e.target.value)}
-                  placeholder="ค้นหาสินค้า / Category..."
-                  className="w-full border border-[#eae3cf] rounded-xl pl-8 pr-2.5 py-1.5 text-xs font-semibold text-[#0d3a57] bg-[#fef9ec]/40 focus:outline-none focus:border-[#118cd1]"
-                />
-              </div>
+          {/* Tab ย่อยด้านซ้าย: Dropdown เลือก/Sort/เพิ่ม Category + ช่องค้นหา + รายการเมนูใน Category */}
+          <div className="w-full lg:w-72 shrink-0 bg-white rounded-2xl p-4 shadow-sm border border-[#eae3cf] space-y-3">
+            {/* Dropdown เลือก Category (พร้อม Drag to Sort และเพิ่ม Category ใหม่) */}
+            <div className="relative">
+              <label className="block text-[11px] font-black text-[#6b8799] mb-1">
+                หมวดหมู่สินค้า (Category)
+              </label>
               <button
                 type="button"
-                onClick={() => {
-                  setAddingBottomCategory(true);
-                  setDraftCategoryName('');
-                }}
-                className="shrink-0 w-8 h-8 rounded-xl bg-[#118cd1] hover:bg-[#0e78b5] text-white flex items-center justify-center cursor-pointer"
-                title="เพิ่ม Category ใหม่ด้านล่าง"
+                onClick={() => setShowCategoryDropdown((v) => !v)}
+                className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border-2 border-[#eae3cf] hover:border-[#118cd1] bg-[#fef9ec]/50 text-xs font-extrabold text-[#0d3a57] transition cursor-pointer"
               >
-                <Plus className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="flex lg:flex-col gap-1.5 overflow-x-auto lg:overflow-x-visible pb-1 lg:pb-0">
-              <button
-                type="button"
-                onClick={() => setSelectedCategoryFilter('ทั้งหมด')}
-                className={`shrink-0 flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                  selectedCategoryFilter === 'ทั้งหมด'
-                    ? 'bg-[#118cd1] text-white shadow-2xs'
-                    : 'bg-[#fef9ec]/50 text-[#0d3a57] hover:bg-[#90d4ec]/20'
-                }`}
-              >
-                <span>ทั้งหมด</span>
-                <span
-                  className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${
-                    selectedCategoryFilter === 'ทั้งหมด'
-                      ? 'bg-white/20 text-white'
-                      : 'bg-white text-[#6b8799]'
-                  }`}
-                >
-                  {recipeOrCatSearch.trim()
-                    ? state.recipes.filter(
-                        (r) =>
-                          flexibleMatch(r.name, recipeOrCatSearch) ||
-                          flexibleMatch(r.category || '', recipeOrCatSearch)
-                      ).length
-                    : state.recipes.length}
+                <span className="truncate">
+                  {selectedCategoryFilter === 'ทั้งหมด'
+                    ? `ทั้งหมด (${state.recipes.length})`
+                    : `${selectedCategoryFilter} (${
+                        state.recipes.filter((r) => (r.category || '').trim() === selectedCategoryFilter)
+                          .length
+                      })`}
                 </span>
+                <ChevronDown
+                  className={`w-4 h-4 text-[#118cd1] shrink-0 transition-transform ${
+                    showCategoryDropdown ? 'rotate-180' : ''
+                  }`}
+                />
               </button>
 
-              {visibleCategories.map((cat) => {
-                const count = state.recipes.filter((r) => {
-                  if ((r.category || '').trim() !== cat) return false;
-                  if (!recipeOrCatSearch.trim()) return true;
-                  return (
-                    flexibleMatch(r.name, recipeOrCatSearch) ||
-                    flexibleMatch(cat, recipeOrCatSearch)
-                  );
-                }).length;
-                const isActive = selectedCategoryFilter === cat;
-                const canDelete = customCategories.includes(cat) && state.recipes.every((r) => (r.category || '').trim() !== cat);
-                const isDragOver = dragOverCategory === cat && draggedCategory !== cat;
-                return (
-                  <div
-                    key={cat}
-                    draggable
-                    onDragStart={() => setDraggedCategory(cat)}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      if (dragOverCategory !== cat) setDragOverCategory(cat);
+              {showCategoryDropdown && (
+                <div className="mt-1.5 w-full bg-white rounded-2xl border border-[#eae3cf] shadow-lg p-2 space-y-1 z-20">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategoryFilter('ทั้งหมด');
+                      setShowCategoryDropdown(false);
                     }}
-                    onDragLeave={() => {
-                      if (dragOverCategory === cat) setDragOverCategory(null);
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      handleDropCategory(cat);
-                    }}
-                    onDragEnd={() => {
-                      setDraggedCategory(null);
-                      setDragOverCategory(null);
-                    }}
-                    className={`shrink-0 flex items-center gap-1 rounded-xl transition ${
-                      isDragOver ? 'ring-2 ring-[#118cd1] bg-[#118cd1]/10' : ''
-                    } ${draggedCategory === cat ? 'opacity-50' : ''}`}
+                    className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                      selectedCategoryFilter === 'ทั้งหมด'
+                        ? 'bg-[#118cd1] text-white'
+                        : 'text-[#0d3a57] hover:bg-[#fef9ec]'
+                    }`}
                   >
+                    <span>ทั้งหมด</span>
+                    <span className="text-[10px] font-black opacity-80">{state.recipes.length}</span>
+                  </button>
+
+                  {productCategories.map((cat) => {
+                    const count = state.recipes.filter((r) => (r.category || '').trim() === cat).length;
+                    const isActive = selectedCategoryFilter === cat;
+                    const canDelete = customCategories.includes(cat) && count === 0;
+                    const isDragOver = dragOverCategory === cat && draggedCategory !== cat;
+                    return (
+                      <div
+                        key={cat}
+                        draggable
+                        onDragStart={() => setDraggedCategory(cat)}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          if (dragOverCategory !== cat) setDragOverCategory(cat);
+                        }}
+                        onDragLeave={() => {
+                          if (dragOverCategory === cat) setDragOverCategory(null);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          handleDropCategory(cat);
+                        }}
+                        onDragEnd={() => {
+                          setDraggedCategory(null);
+                          setDragOverCategory(null);
+                        }}
+                        className={`flex items-center gap-1 rounded-xl transition ${
+                          isDragOver ? 'ring-2 ring-[#118cd1] bg-[#118cd1]/10' : ''
+                        } ${draggedCategory === cat ? 'opacity-50' : ''}`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedCategoryFilter(cat);
+                            setShowCategoryDropdown(false);
+                          }}
+                          className={`flex-1 flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                            isActive
+                              ? 'bg-[#118cd1] text-white'
+                              : 'text-[#0d3a57] hover:bg-[#fef9ec]'
+                          }`}
+                        >
+                          <span className="flex items-center gap-1.5 min-w-0">
+                            <GripVertical
+                              className={`w-3.5 h-3.5 shrink-0 cursor-grab ${
+                                isActive ? 'text-white/75' : 'text-[#6b8799]/60'
+                              }`}
+                            />
+                            <span className="truncate">{cat}</span>
+                          </span>
+                          <span className="text-[10px] font-black opacity-80">{count}</span>
+                        </button>
+                        {canDelete && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCustomCategory(cat)}
+                            className="p-1.5 rounded-lg text-[#6b8799] hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                            title="ลบหมวดหมู่ที่ว่าง"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* เพิ่ม Category ใหม่ด้านล่างสุดของ Dropdown */}
+                  {addingBottomCategory ? (
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        handleCommitBottomCategory();
+                        setShowCategoryDropdown(false);
+                      }}
+                      className="pt-1"
+                    >
+                      <input
+                        type="text"
+                        autoFocus
+                        value={draftCategoryName}
+                        onChange={(e) => setDraftCategoryName(e.target.value)}
+                        onBlur={() => {
+                          handleCommitBottomCategory();
+                          setShowCategoryDropdown(false);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') {
+                            setAddingBottomCategory(false);
+                            setDraftCategoryName('');
+                          }
+                        }}
+                        placeholder="พิมพ์ชื่อ Category ใหม่..."
+                        className="w-full border-2 border-[#118cd1] rounded-xl px-2.5 py-1.5 text-xs font-bold text-[#0d3a57] bg-white focus:outline-none"
+                      />
+                    </form>
+                  ) : (
                     <button
                       type="button"
-                      onClick={() => setSelectedCategoryFilter(cat)}
-                      className={`flex-1 flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                        isActive
-                          ? 'bg-[#118cd1] text-white shadow-2xs'
-                          : 'bg-[#fef9ec]/50 text-[#0d3a57] hover:bg-[#90d4ec]/20'
+                      onClick={() => {
+                        setAddingBottomCategory(true);
+                        setDraftCategoryName('');
+                      }}
+                      className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black text-[#118cd1] bg-[#118cd1]/10 hover:bg-[#118cd1]/20 transition cursor-pointer mt-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      เพิ่ม Category ใหม่
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* ช่องค้นหาเมนูใน Category */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-[#6b8799] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={recipeOrCatSearch}
+                onChange={(e) => setRecipeOrCatSearch(e.target.value)}
+                placeholder="ค้นหาชื่อเมนู..."
+                className="w-full border border-[#eae3cf] rounded-xl pl-8 pr-2.5 py-2 text-xs font-semibold text-[#0d3a57] bg-[#fef9ec]/40 focus:outline-none focus:border-[#118cd1]"
+              />
+            </div>
+
+            {/* รายการเมนูใน Category ที่เลือก */}
+            <div className="space-y-1.5 max-h-[55vh] overflow-y-auto pr-0.5">
+              {filteredRecipes.length === 0 ? (
+                <div className="text-center py-6 text-[11px] text-[#6b8799] bg-[#fef9ec]/40 rounded-xl border border-dashed border-[#eae3cf]">
+                  ไม่พบเมนูในหมวดหมู่นี้
+                </div>
+              ) : (
+                filteredRecipes.map((rec) => {
+                  const cost = calculateRecipeUnitCost(rec, state, sim);
+                  const isSelected = selectedRecipe?.id === rec.id;
+                  return (
+                    <button
+                      key={rec.id}
+                      type="button"
+                      onClick={() => setSelectedRecipeId(rec.id)}
+                      className={`w-full text-left p-2.5 rounded-xl border-2 transition cursor-pointer flex items-center gap-2.5 ${
+                        isSelected
+                          ? 'border-[#118cd1] bg-[#90d4ec]/15 shadow-2xs'
+                          : 'border-[#eae3cf] bg-[#fef9ec]/40 hover:border-[#90d4ec]'
                       }`}
                     >
-                      <span className="flex items-center gap-1.5 min-w-0">
-                        <GripVertical
-                          className={`w-3.5 h-3.5 shrink-0 cursor-grab ${
-                            isActive ? 'text-white/70' : 'text-[#6b8799]/60'
-                          }`}
-                        />
-                        <span className="truncate">{cat}</span>
-                      </span>
-                      <span
-                        className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${
-                          isActive ? 'bg-white/20 text-white' : 'bg-white text-[#6b8799]'
-                        }`}
-                      >
-                        {count}
-                      </span>
+                      <img
+                        src={resolveImageUrl(rec.image)}
+                        alt={rec.name}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = './images/';
+                          (e.target as HTMLImageElement).style.opacity = '0.3';
+                        }}
+                        className="w-10 h-10 rounded-lg object-cover bg-[#90d4ec]/30 shrink-0 border border-[#eae3cf]"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="font-extrabold text-xs text-[#0d3a57] truncate">
+                          {rec.name}
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] text-[#6b8799] mt-0.5">
+                          <span>{rec.category}</span>
+                          <span className="font-black text-[#118cd1]">
+                            ขาย {formatBaht(cost.sellingPriceSingle, 0)}
+                          </span>
+                        </div>
+                      </div>
                     </button>
-                    {canDelete && (
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteCustomCategory(cat)}
-                        className="p-1.5 rounded-lg text-[#6b8799] hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
-                        title="ลบหมวดหมู่ที่ว่าง"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-
-              {/* ช่องกรอก Category ใหม่ด้านล่างสุดเมื่อกดปุ่ม + */}
-              {addingBottomCategory && (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleCommitBottomCategory();
-                  }}
-                  className="shrink-0 flex items-center gap-1 pt-1"
-                >
-                  <input
-                    type="text"
-                    autoFocus
-                    value={draftCategoryName}
-                    onChange={(e) => setDraftCategoryName(e.target.value)}
-                    onBlur={handleCommitBottomCategory}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Escape') {
-                        setAddingBottomCategory(false);
-                        setDraftCategoryName('');
-                      }
-                    }}
-                    placeholder="พิมพ์ชื่อ Category..."
-                    className="w-full border-2 border-[#118cd1] rounded-xl px-2.5 py-1.5 text-xs font-bold text-[#0d3a57] bg-white focus:outline-none"
-                  />
-                </form>
+                  );
+                })
               )}
             </div>
           </div>
@@ -1101,30 +1051,23 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
           <div className="flex-1 min-w-0 w-full space-y-6">
       {/* ส่วนหัว: สรุปต้นทุนต่อชิ้นของทุกสินค้า */}
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-[#eae3cf]">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-extrabold text-[#0d3a57] flex items-center gap-2">
-              <IceCream className="w-5 h-5 text-[#118cd1]" />
-              สูตรสินค้าแต่ละสินค้า & ต้นทุนต่อชิ้น (Flavor BOM & Cost per Cup)
-            </h2>
-            <p className="text-sm text-[#6b8799] mt-0.5">
-              สามารถเพิ่มวัตถุดิบใหม่ และเลือกระบุได้ว่าแต่ละวัตถุดิบจะดึงราคาจาก <b>การซื้อครั้งไหน (Lot ไหน)</b>
-            </p>
-          </div>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <h2 className="text-lg font-extrabold text-[#0d3a57] flex items-center gap-2">
+            <IceCream className="w-5 h-5 text-[#118cd1]" />
+            สูตรสินค้าแต่ละสินค้า & ต้นทุนต่อชิ้น (Flavor BOM & Cost per Cup)
+          </h2>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => {
-                if (selectedCategoryFilter !== 'ทั้งหมด') {
-                  setNewFlavorCat(selectedCategoryFilter);
-                }
-                setShowNewFlavorModal(true);
-              }}
-              className="inline-flex items-center gap-2 bg-[#118cd1] hover:bg-[#0e78b5] text-white font-bold px-3.5 py-2 rounded-xl text-xs transition cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" /> เพิ่มสินค้าใหม่
-            </button>
-          </div>
+          <button
+            onClick={() => {
+              if (selectedCategoryFilter !== 'ทั้งหมด') {
+                setNewFlavorCat(selectedCategoryFilter);
+              }
+              setShowNewFlavorModal(true);
+            }}
+            className="shrink-0 inline-flex items-center gap-2 bg-[#118cd1] hover:bg-[#0e78b5] text-white font-bold px-3.5 py-2 rounded-xl text-xs transition cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" /> เพิ่มสินค้าใหม่
+          </button>
         </div>
 
         {syncNotice && (
@@ -1133,194 +1076,108 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
             {syncNotice}
           </div>
         )}
-
-        {/* การ์ดแสดงสินค้าทั้ง 8+ รส พร้อมต้นทุนต่อชิ้น */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 mt-4">
-          {filteredRecipes.length === 0 ? (
-            <div className="sm:col-span-2 lg:col-span-3 text-center py-8 text-xs text-[#6b8799] bg-[#fef9ec]/40 rounded-2xl border border-dashed border-[#eae3cf]">
-              ยังไม่มีสินค้าในหมวดหมู่ &ldquo;{selectedCategoryFilter}&rdquo; — กดปุ่ม &ldquo;+ เพิ่มสินค้าใหม่&rdquo; เพื่อเพิ่มได้เลยครับ
-            </div>
-          ) : (
-          filteredRecipes.map((rec) => {
-            const cost = calculateRecipeUnitCost(rec, state, sim);
-            const isSelected = selectedRecipe?.id === rec.id;
-
-            const flexibleMatch = (target: string, query: string): boolean => {
-    const q = query.trim().toLowerCase();
-    if (!q) return true;
-    const t = (target || '').toLowerCase();
-    const tokens = q.split(/\s+/).filter(Boolean);
-    return tokens.every((tok) => {
-      if (t.includes(tok)) return true;
-      // Subsequence match (flexible typing e.g. "amrc" -> "americano")
-      let ti = 0;
-      for (let qi = 0; qi < tok.length; qi++) {
-        const idx = t.indexOf(tok[qi], ti);
-        if (idx === -1) return false;
-        ti = idx + 1;
-      }
-      return true;
-    });
-  };
-
-  const rawCategoriesSet = Array.from(
-    new Set([
-      ...customCategories,
-      ...state.recipes.map((r) => (r.category || '').trim()).filter(Boolean),
-    ])
-  );
-
-  const productCategories = [
-    ...categoryOrder.filter((c) => rawCategoriesSet.includes(c)),
-    ...rawCategoriesSet.filter((c) => !categoryOrder.includes(c)),
-  ];
-
-  const visibleCategories = productCategories.filter((cat) => {
-    if (!recipeOrCatSearch.trim()) return true;
-    if (flexibleMatch(cat, recipeOrCatSearch)) return true;
-    return state.recipes.some(
-      (r) => (r.category || '').trim() === cat && flexibleMatch(r.name, recipeOrCatSearch)
-    );
-  });
-
-  const filteredRecipes = state.recipes.filter((r) => {
-    const catOk =
-      selectedCategoryFilter === 'ทั้งหมด' ||
-      (r.category || '').trim() === selectedCategoryFilter;
-    if (!catOk) return false;
-    if (!recipeOrCatSearch.trim()) return true;
-    return (
-      flexibleMatch(r.name, recipeOrCatSearch) ||
-      flexibleMatch(r.category || '', recipeOrCatSearch)
-    );
-  });
-
-  const saveCategoryOrder = (nextOrder: string[]) => {
-    setCategoryOrder(nextOrder);
-    try {
-      localStorage.setItem('boothbook_recipe_category_order_v1', JSON.stringify(nextOrder));
-    } catch {
-      // ignore
-    }
-  };
-
-  const handleCommitBottomCategory = () => {
-    const trimmed = draftCategoryName.trim();
-    setAddingBottomCategory(false);
-    setDraftCategoryName('');
-    if (!trimmed) return;
-    if (!rawCategoriesSet.includes(trimmed)) {
-      const nextCustom = [...customCategories, trimmed];
-      setCustomCategories(nextCustom);
-      try {
-        localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(nextCustom));
-      } catch {
-        // ignore
-      }
-      saveCategoryOrder([...productCategories, trimmed]);
-    }
-    setSelectedCategoryFilter(trimmed);
-  };
-
-  const handleDropCategory = (targetCat: string) => {
-    if (!draggedCategory || draggedCategory === targetCat) {
-      setDraggedCategory(null);
-      setDragOverCategory(null);
-      return;
-    }
-    const nextOrder = [...productCategories];
-    const fromIdx = nextOrder.indexOf(draggedCategory);
-    const toIdx = nextOrder.indexOf(targetCat);
-    if (fromIdx !== -1 && toIdx !== -1) {
-      nextOrder.splice(fromIdx, 1);
-      nextOrder.splice(toIdx, 0, draggedCategory);
-      saveCategoryOrder(nextOrder);
-    }
-    setDraggedCategory(null);
-    setDragOverCategory(null);
-  };
-
-  const handleDeleteCustomCategory = (catName: string) => {
-    const next = customCategories.filter((c) => c !== catName);
-    setCustomCategories(next);
-    try {
-      localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(next));
-    } catch {
-      // ignore
-    }
-    saveCategoryOrder(productCategories.filter((c) => c !== catName));
-    if (selectedCategoryFilter === catName) {
-      setSelectedCategoryFilter('ทั้งหมด');
-    }
-  };
-
-  return (
-              <div
-                key={rec.id}
-                onClick={() => setSelectedRecipeId(rec.id)}
-                className={`p-3.5 rounded-2xl border-2 transition cursor-pointer flex flex-col justify-between ${
-                  isSelected
-                    ? 'border-[#118cd1] bg-[#90d4ec]/15 shadow-sm'
-                    : 'border-[#eae3cf] bg-[#fef9ec]/50 hover:border-[#90d4ec]'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <img
-                    src={resolveImageUrl(rec.image)}
-                    alt={rec.name}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = './images/';
-                      (e.target as HTMLImageElement).style.opacity = '0.3';
-                    }}
-                    className="w-14 h-14 rounded-xl object-cover bg-[#90d4ec]/30 shrink-0 border border-[#eae3cf]"
-                  />
-                  <div className="min-w-0">
-                    <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#90d4ec]/40 text-[#0d3a57]">
-                      {rec.category} (ขาย {formatBaht(cost.sellingPriceSingle, 0)})
-                    </span>
-                    <h3 className="font-extrabold text-[#0d3a57] text-sm truncate mt-1">
-                      {rec.name}
-                    </h3>
-                    <p className="text-[11px] text-[#6b8799]">
-                      น้ำหนัก {cost.gramsPerFullCup.toFixed(1)} กรัม/ชิ้น
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-3 pt-2.5 border-t border-[#eae3cf] space-y-1 text-xs">
-                  <div className="flex justify-between text-[#6b8799]">
-                    <span>ทุนวัตถุดิบ (1 ชิ้น):</span>
-                    <b className="text-[#0d3a57]">{formatBaht(cost.ingredientCostPerFullCup)}</b>
-                  </div>
-                  <div className="flex justify-between text-[#6b8799]">
-                    <span>ทุนบรรจุภัณฑ์:</span>
-                    <b className="text-[#0d3a57]">{formatBaht(cost.packagingCostPerCup)}</b>
-                  </div>
-                  <div className="flex justify-between items-baseline pt-1 border-t border-dashed border-[#eae3cf]">
-                    <span className="font-bold text-[#0d3a57]">ต้นทุนรวม/ชิ้น:</span>
-                    <span className="text-base font-black text-[#118cd1]">
-                      {formatBaht(cost.totalFullCupCost)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-[11px] text-[#1a9a5b] font-bold">
-                    <span>กำไรต่อชิ้น:</span>
-                    <span>
-                      +{formatBaht(cost.grossProfitSingle)} ({cost.grossMarginPct.toFixed(0)}%)
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          })
-          )}
-        </div>
       </div>
 
-      {/* ส่วนแก้ไขสูตรของสินค้าที่เลือก */}
+      {/* SECTION 1 (บน): โครงสร้างต้นทุนต่อชิ้น */}
       {selectedRecipe && selectedCost && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* ซ้าย (2 คอลัมน์): ตารางวัตถุดิบในสูตร พร้อมตัวเลือกว่าใช้การซื้อครั้งไหน */}
-          <div className="lg:col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-[#eae3cf] space-y-4">
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-[#eae3cf] space-y-4">
+            <h3 className="font-extrabold text-[#0d3a57] flex items-center gap-2">
+              <Calculator className="w-5 h-5 text-[#118cd1]" />
+              สรุปโครงสร้างต้นทุนต่อชิ้น ({selectedRecipe.name})
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-[#fef9ec] rounded-xl p-4 border border-[#eae3cf] space-y-2.5 text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-[#6b8799]">หมวดราคาใน POS:</span>
+                  <select
+                    value={selectedRecipe.category}
+                    onChange={(e) =>
+                      handleUpdateRecipeField('category', e.target.value as FlavorCategory)
+                    }
+                    className="bg-white border border-[#eae3cf] rounded-lg px-2.5 py-1 text-xs font-extrabold text-[#118cd1]"
+                  >
+                    <option value="Original">Original (฿79 / ฿40)</option>
+                    <option value="Premium">Premium (฿89 / ฿45)</option>
+                    <option value="Signature">Signature (฿99 / ฿50)</option>
+                  </select>
+                </div>
+
+                <div className="flex justify-between text-xs pt-2 border-t border-[#eae3cf]">
+                  <span className="text-[#6b8799]">1. ต้นทุนวัตถุดิบ (สั่ง 1 ชิ้นเต็มถ้วย):</span>
+                  <b className="text-[#0d3a57]">
+                    {formatBaht(selectedCost.ingredientCostPerFullCup)}
+                  </b>
+                </div>
+
+                <div className="flex justify-between text-xs">
+                  <span className="text-[#6b8799]">
+                    • กรณีลูกค้าสั่ง 2 ชิ้นในถ้วยเดียว (ครึ่งถ้วย):
+                  </span>
+                  <b className="text-[#0d3a57]">
+                    {formatBaht(selectedCost.ingredientCostPerHalfCup)}
+                  </b>
+                </div>
+
+                <div className="pt-2 border-t border-[#eae3cf] space-y-1">
+                  <div className="flex justify-between text-xs font-bold text-[#0d3a57]">
+                    <span className="flex items-center gap-1">
+                      <Package className="w-3.5 h-3.5 text-[#118cd1]" />
+                      2. ต้นทุนแพ็กเกจจิ้งต่อ 1 ชิ้น (FIFO):
+                    </span>
+                    <span>{formatBaht(selectedCost.packagingCostPerCup)}</span>
+                  </div>
+                  {selectedCost.packagingBreakdown.map((pk) => (
+                    <div
+                      key={pk.itemId}
+                      className="flex justify-between text-[11px] text-[#6b8799] pl-4"
+                    >
+                      <span>
+                        - {pk.name} (×{pk.usagePerCup})
+                      </span>
+                      <span>{formatBaht(pk.cost)}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="pt-3 border-t-2 border-[#eae3cf] flex justify-between items-baseline">
+                  <span className="font-extrabold text-[#0d3a57]">รวมต้นทุนทั้งสิ้น / 1 ชิ้น:</span>
+                  <span className="text-xl font-black text-[#118cd1]">
+                    {formatBaht(selectedCost.totalFullCupCost)}
+                  </span>
+                </div>
+              </div>
+
+              {/* เปรียบเทียบกับราคาขายใน POS */}
+              <div className="bg-emerald-50/70 rounded-xl p-4 border border-emerald-200 space-y-2 flex flex-col justify-between">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 text-xs font-extrabold text-emerald-800">
+                    <Sparkles className="w-4 h-4 text-emerald-600" />
+                    กำไรต่อชิ้นเมื่อขายใน POS
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-emerald-900">ราคาขาย 1 ชิ้น ({selectedRecipe.category}):</span>
+                    <b className="text-emerald-950">{formatBaht(selectedCost.sellingPriceSingle)}</b>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-emerald-900">หัก ต้นทุนวัตถุดิบ + แพ็กเกจ:</span>
+                    <b className="text-rose-700">-{formatBaht(selectedCost.totalFullCupCost)}</b>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-emerald-200 flex justify-between items-baseline">
+                  <span className="text-xs font-extrabold text-emerald-900">กำไรขั้นต้น / ชิ้น:</span>
+                  <span className="text-lg font-black text-emerald-700">
+                    +{formatBaht(selectedCost.grossProfitSingle)} (
+                    {selectedCost.grossMarginPct.toFixed(1)}%)
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 2 (ล่าง): สูตรการผลิต */}
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-[#eae3cf] space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#eae3cf]">
               <div className="flex items-center gap-3">
                 <img
@@ -1443,115 +1300,6 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                     (s, l) => s + (Number(l.gramsPerBatch) || 0),
                     0
                   );
-                  const flexibleMatch = (target: string, query: string): boolean => {
-    const q = query.trim().toLowerCase();
-    if (!q) return true;
-    const t = (target || '').toLowerCase();
-    const tokens = q.split(/\s+/).filter(Boolean);
-    return tokens.every((tok) => {
-      if (t.includes(tok)) return true;
-      // Subsequence match (flexible typing e.g. "amrc" -> "americano")
-      let ti = 0;
-      for (let qi = 0; qi < tok.length; qi++) {
-        const idx = t.indexOf(tok[qi], ti);
-        if (idx === -1) return false;
-        ti = idx + 1;
-      }
-      return true;
-    });
-  };
-
-  const rawCategoriesSet = Array.from(
-    new Set([
-      ...customCategories,
-      ...state.recipes.map((r) => (r.category || '').trim()).filter(Boolean),
-    ])
-  );
-
-  const productCategories = [
-    ...categoryOrder.filter((c) => rawCategoriesSet.includes(c)),
-    ...rawCategoriesSet.filter((c) => !categoryOrder.includes(c)),
-  ];
-
-  const visibleCategories = productCategories.filter((cat) => {
-    if (!recipeOrCatSearch.trim()) return true;
-    if (flexibleMatch(cat, recipeOrCatSearch)) return true;
-    return state.recipes.some(
-      (r) => (r.category || '').trim() === cat && flexibleMatch(r.name, recipeOrCatSearch)
-    );
-  });
-
-  const filteredRecipes = state.recipes.filter((r) => {
-    const catOk =
-      selectedCategoryFilter === 'ทั้งหมด' ||
-      (r.category || '').trim() === selectedCategoryFilter;
-    if (!catOk) return false;
-    if (!recipeOrCatSearch.trim()) return true;
-    return (
-      flexibleMatch(r.name, recipeOrCatSearch) ||
-      flexibleMatch(r.category || '', recipeOrCatSearch)
-    );
-  });
-
-  const saveCategoryOrder = (nextOrder: string[]) => {
-    setCategoryOrder(nextOrder);
-    try {
-      localStorage.setItem('boothbook_recipe_category_order_v1', JSON.stringify(nextOrder));
-    } catch {
-      // ignore
-    }
-  };
-
-  const handleCommitBottomCategory = () => {
-    const trimmed = draftCategoryName.trim();
-    setAddingBottomCategory(false);
-    setDraftCategoryName('');
-    if (!trimmed) return;
-    if (!rawCategoriesSet.includes(trimmed)) {
-      const nextCustom = [...customCategories, trimmed];
-      setCustomCategories(nextCustom);
-      try {
-        localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(nextCustom));
-      } catch {
-        // ignore
-      }
-      saveCategoryOrder([...productCategories, trimmed]);
-    }
-    setSelectedCategoryFilter(trimmed);
-  };
-
-  const handleDropCategory = (targetCat: string) => {
-    if (!draggedCategory || draggedCategory === targetCat) {
-      setDraggedCategory(null);
-      setDragOverCategory(null);
-      return;
-    }
-    const nextOrder = [...productCategories];
-    const fromIdx = nextOrder.indexOf(draggedCategory);
-    const toIdx = nextOrder.indexOf(targetCat);
-    if (fromIdx !== -1 && toIdx !== -1) {
-      nextOrder.splice(fromIdx, 1);
-      nextOrder.splice(toIdx, 0, draggedCategory);
-      saveCategoryOrder(nextOrder);
-    }
-    setDraggedCategory(null);
-    setDragOverCategory(null);
-  };
-
-  const handleDeleteCustomCategory = (catName: string) => {
-    const next = customCategories.filter((c) => c !== catName);
-    setCustomCategories(next);
-    try {
-      localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(next));
-    } catch {
-      // ignore
-    }
-    saveCategoryOrder(productCategories.filter((c) => c !== catName));
-    if (selectedCategoryFilter === catName) {
-      setSelectedCategoryFilter('ทั้งหมด');
-    }
-  };
-
   return (
                     <button
                       key={pr.id}
@@ -1730,115 +1478,6 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                           a.purchaseDate.localeCompare(b.purchaseDate) || a.id.localeCompare(b.id)
                       );
 
-                    const flexibleMatch = (target: string, query: string): boolean => {
-    const q = query.trim().toLowerCase();
-    if (!q) return true;
-    const t = (target || '').toLowerCase();
-    const tokens = q.split(/\s+/).filter(Boolean);
-    return tokens.every((tok) => {
-      if (t.includes(tok)) return true;
-      // Subsequence match (flexible typing e.g. "amrc" -> "americano")
-      let ti = 0;
-      for (let qi = 0; qi < tok.length; qi++) {
-        const idx = t.indexOf(tok[qi], ti);
-        if (idx === -1) return false;
-        ti = idx + 1;
-      }
-      return true;
-    });
-  };
-
-  const rawCategoriesSet = Array.from(
-    new Set([
-      ...customCategories,
-      ...state.recipes.map((r) => (r.category || '').trim()).filter(Boolean),
-    ])
-  );
-
-  const productCategories = [
-    ...categoryOrder.filter((c) => rawCategoriesSet.includes(c)),
-    ...rawCategoriesSet.filter((c) => !categoryOrder.includes(c)),
-  ];
-
-  const visibleCategories = productCategories.filter((cat) => {
-    if (!recipeOrCatSearch.trim()) return true;
-    if (flexibleMatch(cat, recipeOrCatSearch)) return true;
-    return state.recipes.some(
-      (r) => (r.category || '').trim() === cat && flexibleMatch(r.name, recipeOrCatSearch)
-    );
-  });
-
-  const filteredRecipes = state.recipes.filter((r) => {
-    const catOk =
-      selectedCategoryFilter === 'ทั้งหมด' ||
-      (r.category || '').trim() === selectedCategoryFilter;
-    if (!catOk) return false;
-    if (!recipeOrCatSearch.trim()) return true;
-    return (
-      flexibleMatch(r.name, recipeOrCatSearch) ||
-      flexibleMatch(r.category || '', recipeOrCatSearch)
-    );
-  });
-
-  const saveCategoryOrder = (nextOrder: string[]) => {
-    setCategoryOrder(nextOrder);
-    try {
-      localStorage.setItem('boothbook_recipe_category_order_v1', JSON.stringify(nextOrder));
-    } catch {
-      // ignore
-    }
-  };
-
-  const handleCommitBottomCategory = () => {
-    const trimmed = draftCategoryName.trim();
-    setAddingBottomCategory(false);
-    setDraftCategoryName('');
-    if (!trimmed) return;
-    if (!rawCategoriesSet.includes(trimmed)) {
-      const nextCustom = [...customCategories, trimmed];
-      setCustomCategories(nextCustom);
-      try {
-        localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(nextCustom));
-      } catch {
-        // ignore
-      }
-      saveCategoryOrder([...productCategories, trimmed]);
-    }
-    setSelectedCategoryFilter(trimmed);
-  };
-
-  const handleDropCategory = (targetCat: string) => {
-    if (!draggedCategory || draggedCategory === targetCat) {
-      setDraggedCategory(null);
-      setDragOverCategory(null);
-      return;
-    }
-    const nextOrder = [...productCategories];
-    const fromIdx = nextOrder.indexOf(draggedCategory);
-    const toIdx = nextOrder.indexOf(targetCat);
-    if (fromIdx !== -1 && toIdx !== -1) {
-      nextOrder.splice(fromIdx, 1);
-      nextOrder.splice(toIdx, 0, draggedCategory);
-      saveCategoryOrder(nextOrder);
-    }
-    setDraggedCategory(null);
-    setDragOverCategory(null);
-  };
-
-  const handleDeleteCustomCategory = (catName: string) => {
-    const next = customCategories.filter((c) => c !== catName);
-    setCustomCategories(next);
-    try {
-      localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(next));
-    } catch {
-      // ignore
-    }
-    saveCategoryOrder(productCategories.filter((c) => c !== catName));
-    if (selectedCategoryFilter === catName) {
-      setSelectedCategoryFilter('ทั้งหมด');
-    }
-  };
-
   return (
                       <tr key={line.ingredientId} className="hover:bg-[#fef9ec]/60">
                         <td className="py-2.5 px-2.5 font-extrabold text-[#0d3a57]">
@@ -2011,98 +1650,6 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                   </button>
                 </div>
               </form>
-            </div>
-          </div>
-
-          {/* ขวา (1 คอลัมน์): บัตรสรุปต้นทุนรวมต่อชิ้น (1 ชิ้น vs 2 ชิ้น + แพ็กเกจจิ้ง) */}
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-[#eae3cf] space-y-4">
-            <h3 className="font-extrabold text-[#0d3a57] flex items-center gap-2">
-              <Calculator className="w-5 h-5 text-[#118cd1]" />
-              สรุปโครงสร้างต้นทุนต่อชิ้น
-            </h3>
-
-            <div className="bg-[#fef9ec] rounded-xl p-4 border border-[#eae3cf] space-y-2.5 text-sm">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-[#6b8799]">หมวดราคาใน POS:</span>
-                <select
-                  value={selectedRecipe.category}
-                  onChange={(e) =>
-                    handleUpdateRecipeField('category', e.target.value as FlavorCategory)
-                  }
-                  className="bg-white border border-[#eae3cf] rounded-lg px-2.5 py-1 text-xs font-extrabold text-[#118cd1]"
-                >
-                  <option value="Original">Original (฿79 / ฿40)</option>
-                  <option value="Premium">Premium (฿89 / ฿45)</option>
-                  <option value="Signature">Signature (฿99 / ฿50)</option>
-                </select>
-              </div>
-
-              <div className="flex justify-between text-xs pt-2 border-t border-[#eae3cf]">
-                <span className="text-[#6b8799]">1. ต้นทุนวัตถุดิบ (สั่ง 1 ชิ้นเต็มถ้วย):</span>
-                <b className="text-[#0d3a57]">
-                  {formatBaht(selectedCost.ingredientCostPerFullCup)}
-                </b>
-              </div>
-
-              <div className="flex justify-between text-xs">
-                <span className="text-[#6b8799]">
-                  • กรณีลูกค้าสั่ง 2 ชิ้นในถ้วยเดียว (ครึ่งถ้วย):
-                </span>
-                <b className="text-[#0d3a57]">
-                  {formatBaht(selectedCost.ingredientCostPerHalfCup)}
-                </b>
-              </div>
-
-              <div className="pt-2 border-t border-[#eae3cf] space-y-1">
-                <div className="flex justify-between text-xs font-bold text-[#0d3a57]">
-                  <span className="flex items-center gap-1">
-                    <Package className="w-3.5 h-3.5 text-[#118cd1]" />
-                    2. ต้นทุนแพ็กเกจจิ้งต่อ 1 ชิ้น (FIFO):
-                  </span>
-                  <span>{formatBaht(selectedCost.packagingCostPerCup)}</span>
-                </div>
-                {selectedCost.packagingBreakdown.map((pk) => (
-                  <div
-                    key={pk.itemId}
-                    className="flex justify-between text-[11px] text-[#6b8799] pl-4"
-                  >
-                    <span>
-                      - {pk.name} (×{pk.usagePerCup})
-                    </span>
-                    <span>{formatBaht(pk.cost)}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="pt-3 border-t-2 border-[#eae3cf] flex justify-between items-baseline">
-                <span className="font-extrabold text-[#0d3a57]">รวมต้นทุนทั้งสิ้น / 1 ชิ้น:</span>
-                <span className="text-xl font-black text-[#118cd1]">
-                  {formatBaht(selectedCost.totalFullCupCost)}
-                </span>
-              </div>
-            </div>
-
-            {/* เปรียบเทียบกับราคาขายใน POS */}
-            <div className="bg-emerald-50/70 rounded-xl p-4 border border-emerald-200 space-y-2">
-              <div className="flex items-center gap-1.5 text-xs font-extrabold text-emerald-800">
-                <Sparkles className="w-4 h-4 text-emerald-600" />
-                กำไรต่อชิ้นเมื่อขายใน POS
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-emerald-900">ราคาขาย 1 ชิ้น ({selectedRecipe.category}):</span>
-                <b className="text-emerald-950">{formatBaht(selectedCost.sellingPriceSingle)}</b>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-emerald-900">หัก ต้นทุนวัตถุดิบ + แพ็กเกจ:</span>
-                <b className="text-rose-700">-{formatBaht(selectedCost.totalFullCupCost)}</b>
-              </div>
-              <div className="pt-2 border-t border-emerald-200 flex justify-between items-baseline">
-                <span className="text-xs font-extrabold text-emerald-900">กำไรขั้นต้น / ชิ้น:</span>
-                <span className="text-lg font-black text-emerald-700">
-                  +{formatBaht(selectedCost.grossProfitSingle)} (
-                  {selectedCost.grossMarginPct.toFixed(1)}%)
-                </span>
-              </div>
             </div>
           </div>
         </div>
