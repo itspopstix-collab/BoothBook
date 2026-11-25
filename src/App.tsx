@@ -12,6 +12,7 @@ import {
   SyncStatusInfo,
 } from './services/storage';
 import { runFifoSimulation } from './services/fifoEngine';
+import { buildDemo50Recipes } from './services/demo50Menus';
 import { EventPnLView } from './components/EventPnLView';
 import { FifoInventoryView } from './components/FifoInventoryView';
 import { RecipeCostView } from './components/RecipeCostView';
@@ -132,6 +133,26 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [pendingSyncCount]);
+
+  // เติมเมนูตัวอย่าง 50 เมนูข้ามหมวดหมู่เมื่อเปิดผ่าน ?demo50=1
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('demo50') !== '1') return;
+    const demo50 = buildDemo50Recipes();
+    setState((prev) => {
+      const existingNames = new Set(prev.recipes.map((r) => r.name.trim().toLowerCase()));
+      const toAdd = demo50.filter((d) => !existingNames.has(d.name.trim().toLowerCase()));
+      if (toAdd.length === 0) return prev;
+      const next = { ...prev, recipes: [...prev.recipes, ...toAdd] };
+      saveAppState(next);
+      return next;
+    });
+    setActiveTab('recipes');
+    params.delete('demo50');
+    const qs = params.toString();
+    const cleanUrl = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
+    window.history.replaceState({}, '', cleanUrl);
+  }, []);
 
   // Auto-switch to pos tab if staff
   useEffect(() => {
