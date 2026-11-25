@@ -134,24 +134,34 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [pendingSyncCount]);
 
-  // เติมเมนูตัวอย่าง 50 เมนูข้ามหมวดหมู่เมื่อเปิดผ่าน ?demo50=1
+  // เติมเมนูตัวอย่าง 50 เมนูข้ามหมวดหมู่ (ทำงานครั้งเดียวอัตโนมัติ หรือเมื่อเปิดผ่าน ?demo50=1)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('demo50') !== '1') return;
+    const forceDemo = params.get('demo50') === '1';
+    const alreadySeeded = localStorage.getItem('boothbook_demo50_seeded_v1') === '1';
+    if (!forceDemo && alreadySeeded) return;
+
     const demo50 = buildDemo50Recipes();
     setState((prev) => {
       const existingNames = new Set(prev.recipes.map((r) => r.name.trim().toLowerCase()));
       const toAdd = demo50.filter((d) => !existingNames.has(d.name.trim().toLowerCase()));
-      if (toAdd.length === 0) return prev;
-      const next = { ...prev, recipes: [...prev.recipes, ...toAdd] };
+      const next =
+        toAdd.length > 0 ? { ...prev, recipes: [...prev.recipes, ...toAdd] } : prev;
       saveAppState(next);
       return next;
     });
-    setActiveTab('recipes');
-    params.delete('demo50');
-    const qs = params.toString();
-    const cleanUrl = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
-    window.history.replaceState({}, '', cleanUrl);
+    try {
+      localStorage.setItem('boothbook_demo50_seeded_v1', '1');
+    } catch {
+      // ignore
+    }
+    if (forceDemo) {
+      setActiveTab('recipes');
+      params.delete('demo50');
+      const qs = params.toString();
+      const cleanUrl = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
+      window.history.replaceState({}, '', cleanUrl);
+    }
   }, []);
 
   // Auto-switch to pos tab if staff
@@ -169,7 +179,27 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
     });
     loadStateFromDiskOrCloud(state).then(({ state: loadedState }) => {
       if (!mounted) return;
-      setState(loadedState);
+      const demo50 = buildDemo50Recipes();
+      setState((prev) => {
+        // คงเมนูตัวอย่าง 50 รายการที่เพิ่งเติมไว้ ไม่ให้ถูกทับด้วยข้อมูลเก่า
+        const mergedMap = new Map<string, typeof loadedState.recipes[number]>();
+        for (const r of loadedState.recipes || []) {
+          mergedMap.set(r.name.trim().toLowerCase(), r);
+        }
+        for (const r of prev.recipes || []) {
+          if (!mergedMap.has(r.name.trim().toLowerCase())) {
+            mergedMap.set(r.name.trim().toLowerCase(), r);
+          }
+        }
+        if (localStorage.getItem('boothbook_demo50_seeded_v1') === '1' && mergedMap.size < 10) {
+          for (const d of demo50) {
+            if (!mergedMap.has(d.name.trim().toLowerCase())) {
+              mergedMap.set(d.name.trim().toLowerCase(), d);
+            }
+          }
+        }
+        return { ...loadedState, recipes: Array.from(mergedMap.values()) };
+      });
       const t = new Date().toLocaleTimeString('th-TH');
       setSyncStatus({
         diskSaved: true,
