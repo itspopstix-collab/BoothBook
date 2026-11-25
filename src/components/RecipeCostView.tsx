@@ -137,7 +137,6 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
   const [newIngVendor, setNewIngVendor] = useState('');
   const [newIngWeight, setNewIngWeight] = useState('1000');
   const [newIngPrice, setNewIngPrice] = useState('');
-  const [newIngRecipeGrams, setNewIngRecipeGrams] = useState('15');
 
   // เพิ่มวัตถุดิบที่มีอยู่แล้วลงในสูตรที่เลือก
   const [addIngId, setAddIngId] = useState<string>(state.ingredients[0]?.id || '');
@@ -229,7 +228,6 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
     const weightG = Math.max(1, parseFloat(newIngWeight) || 1000);
     const totalP = Math.max(0, parseFloat(newIngPrice) || 0);
     const costPerG = totalP / weightG;
-    const recipeG = Math.max(0.1, parseFloat(newIngRecipeGrams) || 10);
 
     const newIng: Ingredient = {
       id: newIngId,
@@ -251,28 +249,6 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
       ...prev,
       ingredients: [...prev.ingredients, newIng],
       ingredientLots: totalP > 0 ? [...prev.ingredientLots, newLot] : prev.ingredientLots,
-      recipes: prev.recipes.map((r) => {
-        if (!selectedRecipe || r.id !== selectedRecipe.id) return r;
-        const newLine = {
-          ingredientId: newIngId,
-          gramsPerBatch: recipeG,
-          selectedLotId: totalP > 0 ? newLotId : 'fifo',
-        };
-        if (selectedRunId !== 'master' && (r.productionRuns || []).some((pr) => pr.id === selectedRunId)) {
-          return {
-            ...r,
-            productionRuns: (r.productionRuns || []).map((pr) =>
-              pr.id === selectedRunId
-                ? { ...pr, ingredients: [...pr.ingredients, newLine] }
-                : pr
-            ),
-          };
-        }
-        return {
-          ...r,
-          ingredients: [...r.ingredients, newLine],
-        };
-      }),
     }));
 
     setAddIngId(newIngId);
@@ -1816,7 +1792,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
               เพิ่มวัตถุดิบใหม่ + บันทึกราคาซื้อล็อตแรก
             </h3>
             <p className="text-xs text-[#6b8799] mt-1">
-              สร้างวัตถุดิบใหม่พร้อมคำนวณราคาต่อกรัมและดึงเข้าสูตร {selectedRecipe?.name} ทันที
+              สร้างวัตถุดิบใหม่พร้อมคำนวณราคาต่อกรัมและบันทึกลงคลังวัตถุดิบ
             </p>
             <form onSubmit={handleQuickCreateIngredientAndAddToRecipe} className="space-y-3 mt-4">
               <div>
@@ -1904,19 +1880,6 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                 </b>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-[#6b8799] mb-1">
-                  ปริมาณที่ใช้ในสูตร &ldquo;{selectedRecipe?.name}&rdquo; (กรัม)
-                </label>
-                <input
-                  type="number"
-                  step="any"
-                  value={newIngRecipeGrams}
-                  onChange={(e) => setNewIngRecipeGrams(e.target.value)}
-                  className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-bold"
-                />
-              </div>
-
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
@@ -1929,7 +1892,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                   type="submit"
                   className="px-5 py-2 rounded-xl font-bold text-sm bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
                 >
-                  บันทึกวัตถุดิบ & ดึงเข้าสูตร
+                  บันทึกวัตถุดิบ
                 </button>
               </div>
             </form>
