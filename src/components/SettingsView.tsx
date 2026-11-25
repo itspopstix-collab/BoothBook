@@ -460,21 +460,19 @@ export const SettingsView: React.FC<Props> = ({
             </div>
 
             <div className="flex flex-wrap items-center gap-2.5">
-              <button
-                type="button"
-                onClick={handleOneClickConnectGoogleSheet}
-                disabled={googleConnecting || !isOnline}
-                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black px-4 py-2.5 rounded-xl text-xs shadow-sm transition cursor-pointer disabled:opacity-50"
-              >
-                <RefreshCw className={`w-4 h-4 ${googleConnecting ? 'animate-spin' : ''}`} />
-                {googleConnecting
-                  ? 'กำลังล็อกอิน & สร้าง Google Sheet...'
-                  : resolvedGoogleSheetUrl
-                  ? 'สร้างชีทใหม่ / เปลี่ยนบัญชี Google'
-                  : 'เชื่อมต่อ Google & สร้างชีทอัตโนมัติ'}
-              </button>
-
-              {resolvedGoogleSheetUrl && (
+              {!resolvedGoogleSheetUrl ? (
+                <button
+                  type="button"
+                  onClick={handleOneClickConnectGoogleSheet}
+                  disabled={googleConnecting || !isOnline}
+                  className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black px-4 py-2.5 rounded-xl text-xs shadow-sm transition cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-4 h-4 ${googleConnecting ? 'animate-spin' : ''}`} />
+                  {googleConnecting
+                    ? 'กำลังล็อกอิน & สร้าง Google Sheet...'
+                    : 'เชื่อมต่อ Google & สร้างชีทอัตโนมัติ'}
+                </button>
+              ) : (
                 <a
                   href={resolvedGoogleSheetUrl}
                   target="_blank"
