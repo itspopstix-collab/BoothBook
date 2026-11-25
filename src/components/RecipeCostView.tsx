@@ -1061,6 +1061,8 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
             onClick={() => {
               if (selectedCategoryFilter !== 'ทั้งหมด') {
                 setNewFlavorCat(selectedCategoryFilter);
+              } else if (productCategories.length > 0) {
+                setNewFlavorCat(productCategories[0]);
               }
               setShowNewFlavorModal(true);
             }}
@@ -1811,19 +1813,40 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                   <label className="block text-xs font-bold text-[#6b8799] mb-1">
                     หมวดหมู่สินค้า
                   </label>
-                  <input
-                    type="text"
-                    list="boothbook-product-categories"
-                    placeholder="เช่น เครื่องดื่ม, ขนม, ทั่วไป"
-                    value={newFlavorCat}
-                    onChange={(e) => setNewFlavorCat(e.target.value)}
-                    className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-semibold"
-                  />
-                  <datalist id="boothbook-product-categories">
+                  <select
+                    value={
+                      productCategories.includes(newFlavorCat)
+                        ? newFlavorCat
+                        : newFlavorCat === ''
+                        ? '__custom__'
+                        : '__custom__'
+                    }
+                    onChange={(e) => {
+                      if (e.target.value === '__custom__') {
+                        setNewFlavorCat('');
+                      } else {
+                        setNewFlavorCat(e.target.value);
+                      }
+                    }}
+                    className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-semibold bg-white text-[#0d3a57]"
+                  >
                     {productCategories.map((cat) => (
-                      <option key={cat} value={cat} />
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
                     ))}
-                  </datalist>
+                    <option value="__custom__">+ พิมพ์หมวดหมู่ใหม่...</option>
+                  </select>
+                  {!productCategories.includes(newFlavorCat) && (
+                    <input
+                      type="text"
+                      placeholder="พิมพ์ชื่อหมวดหมู่ใหม่..."
+                      value={newFlavorCat}
+                      onChange={(e) => setNewFlavorCat(e.target.value)}
+                      className="mt-1.5 w-full border-2 border-[#118cd1] rounded-xl px-3 py-1.5 text-xs font-semibold text-[#0d3a57]"
+                      required
+                    />
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-[#6b8799] mb-1">
