@@ -231,21 +231,27 @@ export const SettingsView: React.FC<Props> = ({
       }
       const res = await connectAndCreateGoogleSheet(state, googleClientId.trim());
       setSheetId(res.spreadsheetId);
-      onUpdateState((prev) => ({
-        ...prev,
-        settings: {
-          ...prev.settings,
-          storageBackend: 'google_sheets',
-          sheetId: res.spreadsheetId,
-          googleSheetUrl: res.spreadsheetUrl,
-          googleAccountEmail: res.email,
-          googleClientId: googleClientId.trim() || prev.settings.googleClientId,
-        },
-      }));
+      onUpdateState((prev) => {
+        const baseState =
+          res.existingSheetFound && res.restoredState ? res.restoredState : prev;
+        return {
+          ...baseState,
+          settings: {
+            ...baseState.settings,
+            storageBackend: 'google_sheets',
+            sheetId: res.spreadsheetId,
+            googleSheetUrl: res.spreadsheetUrl,
+            googleAccountEmail: res.email,
+            googleClientId: googleClientId.trim() || baseState.settings.googleClientId,
+          },
+        };
+      });
       setStorageBackend('google_sheets');
       setGoogleNotice({
         type: 'ok',
-        msg: `สร้าง Google Sheet อัตโนมัติสำเร็จ! (${res.email || 'Google Account'}) พร้อมซิงค์ออเดอร์และสำรองข้อมูลแล้ว`,
+        msg: res.existingSheetFound
+          ? `พบ Google Sheet เดิมของบัญชีนี้แล้ว! (${res.email || 'Google Account'}) เชื่อมต่อและดึงข้อมูลล่าสุดเรียบร้อย`
+          : `สร้าง Google Sheet อัตโนมัติสำเร็จ! (${res.email || 'Google Account'}) พร้อมซิงค์ออเดอร์และสำรองข้อมูลแล้ว`,
       });
     } catch (err: any) {
       setGoogleNotice({

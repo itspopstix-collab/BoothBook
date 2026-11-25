@@ -138,15 +138,64 @@ export async function requestGoogleAccessToken(
   return { accessToken: tokenResp.access_token, email };
 }
 
+/** ค้นหาไฟล์ Google Sheet ของ BoothBook ที่มีอยู่แล้วใน Google Drive ของผู้ใช้ (ข้ามเครื่องได้) */
+async function findExistingBoothBookSheet(
+  accessToken: string
+): Promise<{ id: string; url: string } | null> {
+  try {
+    const q = encodeURIComponent(
+      "mimeType='application/vnd.google-apps.spreadsheet' and trashed=false and name contains 'BoothBook'"
+    );
+    const res = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=modifiedTime desc&pageSize=1&fields=files(id,name,webViewLink)`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const file = data?.files?.[0];
+    if (!file?.id) return null;
+    return {
+      id: file.id as string,
+      url:
+        (file.webViewLink as string) ||
+        `https://docs.google.com/spreadsheets/d/${file.id}/edit`,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /**
- * 1-Click: ล็อกอิน Google -> สร้างไฟล์ Google Sheet ใหม่ใน Google Drive ของผู้ใช้พร้อม 3 แท็บอัตโนมัติ
+ * 1-Click: ล็อกอิน Google -> ถ้าบัญชีนี้มีชีท BoothBook อยู่แล้วให้ผูกชีทเดิมอัตโนมัติ (ข้ามเครื่องได้)
+ * ถ้ายังไม่เคยมีจึงค่อยสร้างไฟล์ Google Sheet ใหม่พร้อม 3 แท็บอัตโนมัติ
  */
 export async function connectAndCreateGoogleSheet(
   state: AppDatabaseState,
   clientIdOverride?: string
-): Promise<{ spreadsheetId: string; spreadsheetUrl: string; email?: string }> {
+): Promise<{
+  spreadsheetId: string;
+  spreadsheetUrl: string;
+  email?: string;
+  existingSheetFound?: boolean;
+  restoredState?: AppDatabaseState | null;
+}> {
   const clientId = getGoogleClientId(clientIdOverride || state.settings.googleClientId);
   const { accessToken, email } = await requestGoogleAccessToken(clientId, true);
+
+  // 0. ตรวจสอบก่อนว่าบัญชี Google นี้เคยสร้างชีท BoothBook ไว้แล้วหรือไม่ (เช่น จากเครื่องอื่น)
+  const existing = await findExistingBoothBookSheet(accessToken);
+  if (existing) {
+    const restoredState = await loadDbSnapshotFromGoogleSheet(existing.id, accessToken);
+    return {
+      spreadsheetId: existing.id,
+      spreadsheetUrl: existing.url,
+      email,
+      existingSheetFound: true,
+      restoredState,
+    };
+  }
 
   const shopTitle = (state.settings.shopName || 'BoothBook').trim();
   const title = `BoothBook — ${shopTitle}`;
