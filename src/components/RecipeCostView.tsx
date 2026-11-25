@@ -711,24 +711,6 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
 
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() => setShowQuickNewIngModal(true)}
-              className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition cursor-pointer"
-            >
-              <Scale className="w-3.5 h-3.5" /> + เพิ่มวัตถุดิบใหม่เข้าระบบ
-            </button>
-
-            <button
-              onClick={handleSyncFlavorsFromPos}
-              disabled={syncingFlavors}
-              className="inline-flex items-center gap-2 bg-[#90d4ec]/30 hover:bg-[#90d4ec]/50 text-[#0d3a57] font-bold px-3.5 py-2 rounded-xl text-xs transition cursor-pointer"
-            >
-              <RefreshCw
-                className={`w-3.5 h-3.5 text-[#118cd1] ${syncingFlavors ? 'animate-spin' : ''}`}
-              />
-              Sync สินค้าจากชีท POS
-            </button>
-
-            <button
               onClick={() => setShowNewFlavorModal(true)}
               className="inline-flex items-center gap-2 bg-[#118cd1] hover:bg-[#0e78b5] text-white font-bold px-3.5 py-2 rounded-xl text-xs transition cursor-pointer"
             >
