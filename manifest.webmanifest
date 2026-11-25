@@ -1,0 +1,18 @@
+{
+  "name": "BoothBook — POS & Event P&L",
+  "short_name": "BoothBook",
+  "description": "ระบบแคชเชียร์หน้าร้าน POS ต้นทุน สต็อก FIFO และสรุปกำไรออกบูธ (ใช้งานออฟไลน์ได้)",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fef9ec",
+  "theme_color": "#118cd1",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
