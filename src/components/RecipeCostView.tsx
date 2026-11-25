@@ -24,6 +24,8 @@ import {
   Calculator,
   Sparkles,
   Scale,
+  Search,
+  ArrowRight,
 } from 'lucide-react';
 
 interface Props {
@@ -40,6 +42,9 @@ const resolveImageUrl = (imgUrl?: string) => {
 };
 
 export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) => {
+  const [activeSubTab, setActiveSubTab] = useState<'recipes' | 'ingredients'>('recipes');
+  const [ingSearch, setIngSearch] = useState('');
+  const [ingCatFilter, setIngCatFilter] = useState<string>('ทั้งหมด');
   const [selectedRecipeId, setSelectedRecipeId] = useState<string>(state.recipes[0]?.id || '');
   // 'master' = แก้สูตรตั้งต้นของสินค้านี้, '<runId>' = แก้ปริมาณกรัม/ล็อตของ "รอบการผลิต / เติม Stock" รอบนั้นโดยเฉพาะ
   const [selectedRunId, setSelectedRunId] = useState<string>('master');
@@ -474,8 +479,223 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
     .filter((l) => l.ingredientId === addIngId)
     .sort((a, b) => a.purchaseDate.localeCompare(b.purchaseDate) || a.id.localeCompare(b.id));
 
+  const ingredientCategories = [
+    'ทั้งหมด',
+    ...Array.from(new Set(state.ingredients.map((i) => i.category).filter(Boolean))),
+  ];
+
+  const filteredIngredients = state.ingredients.filter((ing) => {
+    const matchCat = ingCatFilter === 'ทั้งหมด' || ing.category === ingCatFilter;
+    const matchSearch =
+      !ingSearch.trim() ||
+      ing.name.toLowerCase().includes(ingSearch.trim().toLowerCase()) ||
+      (ing.category || '').toLowerCase().includes(ingSearch.trim().toLowerCase());
+    return matchCat && matchSearch;
+  });
+
+  const handleDeleteIngredient = (ingId: string, ingName: string) => {
+    const usedInCount = state.recipes.filter((r) =>
+      r.ingredients.some((l) => l.ingredientId === ingId)
+    ).length;
+    const msg =
+      usedInCount > 0
+        ? `วัตถุดิบ "${ingName}" กำลังถูกใช้ใน ${usedInCount} สูตร — ต้องการลบออกจากระบบและออกจากทุกสูตรหรือไม่?`
+        : `ต้องการลบวัตถุดิบ "${ingName}" ออกจากคลังใช่หรือไม่?`;
+    if (!window.confirm(msg)) return;
+    onUpdateState((prev) => ({
+      ...prev,
+      ingredients: prev.ingredients.filter((i) => i.id !== ingId),
+      ingredientLots: prev.ingredientLots.filter((l) => l.ingredientId !== ingId),
+      recipes: prev.recipes.map((r) => ({
+        ...r,
+        ingredients: r.ingredients.filter((l) => l.ingredientId !== ingId),
+      })),
+    }));
+  };
+
   return (
     <div className="space-y-6">
+      {/* แถบสลับ Section: สูตรสินค้า vs คลังวัตถุดิบ */}
+      <div className="bg-white rounded-2xl p-2 shadow-sm border border-[#eae3cf] inline-flex flex-wrap gap-1.5">
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('recipes')}
+          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition cursor-pointer ${
+            activeSubTab === 'recipes'
+              ? 'bg-[#118cd1] text-white shadow-sm'
+              : 'text-[#6b8799] hover:bg-[#fef9ec] hover:text-[#0d3a57]'
+          }`}
+        >
+          <IceCream className="w-4 h-4" />
+          สูตรสินค้า & ต้นทุน ({state.recipes.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('ingredients')}
+          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition cursor-pointer ${
+            activeSubTab === 'ingredients'
+              ? 'bg-emerald-600 text-white shadow-sm'
+              : 'text-[#6b8799] hover:bg-[#fef9ec] hover:text-[#0d3a57]'
+          }`}
+        >
+          <Scale className="w-4 h-4" />
+          คลังวัตถุดิบในระบบ ({state.ingredients.length})
+        </button>
+      </div>
+
+      {/* SECTION A: คลังวัตถุดิบทั้งหมดที่มีให้ดึงมากรอกในสูตร */}
+      {activeSubTab === 'ingredients' && (
+        <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-[#eae3cf] space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-extrabold text-[#0d3a57] flex items-center gap-2">
+                <Scale className="w-5 h-5 text-emerald-600" />
+                คลังวัตถุดิบทั้งหมด (สำหรับดึงไปกรอกในสูตร)
+              </h2>
+              <p className="text-xs text-[#6b8799] mt-0.5">
+                ดูรายการวัตถุดิบทั้งหมด ราคาต่อหน่วยจากล็อตที่ซื้อไว้ หรือกดปุ่ม &ldquo;ดึงไปใส่สูตร&rdquo; เพื่อนำไปใช้งานได้ทันที
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowQuickNewIngModal(true)}
+              className="shrink-0 inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-sm transition cursor-pointer"
+            >
+              <Plus className="w-4 h-4" /> เพิ่มวัตถุดิบใหม่เข้าระบบ
+            </button>
+          </div>
+
+          {/* ค้นหา & กรองหมวดหมู่ */}
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="w-4 h-4 text-[#6b8799] absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={ingSearch}
+                onChange={(e) => setIngSearch(e.target.value)}
+                placeholder="ค้นหาชื่อวัตถุดิบ..."
+                className="w-full pl-9 pr-3 py-2 rounded-xl border border-[#eae3cf] bg-[#fef9ec]/40 text-xs font-semibold text-[#0d3a57] focus:outline-none focus:border-[#118cd1]"
+              />
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {ingredientCategories.map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setIngCatFilter(cat)}
+                  className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition cursor-pointer ${
+                    ingCatFilter === cat
+                      ? 'bg-[#0d3a57] text-white'
+                      : 'bg-[#fef9ec] text-[#6b8799] border border-[#eae3cf] hover:text-[#0d3a57]'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* รายการวัตถุดิบ */}
+          {filteredIngredients.length === 0 ? (
+            <div className="text-center py-10 text-xs text-[#6b8799] bg-[#fef9ec]/40 rounded-2xl border border-dashed border-[#eae3cf]">
+              ไม่พบวัตถุดิบที่ตรงกับการค้นหา — กดปุ่ม &ldquo;+ เพิ่มวัตถุดิบใหม่เข้าระบบ&rdquo; เพื่อเพิ่มได้เลยครับ
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {filteredIngredients.map((ing) => {
+                const lots = state.ingredientLots
+                  .filter((l) => l.ingredientId === ing.id)
+                  .sort(
+                    (a, b) =>
+                      b.purchaseDate.localeCompare(a.purchaseDate) || b.id.localeCompare(a.id)
+                  );
+                const latestLot = lots[0];
+                const usedRecipes = state.recipes.filter((r) =>
+                  r.ingredients.some((l) => l.ingredientId === ing.id)
+                );
+
+                return (
+                  <div
+                    key={ing.id}
+                    className="p-4 rounded-2xl border border-[#eae3cf] bg-[#fef9ec]/40 flex flex-col justify-between gap-3 hover:border-[#90d4ec] transition"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-black bg-white border border-[#eae3cf] text-[#6b8799] mb-1">
+                            {ing.category || 'วัตถุดิบ'}
+                          </span>
+                          <h3 className="font-extrabold text-sm text-[#0d3a57]">{ing.name}</h3>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteIngredient(ing.id, ing.name)}
+                          className="p-1.5 rounded-lg text-[#6b8799] hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                          title="ลบวัตถุดิบ"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {latestLot ? (
+                        <div className="bg-white rounded-xl p-2.5 border border-[#eae3cf]/80 text-[11px] space-y-1">
+                          <div className="flex justify-between">
+                            <span className="text-[#6b8799]">ราคาต่อหน่วย (ล็อตล่าสุด):</span>
+                            <b className="text-emerald-700">
+                              {formatBaht(latestLot.costPerGram, 4)} /{' '}
+                              {latestLot.unit === 'pcs' ? 'ชิ้น' : 'กรัม'}
+                            </b>
+                          </div>
+                          <div className="flex justify-between text-[#6b8799]">
+                            <span>แหล่งซื้อ: {latestLot.vendor || '-'}</span>
+                            <span>มี {lots.length} ล็อต</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-amber-50 rounded-xl p-2.5 border border-amber-200 text-[11px] text-amber-800 font-semibold">
+                          ยังไม่มีข้อมูลล็อตราคาซื้อ
+                        </div>
+                      )}
+
+                      <div className="text-[11px] text-[#6b8799]">
+                        {usedRecipes.length > 0 ? (
+                          <span>
+                            ใช้ใน <b className="text-[#0d3a57]">{usedRecipes.length}</b> สูตร:{' '}
+                            {usedRecipes
+                              .slice(0, 2)
+                              .map((r) => r.name)
+                              .join(', ')}
+                            {usedRecipes.length > 2 ? ` +${usedRecipes.length - 2}` : ''}
+                          </span>
+                        ) : (
+                          <span>ยังไม่ถูกดึงไปใช้ในสูตร</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAddIngId(ing.id);
+                        setAddIngLotId('fifo');
+                        setActiveSubTab('recipes');
+                      }}
+                      className="w-full inline-flex items-center justify-center gap-1.5 bg-[#118cd1]/10 hover:bg-[#118cd1] text-[#118cd1] hover:text-white font-black py-2 px-3 rounded-xl text-xs transition cursor-pointer"
+                    >
+                      ดึงไปใส่สูตร
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* SECTION B: สูตรสินค้า & ต้นทุนต่อชิ้น */}
+      {activeSubTab === 'recipes' && (
+        <>
       {/* ส่วนหัว: สรุปต้นทุนต่อชิ้นของทุกสินค้า */}
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-[#eae3cf]">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -979,17 +1199,26 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
 
             {/* ฟอร์มดึงวัตถุดิบเข้าสูตร พร้อมระบุว่าใช้การซื้อครั้งไหน */}
             <div className="bg-[#fef9ec] p-4 rounded-xl border border-[#eae3cf] space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-xs font-extrabold text-[#0d3a57]">
                   + ดึงวัตถุดิบเข้าสูตรนี้ (พร้อมเลือกได้ว่าจะใช้วัตถุดิบของการซื้อครั้งไหน):
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setShowQuickNewIngModal(true)}
-                  className="text-xs font-extrabold text-emerald-700 hover:underline cursor-pointer"
-                >
-                  + ไม่มีในรายการ? คลิกสร้างวัตถุดิบใหม่ตรงนี้
-                </button>
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setActiveSubTab('ingredients')}
+                    className="inline-flex items-center gap-1 text-xs font-extrabold text-[#118cd1] hover:underline cursor-pointer"
+                  >
+                    ดูคลังวัตถุดิบทั้งหมด ({state.ingredients.length}) →
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowQuickNewIngModal(true)}
+                    className="text-xs font-extrabold text-emerald-700 hover:underline cursor-pointer"
+                  >
+                    + ไม่มีในรายการ? คลิกสร้างวัตถุดิบใหม่ตรงนี้
+                  </button>
+                </div>
               </div>
 
               <form
@@ -1154,6 +1383,8 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
 
       {/* Modal เพิ่มวัตถุดิบใหม่พร้อมใส่ล็อตราคาซื้อแรกได้ทันที */}
