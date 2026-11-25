@@ -26,6 +26,7 @@ import {
   Scale,
   Search,
   ArrowRight,
+  GripVertical,
 } from 'lucide-react';
 
 interface Props {
@@ -46,10 +47,22 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
   const [ingSearch, setIngSearch] = useState('');
   const [ingCatFilter, setIngCatFilter] = useState<string>('ทั้งหมด');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('ทั้งหมด');
-  const [newCategoryName, setNewCategoryName] = useState('');
+  const [recipeOrCatSearch, setRecipeOrCatSearch] = useState('');
+  const [addingBottomCategory, setAddingBottomCategory] = useState(false);
+  const [draftCategoryName, setDraftCategoryName] = useState('');
+  const [draggedCategory, setDraggedCategory] = useState<string | null>(null);
+  const [dragOverCategory, setDragOverCategory] = useState<string | null>(null);
   const [customCategories, setCustomCategories] = useState<string[]>(() => {
     try {
       const raw = localStorage.getItem('boothbook_recipe_categories_v1');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [categoryOrder, setCategoryOrder] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem('boothbook_recipe_category_order_v1');
       return raw ? JSON.parse(raw) : [];
     } catch {
       return [];
@@ -523,33 +536,99 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
     }));
   };
 
-  const productCategories = Array.from(
+  const flexibleMatch = (target: string, query: string): boolean => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    const t = (target || '').toLowerCase();
+    const tokens = q.split(/\s+/).filter(Boolean);
+    return tokens.every((tok) => {
+      if (t.includes(tok)) return true;
+      // Subsequence match (flexible typing e.g. "amrc" -> "americano")
+      let ti = 0;
+      for (let qi = 0; qi < tok.length; qi++) {
+        const idx = t.indexOf(tok[qi], ti);
+        if (idx === -1) return false;
+        ti = idx + 1;
+      }
+      return true;
+    });
+  };
+
+  const rawCategoriesSet = Array.from(
     new Set([
       ...customCategories,
       ...state.recipes.map((r) => (r.category || '').trim()).filter(Boolean),
     ])
   );
 
-  const filteredRecipes =
-    selectedCategoryFilter === 'ทั้งหมด'
-      ? state.recipes
-      : state.recipes.filter((r) => (r.category || '').trim() === selectedCategoryFilter);
+  const productCategories = [
+    ...categoryOrder.filter((c) => rawCategoriesSet.includes(c)),
+    ...rawCategoriesSet.filter((c) => !categoryOrder.includes(c)),
+  ];
 
-  const handleAddCustomCategory = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = newCategoryName.trim();
+  const visibleCategories = productCategories.filter((cat) => {
+    if (!recipeOrCatSearch.trim()) return true;
+    if (flexibleMatch(cat, recipeOrCatSearch)) return true;
+    return state.recipes.some(
+      (r) => (r.category || '').trim() === cat && flexibleMatch(r.name, recipeOrCatSearch)
+    );
+  });
+
+  const filteredRecipes = state.recipes.filter((r) => {
+    const catOk =
+      selectedCategoryFilter === 'ทั้งหมด' ||
+      (r.category || '').trim() === selectedCategoryFilter;
+    if (!catOk) return false;
+    if (!recipeOrCatSearch.trim()) return true;
+    return (
+      flexibleMatch(r.name, recipeOrCatSearch) ||
+      flexibleMatch(r.category || '', recipeOrCatSearch)
+    );
+  });
+
+  const saveCategoryOrder = (nextOrder: string[]) => {
+    setCategoryOrder(nextOrder);
+    try {
+      localStorage.setItem('boothbook_recipe_category_order_v1', JSON.stringify(nextOrder));
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleCommitBottomCategory = () => {
+    const trimmed = draftCategoryName.trim();
+    setAddingBottomCategory(false);
+    setDraftCategoryName('');
     if (!trimmed) return;
-    if (!productCategories.includes(trimmed)) {
-      const next = [...customCategories, trimmed];
-      setCustomCategories(next);
+    if (!rawCategoriesSet.includes(trimmed)) {
+      const nextCustom = [...customCategories, trimmed];
+      setCustomCategories(nextCustom);
       try {
-        localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(next));
+        localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(nextCustom));
       } catch {
         // ignore
       }
+      saveCategoryOrder([...productCategories, trimmed]);
     }
     setSelectedCategoryFilter(trimmed);
-    setNewCategoryName('');
+  };
+
+  const handleDropCategory = (targetCat: string) => {
+    if (!draggedCategory || draggedCategory === targetCat) {
+      setDraggedCategory(null);
+      setDragOverCategory(null);
+      return;
+    }
+    const nextOrder = [...productCategories];
+    const fromIdx = nextOrder.indexOf(draggedCategory);
+    const toIdx = nextOrder.indexOf(targetCat);
+    if (fromIdx !== -1 && toIdx !== -1) {
+      nextOrder.splice(fromIdx, 1);
+      nextOrder.splice(toIdx, 0, draggedCategory);
+      saveCategoryOrder(nextOrder);
+    }
+    setDraggedCategory(null);
+    setDragOverCategory(null);
   };
 
   const handleDeleteCustomCategory = (catName: string) => {
@@ -560,6 +639,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
     } catch {
       // ignore
     }
+    saveCategoryOrder(productCategories.filter((c) => c !== catName));
     if (selectedCategoryFilter === catName) {
       setSelectedCategoryFilter('ทั้งหมด');
     }
@@ -666,33 +746,99 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                   r.ingredients.some((l) => l.ingredientId === ing.id)
                 );
 
-                const productCategories = Array.from(
+                const flexibleMatch = (target: string, query: string): boolean => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    const t = (target || '').toLowerCase();
+    const tokens = q.split(/\s+/).filter(Boolean);
+    return tokens.every((tok) => {
+      if (t.includes(tok)) return true;
+      // Subsequence match (flexible typing e.g. "amrc" -> "americano")
+      let ti = 0;
+      for (let qi = 0; qi < tok.length; qi++) {
+        const idx = t.indexOf(tok[qi], ti);
+        if (idx === -1) return false;
+        ti = idx + 1;
+      }
+      return true;
+    });
+  };
+
+  const rawCategoriesSet = Array.from(
     new Set([
       ...customCategories,
       ...state.recipes.map((r) => (r.category || '').trim()).filter(Boolean),
     ])
   );
 
-  const filteredRecipes =
-    selectedCategoryFilter === 'ทั้งหมด'
-      ? state.recipes
-      : state.recipes.filter((r) => (r.category || '').trim() === selectedCategoryFilter);
+  const productCategories = [
+    ...categoryOrder.filter((c) => rawCategoriesSet.includes(c)),
+    ...rawCategoriesSet.filter((c) => !categoryOrder.includes(c)),
+  ];
 
-  const handleAddCustomCategory = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = newCategoryName.trim();
+  const visibleCategories = productCategories.filter((cat) => {
+    if (!recipeOrCatSearch.trim()) return true;
+    if (flexibleMatch(cat, recipeOrCatSearch)) return true;
+    return state.recipes.some(
+      (r) => (r.category || '').trim() === cat && flexibleMatch(r.name, recipeOrCatSearch)
+    );
+  });
+
+  const filteredRecipes = state.recipes.filter((r) => {
+    const catOk =
+      selectedCategoryFilter === 'ทั้งหมด' ||
+      (r.category || '').trim() === selectedCategoryFilter;
+    if (!catOk) return false;
+    if (!recipeOrCatSearch.trim()) return true;
+    return (
+      flexibleMatch(r.name, recipeOrCatSearch) ||
+      flexibleMatch(r.category || '', recipeOrCatSearch)
+    );
+  });
+
+  const saveCategoryOrder = (nextOrder: string[]) => {
+    setCategoryOrder(nextOrder);
+    try {
+      localStorage.setItem('boothbook_recipe_category_order_v1', JSON.stringify(nextOrder));
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleCommitBottomCategory = () => {
+    const trimmed = draftCategoryName.trim();
+    setAddingBottomCategory(false);
+    setDraftCategoryName('');
     if (!trimmed) return;
-    if (!productCategories.includes(trimmed)) {
-      const next = [...customCategories, trimmed];
-      setCustomCategories(next);
+    if (!rawCategoriesSet.includes(trimmed)) {
+      const nextCustom = [...customCategories, trimmed];
+      setCustomCategories(nextCustom);
       try {
-        localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(next));
+        localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(nextCustom));
       } catch {
         // ignore
       }
+      saveCategoryOrder([...productCategories, trimmed]);
     }
     setSelectedCategoryFilter(trimmed);
-    setNewCategoryName('');
+  };
+
+  const handleDropCategory = (targetCat: string) => {
+    if (!draggedCategory || draggedCategory === targetCat) {
+      setDraggedCategory(null);
+      setDragOverCategory(null);
+      return;
+    }
+    const nextOrder = [...productCategories];
+    const fromIdx = nextOrder.indexOf(draggedCategory);
+    const toIdx = nextOrder.indexOf(targetCat);
+    if (fromIdx !== -1 && toIdx !== -1) {
+      nextOrder.splice(fromIdx, 1);
+      nextOrder.splice(toIdx, 0, draggedCategory);
+      saveCategoryOrder(nextOrder);
+    }
+    setDraggedCategory(null);
+    setDragOverCategory(null);
   };
 
   const handleDeleteCustomCategory = (catName: string) => {
@@ -703,6 +849,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
     } catch {
       // ignore
     }
+    saveCategoryOrder(productCategories.filter((c) => c !== catName));
     if (selectedCategoryFilter === catName) {
       setSelectedCategoryFilter('ทั้งหมด');
     }
@@ -790,26 +937,34 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
       {/* SECTION B: สูตรสินค้า & ต้นทุนต่อชิ้น */}
       {activeSubTab === 'recipes' && (
         <div className="flex flex-col lg:flex-row gap-5 items-start">
-          {/* Tab ย่อยด้านซ้าย: Category ของสินค้า */}
-          <div className="w-full lg:w-60 shrink-0 bg-white rounded-2xl p-4 shadow-sm border border-[#eae3cf] space-y-3">
+          {/* Tab ย่อยด้านซ้าย: Search & Category ของสินค้า */}
+          <div className="w-full lg:w-64 shrink-0 bg-white rounded-2xl p-4 shadow-sm border border-[#eae3cf] space-y-3">
             <div className="text-xs font-black text-[#0d3a57]">หมวดหมู่สินค้า (Category)</div>
 
-            <form onSubmit={handleAddCustomCategory} className="flex gap-1.5">
-              <input
-                type="text"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                placeholder="สร้าง Category ใหม่..."
-                className="flex-1 min-w-0 border border-[#eae3cf] rounded-xl px-2.5 py-1.5 text-xs font-semibold text-[#0d3a57] bg-[#fef9ec]/40 focus:outline-none focus:border-[#118cd1]"
-              />
+            {/* ช่อง Search อย่างเดียว + ปุ่ม + เพิ่ม Category ด้านล่างสุด */}
+            <div className="flex gap-1.5">
+              <div className="relative flex-1 min-w-0">
+                <Search className="w-3.5 h-3.5 text-[#6b8799] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={recipeOrCatSearch}
+                  onChange={(e) => setRecipeOrCatSearch(e.target.value)}
+                  placeholder="ค้นหาสินค้า / Category..."
+                  className="w-full border border-[#eae3cf] rounded-xl pl-8 pr-2.5 py-1.5 text-xs font-semibold text-[#0d3a57] bg-[#fef9ec]/40 focus:outline-none focus:border-[#118cd1]"
+                />
+              </div>
               <button
-                type="submit"
+                type="button"
+                onClick={() => {
+                  setAddingBottomCategory(true);
+                  setDraftCategoryName('');
+                }}
                 className="shrink-0 w-8 h-8 rounded-xl bg-[#118cd1] hover:bg-[#0e78b5] text-white flex items-center justify-center cursor-pointer"
-                title="เพิ่ม Category"
+                title="เพิ่ม Category ใหม่ด้านล่าง"
               >
                 <Plus className="w-4 h-4" />
               </button>
-            </form>
+            </div>
 
             <div className="flex lg:flex-col gap-1.5 overflow-x-auto lg:overflow-x-visible pb-1 lg:pb-0">
               <button
@@ -829,26 +984,69 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                       : 'bg-white text-[#6b8799]'
                   }`}
                 >
-                  {state.recipes.length}
+                  {recipeOrCatSearch.trim()
+                    ? state.recipes.filter(
+                        (r) =>
+                          flexibleMatch(r.name, recipeOrCatSearch) ||
+                          flexibleMatch(r.category || '', recipeOrCatSearch)
+                      ).length
+                    : state.recipes.length}
                 </span>
               </button>
 
-              {productCategories.map((cat) => {
-                const count = state.recipes.filter((r) => (r.category || '').trim() === cat).length;
+              {visibleCategories.map((cat) => {
+                const count = state.recipes.filter((r) => {
+                  if ((r.category || '').trim() !== cat) return false;
+                  if (!recipeOrCatSearch.trim()) return true;
+                  return (
+                    flexibleMatch(r.name, recipeOrCatSearch) ||
+                    flexibleMatch(cat, recipeOrCatSearch)
+                  );
+                }).length;
                 const isActive = selectedCategoryFilter === cat;
-                const canDelete = customCategories.includes(cat) && count === 0;
+                const canDelete = customCategories.includes(cat) && state.recipes.every((r) => (r.category || '').trim() !== cat);
+                const isDragOver = dragOverCategory === cat && draggedCategory !== cat;
                 return (
-                  <div key={cat} className="shrink-0 flex items-center gap-1">
+                  <div
+                    key={cat}
+                    draggable
+                    onDragStart={() => setDraggedCategory(cat)}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      if (dragOverCategory !== cat) setDragOverCategory(cat);
+                    }}
+                    onDragLeave={() => {
+                      if (dragOverCategory === cat) setDragOverCategory(null);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      handleDropCategory(cat);
+                    }}
+                    onDragEnd={() => {
+                      setDraggedCategory(null);
+                      setDragOverCategory(null);
+                    }}
+                    className={`shrink-0 flex items-center gap-1 rounded-xl transition ${
+                      isDragOver ? 'ring-2 ring-[#118cd1] bg-[#118cd1]/10' : ''
+                    } ${draggedCategory === cat ? 'opacity-50' : ''}`}
+                  >
                     <button
                       type="button"
                       onClick={() => setSelectedCategoryFilter(cat)}
-                      className={`flex-1 flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                      className={`flex-1 flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
                         isActive
                           ? 'bg-[#118cd1] text-white shadow-2xs'
                           : 'bg-[#fef9ec]/50 text-[#0d3a57] hover:bg-[#90d4ec]/20'
                       }`}
                     >
-                      <span className="truncate">{cat}</span>
+                      <span className="flex items-center gap-1.5 min-w-0">
+                        <GripVertical
+                          className={`w-3.5 h-3.5 shrink-0 cursor-grab ${
+                            isActive ? 'text-white/70' : 'text-[#6b8799]/60'
+                          }`}
+                        />
+                        <span className="truncate">{cat}</span>
+                      </span>
                       <span
                         className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${
                           isActive ? 'bg-white/20 text-white' : 'bg-white text-[#6b8799]'
@@ -870,6 +1068,33 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                   </div>
                 );
               })}
+
+              {/* ช่องกรอก Category ใหม่ด้านล่างสุดเมื่อกดปุ่ม + */}
+              {addingBottomCategory && (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleCommitBottomCategory();
+                  }}
+                  className="shrink-0 flex items-center gap-1 pt-1"
+                >
+                  <input
+                    type="text"
+                    autoFocus
+                    value={draftCategoryName}
+                    onChange={(e) => setDraftCategoryName(e.target.value)}
+                    onBlur={handleCommitBottomCategory}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        setAddingBottomCategory(false);
+                        setDraftCategoryName('');
+                      }
+                    }}
+                    placeholder="พิมพ์ชื่อ Category..."
+                    className="w-full border-2 border-[#118cd1] rounded-xl px-2.5 py-1.5 text-xs font-bold text-[#0d3a57] bg-white focus:outline-none"
+                  />
+                </form>
+              )}
             </div>
           </div>
 
@@ -920,33 +1145,99 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
             const cost = calculateRecipeUnitCost(rec, state, sim);
             const isSelected = selectedRecipe?.id === rec.id;
 
-            const productCategories = Array.from(
+            const flexibleMatch = (target: string, query: string): boolean => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    const t = (target || '').toLowerCase();
+    const tokens = q.split(/\s+/).filter(Boolean);
+    return tokens.every((tok) => {
+      if (t.includes(tok)) return true;
+      // Subsequence match (flexible typing e.g. "amrc" -> "americano")
+      let ti = 0;
+      for (let qi = 0; qi < tok.length; qi++) {
+        const idx = t.indexOf(tok[qi], ti);
+        if (idx === -1) return false;
+        ti = idx + 1;
+      }
+      return true;
+    });
+  };
+
+  const rawCategoriesSet = Array.from(
     new Set([
       ...customCategories,
       ...state.recipes.map((r) => (r.category || '').trim()).filter(Boolean),
     ])
   );
 
-  const filteredRecipes =
-    selectedCategoryFilter === 'ทั้งหมด'
-      ? state.recipes
-      : state.recipes.filter((r) => (r.category || '').trim() === selectedCategoryFilter);
+  const productCategories = [
+    ...categoryOrder.filter((c) => rawCategoriesSet.includes(c)),
+    ...rawCategoriesSet.filter((c) => !categoryOrder.includes(c)),
+  ];
 
-  const handleAddCustomCategory = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = newCategoryName.trim();
+  const visibleCategories = productCategories.filter((cat) => {
+    if (!recipeOrCatSearch.trim()) return true;
+    if (flexibleMatch(cat, recipeOrCatSearch)) return true;
+    return state.recipes.some(
+      (r) => (r.category || '').trim() === cat && flexibleMatch(r.name, recipeOrCatSearch)
+    );
+  });
+
+  const filteredRecipes = state.recipes.filter((r) => {
+    const catOk =
+      selectedCategoryFilter === 'ทั้งหมด' ||
+      (r.category || '').trim() === selectedCategoryFilter;
+    if (!catOk) return false;
+    if (!recipeOrCatSearch.trim()) return true;
+    return (
+      flexibleMatch(r.name, recipeOrCatSearch) ||
+      flexibleMatch(r.category || '', recipeOrCatSearch)
+    );
+  });
+
+  const saveCategoryOrder = (nextOrder: string[]) => {
+    setCategoryOrder(nextOrder);
+    try {
+      localStorage.setItem('boothbook_recipe_category_order_v1', JSON.stringify(nextOrder));
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleCommitBottomCategory = () => {
+    const trimmed = draftCategoryName.trim();
+    setAddingBottomCategory(false);
+    setDraftCategoryName('');
     if (!trimmed) return;
-    if (!productCategories.includes(trimmed)) {
-      const next = [...customCategories, trimmed];
-      setCustomCategories(next);
+    if (!rawCategoriesSet.includes(trimmed)) {
+      const nextCustom = [...customCategories, trimmed];
+      setCustomCategories(nextCustom);
       try {
-        localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(next));
+        localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(nextCustom));
       } catch {
         // ignore
       }
+      saveCategoryOrder([...productCategories, trimmed]);
     }
     setSelectedCategoryFilter(trimmed);
-    setNewCategoryName('');
+  };
+
+  const handleDropCategory = (targetCat: string) => {
+    if (!draggedCategory || draggedCategory === targetCat) {
+      setDraggedCategory(null);
+      setDragOverCategory(null);
+      return;
+    }
+    const nextOrder = [...productCategories];
+    const fromIdx = nextOrder.indexOf(draggedCategory);
+    const toIdx = nextOrder.indexOf(targetCat);
+    if (fromIdx !== -1 && toIdx !== -1) {
+      nextOrder.splice(fromIdx, 1);
+      nextOrder.splice(toIdx, 0, draggedCategory);
+      saveCategoryOrder(nextOrder);
+    }
+    setDraggedCategory(null);
+    setDragOverCategory(null);
   };
 
   const handleDeleteCustomCategory = (catName: string) => {
@@ -957,6 +1248,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
     } catch {
       // ignore
     }
+    saveCategoryOrder(productCategories.filter((c) => c !== catName));
     if (selectedCategoryFilter === catName) {
       setSelectedCategoryFilter('ทั้งหมด');
     }
@@ -1151,33 +1443,99 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                     (s, l) => s + (Number(l.gramsPerBatch) || 0),
                     0
                   );
-                  const productCategories = Array.from(
+                  const flexibleMatch = (target: string, query: string): boolean => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    const t = (target || '').toLowerCase();
+    const tokens = q.split(/\s+/).filter(Boolean);
+    return tokens.every((tok) => {
+      if (t.includes(tok)) return true;
+      // Subsequence match (flexible typing e.g. "amrc" -> "americano")
+      let ti = 0;
+      for (let qi = 0; qi < tok.length; qi++) {
+        const idx = t.indexOf(tok[qi], ti);
+        if (idx === -1) return false;
+        ti = idx + 1;
+      }
+      return true;
+    });
+  };
+
+  const rawCategoriesSet = Array.from(
     new Set([
       ...customCategories,
       ...state.recipes.map((r) => (r.category || '').trim()).filter(Boolean),
     ])
   );
 
-  const filteredRecipes =
-    selectedCategoryFilter === 'ทั้งหมด'
-      ? state.recipes
-      : state.recipes.filter((r) => (r.category || '').trim() === selectedCategoryFilter);
+  const productCategories = [
+    ...categoryOrder.filter((c) => rawCategoriesSet.includes(c)),
+    ...rawCategoriesSet.filter((c) => !categoryOrder.includes(c)),
+  ];
 
-  const handleAddCustomCategory = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = newCategoryName.trim();
+  const visibleCategories = productCategories.filter((cat) => {
+    if (!recipeOrCatSearch.trim()) return true;
+    if (flexibleMatch(cat, recipeOrCatSearch)) return true;
+    return state.recipes.some(
+      (r) => (r.category || '').trim() === cat && flexibleMatch(r.name, recipeOrCatSearch)
+    );
+  });
+
+  const filteredRecipes = state.recipes.filter((r) => {
+    const catOk =
+      selectedCategoryFilter === 'ทั้งหมด' ||
+      (r.category || '').trim() === selectedCategoryFilter;
+    if (!catOk) return false;
+    if (!recipeOrCatSearch.trim()) return true;
+    return (
+      flexibleMatch(r.name, recipeOrCatSearch) ||
+      flexibleMatch(r.category || '', recipeOrCatSearch)
+    );
+  });
+
+  const saveCategoryOrder = (nextOrder: string[]) => {
+    setCategoryOrder(nextOrder);
+    try {
+      localStorage.setItem('boothbook_recipe_category_order_v1', JSON.stringify(nextOrder));
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleCommitBottomCategory = () => {
+    const trimmed = draftCategoryName.trim();
+    setAddingBottomCategory(false);
+    setDraftCategoryName('');
     if (!trimmed) return;
-    if (!productCategories.includes(trimmed)) {
-      const next = [...customCategories, trimmed];
-      setCustomCategories(next);
+    if (!rawCategoriesSet.includes(trimmed)) {
+      const nextCustom = [...customCategories, trimmed];
+      setCustomCategories(nextCustom);
       try {
-        localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(next));
+        localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(nextCustom));
       } catch {
         // ignore
       }
+      saveCategoryOrder([...productCategories, trimmed]);
     }
     setSelectedCategoryFilter(trimmed);
-    setNewCategoryName('');
+  };
+
+  const handleDropCategory = (targetCat: string) => {
+    if (!draggedCategory || draggedCategory === targetCat) {
+      setDraggedCategory(null);
+      setDragOverCategory(null);
+      return;
+    }
+    const nextOrder = [...productCategories];
+    const fromIdx = nextOrder.indexOf(draggedCategory);
+    const toIdx = nextOrder.indexOf(targetCat);
+    if (fromIdx !== -1 && toIdx !== -1) {
+      nextOrder.splice(fromIdx, 1);
+      nextOrder.splice(toIdx, 0, draggedCategory);
+      saveCategoryOrder(nextOrder);
+    }
+    setDraggedCategory(null);
+    setDragOverCategory(null);
   };
 
   const handleDeleteCustomCategory = (catName: string) => {
@@ -1188,6 +1546,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
     } catch {
       // ignore
     }
+    saveCategoryOrder(productCategories.filter((c) => c !== catName));
     if (selectedCategoryFilter === catName) {
       setSelectedCategoryFilter('ทั้งหมด');
     }
@@ -1371,33 +1730,99 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                           a.purchaseDate.localeCompare(b.purchaseDate) || a.id.localeCompare(b.id)
                       );
 
-                    const productCategories = Array.from(
+                    const flexibleMatch = (target: string, query: string): boolean => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    const t = (target || '').toLowerCase();
+    const tokens = q.split(/\s+/).filter(Boolean);
+    return tokens.every((tok) => {
+      if (t.includes(tok)) return true;
+      // Subsequence match (flexible typing e.g. "amrc" -> "americano")
+      let ti = 0;
+      for (let qi = 0; qi < tok.length; qi++) {
+        const idx = t.indexOf(tok[qi], ti);
+        if (idx === -1) return false;
+        ti = idx + 1;
+      }
+      return true;
+    });
+  };
+
+  const rawCategoriesSet = Array.from(
     new Set([
       ...customCategories,
       ...state.recipes.map((r) => (r.category || '').trim()).filter(Boolean),
     ])
   );
 
-  const filteredRecipes =
-    selectedCategoryFilter === 'ทั้งหมด'
-      ? state.recipes
-      : state.recipes.filter((r) => (r.category || '').trim() === selectedCategoryFilter);
+  const productCategories = [
+    ...categoryOrder.filter((c) => rawCategoriesSet.includes(c)),
+    ...rawCategoriesSet.filter((c) => !categoryOrder.includes(c)),
+  ];
 
-  const handleAddCustomCategory = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = newCategoryName.trim();
+  const visibleCategories = productCategories.filter((cat) => {
+    if (!recipeOrCatSearch.trim()) return true;
+    if (flexibleMatch(cat, recipeOrCatSearch)) return true;
+    return state.recipes.some(
+      (r) => (r.category || '').trim() === cat && flexibleMatch(r.name, recipeOrCatSearch)
+    );
+  });
+
+  const filteredRecipes = state.recipes.filter((r) => {
+    const catOk =
+      selectedCategoryFilter === 'ทั้งหมด' ||
+      (r.category || '').trim() === selectedCategoryFilter;
+    if (!catOk) return false;
+    if (!recipeOrCatSearch.trim()) return true;
+    return (
+      flexibleMatch(r.name, recipeOrCatSearch) ||
+      flexibleMatch(r.category || '', recipeOrCatSearch)
+    );
+  });
+
+  const saveCategoryOrder = (nextOrder: string[]) => {
+    setCategoryOrder(nextOrder);
+    try {
+      localStorage.setItem('boothbook_recipe_category_order_v1', JSON.stringify(nextOrder));
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleCommitBottomCategory = () => {
+    const trimmed = draftCategoryName.trim();
+    setAddingBottomCategory(false);
+    setDraftCategoryName('');
     if (!trimmed) return;
-    if (!productCategories.includes(trimmed)) {
-      const next = [...customCategories, trimmed];
-      setCustomCategories(next);
+    if (!rawCategoriesSet.includes(trimmed)) {
+      const nextCustom = [...customCategories, trimmed];
+      setCustomCategories(nextCustom);
       try {
-        localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(next));
+        localStorage.setItem('boothbook_recipe_categories_v1', JSON.stringify(nextCustom));
       } catch {
         // ignore
       }
+      saveCategoryOrder([...productCategories, trimmed]);
     }
     setSelectedCategoryFilter(trimmed);
-    setNewCategoryName('');
+  };
+
+  const handleDropCategory = (targetCat: string) => {
+    if (!draggedCategory || draggedCategory === targetCat) {
+      setDraggedCategory(null);
+      setDragOverCategory(null);
+      return;
+    }
+    const nextOrder = [...productCategories];
+    const fromIdx = nextOrder.indexOf(draggedCategory);
+    const toIdx = nextOrder.indexOf(targetCat);
+    if (fromIdx !== -1 && toIdx !== -1) {
+      nextOrder.splice(fromIdx, 1);
+      nextOrder.splice(toIdx, 0, draggedCategory);
+      saveCategoryOrder(nextOrder);
+    }
+    setDraggedCategory(null);
+    setDragOverCategory(null);
   };
 
   const handleDeleteCustomCategory = (catName: string) => {
@@ -1408,6 +1833,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
     } catch {
       // ignore
     }
+    saveCategoryOrder(productCategories.filter((c) => c !== catName));
     if (selectedCategoryFilter === catName) {
       setSelectedCategoryFilter('ทั้งหมด');
     }
