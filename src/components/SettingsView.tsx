@@ -407,11 +407,8 @@ export const SettingsView: React.FC<Props> = ({
             <HardDrive className="w-5 h-5 text-[#118cd1]" />
             <div>
               <h2 className="text-lg font-extrabold text-[#0d3a57]">
-                ระบบจัดเก็บข้อมูล ({activeBackendLabel} + Offline-First)
+                ระบบจัดเก็บข้อมูล ({activeBackendLabel})
               </h2>
-              <p className="text-xs text-[#6b8799]">
-                รองรับการติดตั้งและใช้งานบนทุกอุปกรณ์ (มือถือ / แท็บเล็ต / คอม) โดยสำรองข้อมูลไว้ในเครื่องนี้เสมอ
-              </p>
             </div>
           </div>
 
@@ -451,11 +448,8 @@ export const SettingsView: React.FC<Props> = ({
                 <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
                 <div>
                   <div className="text-sm font-black text-[#0d3a57]">
-                    เชื่อมต่อ Google Sheet อัตโนมัติ (1 คลิก)
+                    เชื่อมต่อ Google Sheet
                   </div>
-                  <p className="text-xs text-[#6b8799]">
-                    กดปุ่มเพื่อล็อกอิน Google แล้วระบบจะสร้างไฟล์ชีท (Sales / Events_Summary / BoothBook_DB) ให้ทันที
-                  </p>
                 </div>
               </div>
               {state.settings.googleAccountEmail && (
@@ -629,7 +623,7 @@ export const SettingsView: React.FC<Props> = ({
             </div>
             <div>
               <label className="block text-xs font-bold text-[#6b8799] mb-1">
-                เบอร์พร้อมเพย์ / เลข 13 หลัก (สำหรับ QR POS)
+                เบอร์พร้อมเพย์ / เลข 13 หลัก
               </label>
               <input
                 type="text"
@@ -717,9 +711,6 @@ export const SettingsView: React.FC<Props> = ({
               <h2 className="text-lg font-extrabold text-[#0d3a57]">
                 Resync & คืนความจำเครื่อง
               </h2>
-              <p className="text-xs text-[#6b8799]">
-                เลือกช่วงเวลาแล้วกด Sync ระบบจะซิงค์ข้อมูลขึ้น <b>{activeBackendLabel}</b> ให้ครบก่อน แล้วล้างรายการที่ซิงค์แล้วออกจากเครื่องให้อัตโนมัติ
-              </p>
             </div>
           </div>
           <span className="text-xs font-bold text-[#6b8799] bg-[#fef9ec] px-3 py-1 rounded-full border border-[#eae3cf]">
@@ -873,7 +864,7 @@ export const SettingsView: React.FC<Props> = ({
                       1. เลือกแพ็กเกจวันขายจริง
                     </h4>
                     <span className="text-[11px] font-bold text-[#6b8799]">
-                      คิดตามจำนวนวันขายจริง · เลื่อนซ้าย-ขวาเพื่อเลือก
+                      คิดตามจำนวนวันขายจริง
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
@@ -978,7 +969,7 @@ export const SettingsView: React.FC<Props> = ({
                       2. เลือกโควตาบิลและระบบเก็บข้อมูล Cloud
                     </h4>
                     <span className="text-[11px] font-bold text-emerald-700">
-                      Google Sheets ฟรีตลอดชีพ! · เลื่อนเลือกการ์ดด้านล่าง
+                      Google Sheets ฟรีตลอดชีพ!
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
