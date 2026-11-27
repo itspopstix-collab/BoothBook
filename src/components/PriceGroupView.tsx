@@ -332,54 +332,48 @@ export const PriceGroupView: React.FC<Props> = ({ state, onUpdateState }) => {
               </div>
             </div>
 
-            <div className="max-h-60 overflow-y-auto bg-white">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead className="bg-[#fef9ec] text-[#6b8799] sticky top-0 border-b border-[#eae3cf]">
-                  <tr>
-                    <th className="py-2 px-3 w-10 text-center">เลือก</th>
-                    <th className="py-2 px-3 font-bold">ชื่อสินค้า</th>
-                    <th className="py-2 px-3 font-bold">หมวดหมู่</th>
-                    <th className="py-2 px-3 font-bold text-right">ราคาเดิม</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#eae3cf]/60">
-                  {filteredRecipesForNewGroup.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="py-6 text-center text-[#6b8799]">
-                        ไม่พบสินค้าที่ตรงกับการค้นหา
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredRecipesForNewGroup.map((r) => {
-                      const checked = selectedRecipeIdsForNewGroup.includes(r.id);
-                      return (
-                        <tr
-                          key={r.id}
-                          onClick={() => toggleRecipeForNewGroup(r.id)}
-                          className={`cursor-pointer transition ${
-                            checked ? 'bg-[#e8f5fd]/60' : 'hover:bg-[#fef9ec]/60'
-                          }`}
-                        >
-                          <td className="py-2 px-3 text-center">
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => toggleRecipeForNewGroup(r.id)}
-                              onClick={(e) => e.stopPropagation()}
-                              className="w-4 h-4 accent-[#118cd1] rounded cursor-pointer"
-                            />
-                          </td>
-                          <td className="py-2 px-3 font-bold text-[#0d3a57]">{r.name}</td>
-                          <td className="py-2 px-3 text-[#6b8799]">{r.category || '-'}</td>
-                          <td className="py-2 px-3 text-right font-bold text-[#0d3a57]">
-                            {formatBaht(getRecipeSellingPrice(r))}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+            <div className="max-h-64 overflow-y-auto bg-white p-3">
+              {filteredRecipesForNewGroup.length === 0 ? (
+                <div className="py-6 text-center text-xs text-[#6b8799]">
+                  ไม่พบสินค้าที่ตรงกับการค้นหา
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {filteredRecipesForNewGroup.map((r) => {
+                    const checked = selectedRecipeIdsForNewGroup.includes(r.id);
+                    return (
+                      <div
+                        key={r.id}
+                        onClick={() => toggleRecipeForNewGroup(r.id)}
+                        className={`flex items-start gap-2 p-2.5 rounded-xl border cursor-pointer transition select-none ${
+                          checked
+                            ? 'bg-[#e8f5fd] border-[#118cd1] shadow-xs'
+                            : 'bg-[#fef9ec]/60 border-[#eae3cf] hover:border-[#118cd1]/50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleRecipeForNewGroup(r.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-4 h-4 mt-0.5 accent-[#118cd1] rounded cursor-pointer shrink-0"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="font-bold text-xs text-[#0d3a57] truncate">
+                            {r.name}
+                          </div>
+                          <div className="text-[11px] text-[#6b8799] truncate">
+                            {r.category || '-'}
+                          </div>
+                          <div className="text-[11px] font-extrabold text-[#118cd1] mt-0.5">
+                            เดิม {formatBaht(getRecipeSellingPrice(r))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
           <div className="flex justify-end gap-2">
