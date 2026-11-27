@@ -39,7 +39,7 @@ export const WarehouseView: React.FC<Props> = ({ state, sim, onUpdateState }) =>
           }`}
         >
           <Package className="w-4 h-4" />
-          สินค้า Consumtion ({state.packagingItems.length})
+          สินค้า Consumables ({state.packagingItems.length})
         </button>
       </div>
 
