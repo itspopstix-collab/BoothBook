@@ -14,6 +14,7 @@ import {
 import { runFifoSimulation } from './services/fifoEngine';
 import { buildDemo50Recipes } from './services/demo50Menus';
 import { EventPnLView } from './components/EventPnLView';
+import { WarehouseView } from './components/WarehouseView';
 import { RecipeCostView } from './components/RecipeCostView';
 import { PriceGroupView } from './components/PriceGroupView';
 import { SettingsView } from './components/SettingsView';
@@ -47,7 +48,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
-type ActiveTab = 'pos' | 'events' | 'recipes' | 'price_groups' | 'settings';
+type ActiveTab = 'pos' | 'events' | 'warehouse' | 'recipes' | 'price_groups' | 'settings';
 
 const DB_REVISION_STAMP = 'boothbook-pos-unified-v1';
 
@@ -304,7 +305,8 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
   const navItems: { id: ActiveTab; label: string; icon: React.ReactNode; ownerOnly?: boolean }[] = [
     { id: 'pos', label: 'แคชเชียร์ POS', icon: <ShoppingBag className="w-5 h-5 shrink-0" /> },
     { id: 'events', label: 'ออกบูธ & P&L', icon: <BarChart3 className="w-5 h-5 shrink-0" />, ownerOnly: true },
-    { id: 'recipes', label: 'สูตร & สินค้า', icon: <IceCream className="w-5 h-5 shrink-0" />, ownerOnly: true },
+    { id: 'warehouse', label: 'คลัง', icon: <Package className="w-5 h-5 shrink-0" />, ownerOnly: true },
+    { id: 'recipes', label: 'สูตร', icon: <IceCream className="w-5 h-5 shrink-0" />, ownerOnly: true },
     { id: 'price_groups', label: 'Price Group', icon: <Tags className="w-5 h-5 shrink-0" />, ownerOnly: true },
     { id: 'settings', label: 'ตั้งค่า', icon: <Settings className="w-5 h-5 shrink-0" />, ownerOnly: true },
   ];
@@ -563,11 +565,20 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
           />
         )}
 
+        {isOwner && activeTab === 'warehouse' && (
+          <WarehouseView
+            state={state}
+            sim={sim}
+            onUpdateState={handleUpdateState}
+          />
+        )}
+
         {isOwner && activeTab === 'recipes' && (
           <RecipeCostView
             state={state}
             sim={sim}
             onUpdateState={handleUpdateState}
+            sectionMode="recipes"
           />
         )}
 

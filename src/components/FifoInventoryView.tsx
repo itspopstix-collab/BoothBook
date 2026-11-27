@@ -24,10 +24,17 @@ interface Props {
   state: AppDatabaseState;
   sim: SystemSimulationResult;
   onUpdateState: (updater: (prev: AppDatabaseState) => AppDatabaseState) => void;
+  onlyPackaging?: boolean;
 }
 
-export const FifoInventoryView: React.FC<Props> = ({ state, sim, onUpdateState }) => {
+export const FifoInventoryView: React.FC<Props> = ({
+  state,
+  sim,
+  onUpdateState,
+  onlyPackaging = false,
+}) => {
   const [subTab, setSubTab] = useState<'packaging' | 'ingredients'>('packaging');
+  const effectiveSubTab = onlyPackaging ? 'packaging' : subTab;
 
   // Sum of raw purchase costs for all ingredient lots
   const totalPurchaseCost = state.ingredientLots.reduce((s, lot) => s + (lot.totalPrice ?? 0), 0);
@@ -184,44 +191,46 @@ export const FifoInventoryView: React.FC<Props> = ({ state, sim, onUpdateState }
   return (
     <div className="space-y-6">
       {/* สลับหมวดหมู่: แพ็กเกจจิ้ง/ของใช้เก็บข้ามงาน vs วัตถุดิบการผลิต */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm border border-[#eae3cf] flex flex-wrap items-center justify-between gap-4">
-        <div className="flex gap-2 bg-[#fef9ec] p-1.5 rounded-xl border border-[#eae3cf]">
-          <button
-            onClick={() => setSubTab('packaging')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-extrabold text-sm transition cursor-pointer ${
-              subTab === 'packaging'
-                ? 'bg-[#118cd1] text-white shadow-xs'
-                : 'text-[#6b8799] hover:text-[#0d3a57]'
-            }`}
-          >
-            <Package className="w-4 h-4" />
-            1. ของใช้ & แพ็กเกจจิ้งเก็บข้ามงาน (แก้ว / ช้อน / ทิชชู่)
-          </button>
-          <button
-            onClick={() => setSubTab('ingredients')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-extrabold text-sm transition cursor-pointer ${
-              subTab === 'ingredients'
-                ? 'bg-[#118cd1] text-white shadow-xs'
-                : 'text-[#6b8799] hover:text-[#0d3a57]'
-            }`}
-          >
-            <Scale className="w-4 h-4" />
-            2. วัตถุดิบการผลิต (บันทึกน้ำหนักกรัม & ราคา/กรัม)
-          </button>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="bg-[#fef9ec] px-3.5 py-1.5 rounded-xl border border-[#eae3cf] text-xs">
-            <span className="text-[#6b8799] font-medium">ยอดซื้อวัตถุดิบทั้งหมดที่บันทึก: </span>
-            <b className="text-[#0d3a57] font-extrabold text-sm">{formatBaht(totalPurchaseCost)}</b>
+      {!onlyPackaging && (
+        <div className="bg-white rounded-2xl p-4 shadow-sm border border-[#eae3cf] flex flex-wrap items-center justify-between gap-4">
+          <div className="flex gap-2 bg-[#fef9ec] p-1.5 rounded-xl border border-[#eae3cf]">
+            <button
+              onClick={() => setSubTab('packaging')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-extrabold text-sm transition cursor-pointer ${
+                effectiveSubTab === 'packaging'
+                  ? 'bg-[#118cd1] text-white shadow-xs'
+                  : 'text-[#6b8799] hover:text-[#0d3a57]'
+              }`}
+            >
+              <Package className="w-4 h-4" />
+              1. ของใช้ & แพ็กเกจจิ้งเก็บข้ามงาน (แก้ว / ช้อน / ทิชชู่)
+            </button>
+            <button
+              onClick={() => setSubTab('ingredients')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-extrabold text-sm transition cursor-pointer ${
+                effectiveSubTab === 'ingredients'
+                  ? 'bg-[#118cd1] text-white shadow-xs'
+                  : 'text-[#6b8799] hover:text-[#0d3a57]'
+              }`}
+            >
+              <Scale className="w-4 h-4" />
+              2. วัตถุดิบการผลิต (บันทึกน้ำหนักกรัม & ราคา/กรัม)
+            </button>
           </div>
-          <div className="text-xs text-[#6b8799] font-medium hidden md:block">
-            💡 ระบบตัดต้นทุนตามสูตรที่ผลิตจริง ไม่ได้เหมาต้นทุนซื้อทั้งหมดเข้าบูธ
+
+          <div className="flex items-center gap-4">
+            <div className="bg-[#fef9ec] px-3.5 py-1.5 rounded-xl border border-[#eae3cf] text-xs">
+              <span className="text-[#6b8799] font-medium">ยอดซื้อวัตถุดิบทั้งหมดที่บันทึก: </span>
+              <b className="text-[#0d3a57] font-extrabold text-sm">{formatBaht(totalPurchaseCost)}</b>
+            </div>
+            <div className="text-xs text-[#6b8799] font-medium hidden md:block">
+              💡 ระบบตัดต้นทุนตามสูตรที่ผลิตจริง ไม่ได้เหมาต้นทุนซื้อทั้งหมดเข้าบูธ
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {subTab === 'packaging' ? (
+      {effectiveSubTab === 'packaging' ? (
         <div className="space-y-6">
           {/* ฟอร์มบันทึกล็อตซื้อแพ็กเกจจิ้ง */}
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-[#eae3cf]">

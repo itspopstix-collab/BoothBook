@@ -39,6 +39,7 @@ interface Props {
   state: AppDatabaseState;
   sim: SystemSimulationResult;
   onUpdateState: (updater: (prev: AppDatabaseState) => AppDatabaseState) => void;
+  sectionMode?: 'recipes' | 'ingredients' | 'both';
 }
 
 const resolveImageUrl = (imgUrl?: string) => {
@@ -89,8 +90,14 @@ async function compressMenuImageToDataUrl(file: File): Promise<string> {
   });
 }
 
-export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) => {
+export const RecipeCostView: React.FC<Props> = ({
+  state,
+  sim,
+  onUpdateState,
+  sectionMode = 'both',
+}) => {
   const [activeSubTab, setActiveSubTab] = useState<'recipes' | 'ingredients'>('recipes');
+  const effectiveSubTab = sectionMode === 'both' ? activeSubTab : sectionMode;
   const [ingSearch, setIngSearch] = useState('');
   const [ingCatFilter, setIngCatFilter] = useState<string>('ทั้งหมด');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('ทั้งหมด');
@@ -677,35 +684,37 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
   return (
     <div className="space-y-6">
       {/* แถบสลับ Section: สูตรสินค้า vs คลังวัตถุดิบ */}
-      <div className="bg-white rounded-2xl p-2 shadow-sm border border-[#eae3cf] inline-flex flex-wrap gap-1.5">
-        <button
-          type="button"
-          onClick={() => setActiveSubTab('recipes')}
-          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition cursor-pointer ${
-            activeSubTab === 'recipes'
-              ? 'bg-[#118cd1] text-white shadow-sm'
-              : 'text-[#6b8799] hover:bg-[#fef9ec] hover:text-[#0d3a57]'
-          }`}
-        >
-          <IceCream className="w-4 h-4" />
-          สูตรสินค้า & ต้นทุน ({state.recipes.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveSubTab('ingredients')}
-          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition cursor-pointer ${
-            activeSubTab === 'ingredients'
-              ? 'bg-emerald-600 text-white shadow-sm'
-              : 'text-[#6b8799] hover:bg-[#fef9ec] hover:text-[#0d3a57]'
-          }`}
-        >
-          <Scale className="w-4 h-4" />
-          คลังวัตถุดิบในระบบ ({state.ingredients.length})
-        </button>
-      </div>
+      {sectionMode === 'both' && (
+        <div className="bg-white rounded-2xl p-2 shadow-sm border border-[#eae3cf] inline-flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('recipes')}
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition cursor-pointer ${
+              effectiveSubTab === 'recipes'
+                ? 'bg-[#118cd1] text-white shadow-sm'
+                : 'text-[#6b8799] hover:bg-[#fef9ec] hover:text-[#0d3a57]'
+            }`}
+          >
+            <IceCream className="w-4 h-4" />
+            สูตรสินค้า & ต้นทุน ({state.recipes.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('ingredients')}
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition cursor-pointer ${
+              effectiveSubTab === 'ingredients'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-[#6b8799] hover:bg-[#fef9ec] hover:text-[#0d3a57]'
+            }`}
+          >
+            <Scale className="w-4 h-4" />
+            คลังวัตถุดิบในระบบ ({state.ingredients.length})
+          </button>
+        </div>
+      )}
 
       {/* SECTION A: คลังวัตถุดิบทั้งหมดที่มีให้ดึงมากรอกในสูตร */}
-      {activeSubTab === 'ingredients' && (
+      {effectiveSubTab === 'ingredients' && (
         <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-[#eae3cf] space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
@@ -842,7 +851,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
       )}
 
       {/* SECTION B: สูตรสินค้า & ต้นทุนต่อชิ้น */}
-      {activeSubTab === 'recipes' && (
+      {effectiveSubTab === 'recipes' && (
         <div className="flex flex-col lg:flex-row gap-5 items-start">
           {/* Tab ย่อยด้านซ้าย: Dropdown เลือก/Sort/เพิ่ม Category + ช่องค้นหา + รายการเมนูใน Category */}
           <div className="w-full lg:w-72 shrink-0 bg-white rounded-2xl p-4 shadow-sm border border-[#eae3cf] space-y-3">
