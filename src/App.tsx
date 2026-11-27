@@ -70,7 +70,7 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
   }, [userProfile, state.settings.users]);
 
   const effectiveRole = matchedManagedUser?.role || userProfile?.role || 'owner';
-  const isStaff = effectiveRole === 'staff';
+  const isStaff = effectiveRole.toLowerCase() === 'staff';
   const isOwner = !isStaff; // default owner
 
   const [activeTab, setActiveTab] = useState<ActiveTab>(isStaff ? 'pos' : 'events');

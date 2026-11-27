@@ -4,7 +4,6 @@ import {
   AppTabKey,
   CloudStorageBackend,
   ManagedAppUser,
-  UserRole,
 } from '../types';
 import { fetchAllPosSalesFromCloud } from '../services/posSync';
 import { getStorageEngineLabel } from '../services/nativeStorage';
@@ -87,14 +86,40 @@ export const SettingsView: React.FC<Props> = ({
   ];
   const [newUserName, setNewUserName] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
-  const [newUserRole, setNewUserRole] = useState<UserRole>('staff');
+  const [newUserPassword, setNewUserPassword] = useState('');
+  const [newUserRole, setNewUserRole] = useState<string>('Staff');
   const [newUserTabs, setNewUserTabs] = useState<AppTabKey[]>(['pos']);
+  const [showAddRoleInput, setShowAddRoleInput] = useState(false);
+  const [draftRoleName, setDraftRoleName] = useState('');
 
-  const handleNewUserRoleChange = (role: UserRole) => {
+  const availableRoles = useMemo(() => {
+    const base = ['Owner', 'Staff'];
+    const custom = state.settings.customRoles || [];
+    return Array.from(new Set([...base, ...custom]));
+  }, [state.settings.customRoles]);
+
+  const handleAddCustomRole = () => {
+    const trimmed = draftRoleName.trim();
+    if (!trimmed) return;
+    if (!availableRoles.includes(trimmed)) {
+      onUpdateState((prev) => ({
+        ...prev,
+        settings: {
+          ...prev.settings,
+          customRoles: [...(prev.settings.customRoles || []), trimmed],
+        },
+      }));
+    }
+    setNewUserRole(trimmed);
+    setDraftRoleName('');
+    setShowAddRoleInput(false);
+  };
+
+  const handleNewUserRoleChange = (role: string) => {
     setNewUserRole(role);
-    if (role === 'owner') {
+    if (role.toLowerCase() === 'owner') {
       setNewUserTabs(ALL_TABS.map((t) => t.key));
-    } else {
+    } else if (role.toLowerCase() === 'staff') {
       setNewUserTabs(['pos']);
     }
   };
@@ -112,6 +137,7 @@ export const SettingsView: React.FC<Props> = ({
       id: 'usr-' + Date.now(),
       name: newUserName.trim(),
       email: newUserEmail.trim(),
+      password: newUserPassword.trim() || undefined,
       role: newUserRole,
       allowedTabs: newUserTabs,
       createdAt: new Date().toISOString().slice(0, 10),
@@ -125,11 +151,12 @@ export const SettingsView: React.FC<Props> = ({
     }));
     setNewUserName('');
     setNewUserEmail('');
-    setNewUserRole('staff');
+    setNewUserPassword('');
+    setNewUserRole('Staff');
     setNewUserTabs(['pos']);
   };
 
-  const handleUpdateManagedUserRole = (userId: string, role: UserRole) => {
+  const handleUpdateManagedUserRole = (userId: string, role: string) => {
     onUpdateState((prev) => ({
       ...prev,
       settings: {
@@ -431,35 +458,37 @@ export const SettingsView: React.FC<Props> = ({
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      {/* Sub-tab Bar */}
-      <div className="bg-white rounded-2xl p-2 shadow-sm border border-[#eae3cf] inline-flex flex-wrap gap-1.5">
+    <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-6 items-start">
+      {/* Side Sub-tab Bar */}
+      <div className="w-full lg:w-60 shrink-0 bg-white rounded-2xl p-3 shadow-sm border border-[#eae3cf] flex lg:flex-col gap-1.5">
         <button
           type="button"
           onClick={() => setSettingsSubTab('general')}
-          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition cursor-pointer ${
+          className={`flex-1 lg:flex-none inline-flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-black transition cursor-pointer text-left ${
             settingsSubTab === 'general'
               ? 'bg-[#118cd1] text-white shadow-sm'
               : 'text-[#6b8799] hover:bg-[#fef9ec] hover:text-[#0d3a57]'
           }`}
         >
-          <HardDrive className="w-4 h-4" />
-          ตั้งค่าทั่วไป &amp; Cloud
+          <HardDrive className="w-4 h-4 shrink-0" />
+          <span>ตั้งค่าทั่วไป &amp; Cloud</span>
         </button>
         <button
           type="button"
           onClick={() => setSettingsSubTab('users')}
-          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition cursor-pointer ${
+          className={`flex-1 lg:flex-none inline-flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-black transition cursor-pointer text-left ${
             settingsSubTab === 'users'
               ? 'bg-[#118cd1] text-white shadow-sm'
               : 'text-[#6b8799] hover:bg-[#fef9ec] hover:text-[#0d3a57]'
           }`}
         >
-          <Users className="w-4 h-4" />
-          User ({(state.settings.users || []).length})
+          <Users className="w-4 h-4 shrink-0" />
+          <span>User ({(state.settings.users || []).length})</span>
         </button>
       </div>
 
+      {/* Main Content */}
+      <div className="flex-1 w-full min-w-0 space-y-6">
       {settingsSubTab === 'users' && (
         <div className="space-y-6">
           <form
@@ -471,7 +500,7 @@ export const SettingsView: React.FC<Props> = ({
               เพิ่มผู้ใช้งาน (User) &amp; กำหนดสิทธิ์แท็บ
             </h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-bold text-[#6b8799] mb-1">
                   ชื่อผู้ใช้งาน *
@@ -500,16 +529,60 @@ export const SettingsView: React.FC<Props> = ({
               </div>
               <div>
                 <label className="block text-xs font-bold text-[#6b8799] mb-1">
-                  Role *
+                  รหัสผ่าน (Password) *
                 </label>
+                <input
+                  type="password"
+                  placeholder="ตั้งรหัสผ่านสำหรับเข้าใช้งาน"
+                  value={newUserPassword}
+                  onChange={(e) => setNewUserPassword(e.target.value)}
+                  className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:border-[#118cd1]"
+                  required
+                />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-[#6b8799]">
+                    Role *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddRoleInput((v) => !v)}
+                    className="text-[11px] font-extrabold text-[#118cd1] hover:underline cursor-pointer"
+                  >
+                    + เพิ่ม Role ใหม่
+                  </button>
+                </div>
                 <select
                   value={newUserRole}
-                  onChange={(e) => handleNewUserRoleChange(e.target.value as UserRole)}
+                  onChange={(e) => handleNewUserRoleChange(e.target.value)}
                   className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-bold text-[#0d3a57] bg-white focus:outline-none focus:border-[#118cd1]"
                 >
-                  <option value="staff">Staff (พนักงาน)</option>
-                  <option value="owner">Owner (เจ้าของร้าน)</option>
+                  {availableRoles.map((roleName) => (
+                    <option key={roleName} value={roleName}>
+                      {roleName}
+                    </option>
+                  ))}
                 </select>
+                {showAddRoleInput && (
+                  <div className="mt-2 flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      placeholder="ชื่อ Role ใหม่ เช่น ผู้จัดการ"
+                      value={draftRoleName}
+                      onChange={(e) => setDraftRoleName(e.target.value)}
+                      className="flex-1 border border-[#eae3cf] rounded-lg px-2.5 py-1 text-xs font-semibold focus:outline-none focus:border-[#118cd1]"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCustomRole}
+                      className="px-2.5 py-1 rounded-lg bg-[#118cd1] text-white text-xs font-bold cursor-pointer"
+                    >
+                      เพิ่ม
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -574,27 +647,31 @@ export const SettingsView: React.FC<Props> = ({
                           <span>{u.name}</span>
                           <span
                             className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                              u.role === 'owner'
+                              u.role.toLowerCase() === 'owner'
                                 ? 'bg-amber-100 text-amber-800'
                                 : 'bg-sky-100 text-sky-800'
                             }`}
                           >
-                            {u.role === 'owner' ? 'Owner' : 'Staff'}
+                            {u.role}
                           </span>
                         </div>
-                        <div className="text-xs text-[#6b8799]">{u.email}</div>
+                        <div className="text-xs text-[#6b8799]">
+                          {u.email}
+                          {u.password ? ' · รหัสผ่าน: ••••••' : ''}
+                        </div>
                       </div>
 
                       <div className="flex items-center gap-2">
                         <select
                           value={u.role}
-                          onChange={(e) =>
-                            handleUpdateManagedUserRole(u.id, e.target.value as UserRole)
-                          }
+                          onChange={(e) => handleUpdateManagedUserRole(u.id, e.target.value)}
                           className="bg-white border border-[#eae3cf] rounded-lg px-2.5 py-1 text-xs font-bold text-[#0d3a57]"
                         >
-                          <option value="staff">Staff</option>
-                          <option value="owner">Owner</option>
+                          {Array.from(new Set([...availableRoles, u.role])).map((roleName) => (
+                            <option key={roleName} value={roleName}>
+                              {roleName}
+                            </option>
+                          ))}
                         </select>
                         <button
                           type="button"
@@ -1499,6 +1576,7 @@ export const SettingsView: React.FC<Props> = ({
       )}
         </>
       )}
+      </div>
     </div>
   );
 };

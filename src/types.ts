@@ -296,6 +296,7 @@ export interface PosConnectionSettings {
   promptPayNumber?: string;
   priceCategories?: PriceCategoryOption[];
   users?: ManagedAppUser[];
+  customRoles?: string[];
 }
 
 export type AppTabKey = 'pos' | 'events' | 'warehouse' | 'recipes' | 'price_groups' | 'settings';
@@ -306,7 +307,8 @@ export interface ManagedAppUser {
   id: string;
   name: string;
   email: string;
-  role: UserRole;
+  password?: string;
+  role: string;
   allowedTabs: AppTabKey[];
   createdAt: string;
 }
