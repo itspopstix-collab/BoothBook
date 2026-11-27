@@ -91,6 +91,7 @@ export const SettingsView: React.FC<Props> = ({
   const [newUserTabs, setNewUserTabs] = useState<AppTabKey[]>(['pos']);
   const [showAddRoleInput, setShowAddRoleInput] = useState(false);
   const [draftRoleName, setDraftRoleName] = useState('');
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
 
   const availableRoles = useMemo(() => {
     const base = ['Owner', 'Staff'];
@@ -154,6 +155,7 @@ export const SettingsView: React.FC<Props> = ({
     setNewUserPassword('');
     setNewUserRole('Staff');
     setNewUserTabs(['pos']);
+    setShowAddUserModal(false);
   };
 
   const handleUpdateManagedUserRole = (userId: string, role: string) => {
@@ -491,148 +493,29 @@ export const SettingsView: React.FC<Props> = ({
       <div className="flex-1 w-full min-w-0 space-y-6">
       {settingsSubTab === 'users' && (
         <div className="space-y-6">
-          <form
-            onSubmit={handleAddManagedUser}
-            className="bg-white rounded-2xl p-6 shadow-sm border border-[#eae3cf] space-y-4"
-          >
-            <h2 className="text-lg font-extrabold text-[#0d3a57] flex items-center gap-2">
-              <Users className="w-5 h-5 text-[#118cd1]" />
-              เพิ่มผู้ใช้งาน (User) &amp; กำหนดสิทธิ์แท็บ
-            </h2>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#eae3cf] space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <label className="block text-xs font-bold text-[#6b8799] mb-1">
-                  ชื่อผู้ใช้งาน *
-                </label>
-                <input
-                  type="text"
-                  placeholder="เช่น น้องมายด์ (แคชเชียร์)"
-                  value={newUserName}
-                  onChange={(e) => setNewUserName(e.target.value)}
-                  className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:border-[#118cd1]"
-                  required
-                />
+                <h3 className="text-lg font-extrabold text-[#0d3a57] flex items-center gap-2">
+                  <Users className="w-5 h-5 text-[#118cd1]" />
+                  รายชื่อผู้ใช้งานในระบบ ({(state.settings.users || []).length})
+                </h3>
+                <p className="text-xs text-[#6b8799] mt-0.5">
+                  จัดการบัญชีผู้ใช้งาน รหัสผ่าน Role และเลือกแท็บที่สามารถมองเห็นได้
+                </p>
               </div>
-              <div>
-                <label className="block text-xs font-bold text-[#6b8799] mb-1">
-                  อีเมล / Username *
-                </label>
-                <input
-                  type="text"
-                  placeholder="เช่น staff@shop.com"
-                  value={newUserEmail}
-                  onChange={(e) => setNewUserEmail(e.target.value)}
-                  className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:border-[#118cd1]"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-[#6b8799] mb-1">
-                  รหัสผ่าน (Password) *
-                </label>
-                <input
-                  type="password"
-                  placeholder="ตั้งรหัสผ่านสำหรับเข้าใช้งาน"
-                  value={newUserPassword}
-                  onChange={(e) => setNewUserPassword(e.target.value)}
-                  className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:border-[#118cd1]"
-                  required
-                />
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-[#6b8799]">
-                    Role *
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowAddRoleInput((v) => !v)}
-                    className="text-[11px] font-extrabold text-[#118cd1] hover:underline cursor-pointer"
-                  >
-                    + เพิ่ม Role ใหม่
-                  </button>
-                </div>
-                <select
-                  value={newUserRole}
-                  onChange={(e) => handleNewUserRoleChange(e.target.value)}
-                  className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-bold text-[#0d3a57] bg-white focus:outline-none focus:border-[#118cd1]"
-                >
-                  {availableRoles.map((roleName) => (
-                    <option key={roleName} value={roleName}>
-                      {roleName}
-                    </option>
-                  ))}
-                </select>
-                {showAddRoleInput && (
-                  <div className="mt-2 flex items-center gap-1.5">
-                    <input
-                      type="text"
-                      placeholder="ชื่อ Role ใหม่ เช่น ผู้จัดการ"
-                      value={draftRoleName}
-                      onChange={(e) => setDraftRoleName(e.target.value)}
-                      className="flex-1 border border-[#eae3cf] rounded-lg px-2.5 py-1 text-xs font-semibold focus:outline-none focus:border-[#118cd1]"
-                      autoFocus
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddCustomRole}
-                      className="px-2.5 py-1 rounded-lg bg-[#118cd1] text-white text-xs font-bold cursor-pointer"
-                    >
-                      เพิ่ม
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="bg-[#fef9ec] rounded-xl p-4 border border-[#eae3cf] space-y-2">
-              <div className="text-xs font-extrabold text-[#0d3a57]">
-                เลือกแท็บที่สามารถมองเห็นได้:
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                {ALL_TABS.map((t) => {
-                  const checked = newUserTabs.includes(t.key);
-                  return (
-                    <label
-                      key={t.key}
-                      className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition select-none ${
-                        checked
-                          ? 'bg-[#e8f5fd] border-[#118cd1] text-[#0d3a57]'
-                          : 'bg-white border-[#eae3cf] text-[#6b8799]'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => handleToggleNewUserTab(t.key)}
-                        className="w-4 h-4 accent-[#118cd1] rounded cursor-pointer"
-                      />
-                      <span className="text-xs font-bold">{t.label}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="flex justify-end">
               <button
-                type="submit"
-                className="inline-flex items-center gap-1.5 bg-[#118cd1] hover:bg-[#0e76b2] text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow-sm transition cursor-pointer"
+                type="button"
+                onClick={() => setShowAddUserModal(true)}
+                className="shrink-0 inline-flex items-center gap-1.5 bg-[#118cd1] hover:bg-[#0e76b2] text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-sm transition cursor-pointer"
               >
                 <Plus className="w-4 h-4" /> เพิ่มผู้ใช้งาน
               </button>
             </div>
-          </form>
-
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#eae3cf] space-y-4">
-            <h3 className="text-base font-extrabold text-[#0d3a57]">
-              รายชื่อผู้ใช้งานในระบบ ({(state.settings.users || []).length})
-            </h3>
 
             {(state.settings.users || []).length === 0 ? (
               <div className="bg-[#fef9ec] rounded-xl p-6 text-center text-xs text-[#6b8799] border border-dashed border-[#eae3cf]">
-                ยังไม่มีผู้ใช้งานที่เพิ่มไว้ — กรอกฟอร์มด้านบนเพื่อเพิ่มผู้ใช้งานและกำหนดสิทธิ์การมองเห็นแท็บได้เลย
+                ยังไม่มีผู้ใช้งานที่เพิ่มไว้ — กดปุ่ม &ldquo;+ เพิ่มผู้ใช้งาน&rdquo; ด้านบนเพื่อเพิ่มผู้ใช้งานและกำหนดสิทธิ์ได้เลย
               </div>
             ) : (
               <div className="space-y-3">
@@ -1575,6 +1458,160 @@ export const SettingsView: React.FC<Props> = ({
         </div>
       )}
         </>
+      )}
+      {showAddUserModal && (
+        <div className="fixed inset-0 bg-[#0d3a57]/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <form
+            onSubmit={handleAddManagedUser}
+            className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-xl border border-[#eae3cf] space-y-4 max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-extrabold text-[#0d3a57] flex items-center gap-2">
+                <Users className="w-5 h-5 text-[#118cd1]" />
+                เพิ่มผู้ใช้งาน (User) &amp; กำหนดสิทธิ์แท็บ
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowAddUserModal(false)}
+                className="p-1.5 rounded-lg text-[#6b8799] hover:text-[#0d3a57] hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-[#6b8799] mb-1">
+                  ชื่อผู้ใช้งาน *
+                </label>
+                <input
+                  type="text"
+                  placeholder="เช่น น้องมายด์ (แคชเชียร์)"
+                  value={newUserName}
+                  onChange={(e) => setNewUserName(e.target.value)}
+                  className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:border-[#118cd1]"
+                  required
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-[#6b8799] mb-1">
+                  อีเมล / Username *
+                </label>
+                <input
+                  type="text"
+                  placeholder="เช่น staff@shop.com"
+                  value={newUserEmail}
+                  onChange={(e) => setNewUserEmail(e.target.value)}
+                  className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:border-[#118cd1]"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-[#6b8799] mb-1">
+                  รหัสผ่าน (Password) *
+                </label>
+                <input
+                  type="password"
+                  placeholder="ตั้งรหัสผ่านสำหรับเข้าใช้งาน"
+                  value={newUserPassword}
+                  onChange={(e) => setNewUserPassword(e.target.value)}
+                  className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:border-[#118cd1]"
+                  required
+                />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-[#6b8799]">
+                    Role *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddRoleInput((v) => !v)}
+                    className="text-[11px] font-extrabold text-[#118cd1] hover:underline cursor-pointer"
+                  >
+                    + เพิ่ม Role ใหม่
+                  </button>
+                </div>
+                <select
+                  value={newUserRole}
+                  onChange={(e) => handleNewUserRoleChange(e.target.value)}
+                  className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-bold text-[#0d3a57] bg-white focus:outline-none focus:border-[#118cd1]"
+                >
+                  {availableRoles.map((roleName) => (
+                    <option key={roleName} value={roleName}>
+                      {roleName}
+                    </option>
+                  ))}
+                </select>
+                {showAddRoleInput && (
+                  <div className="mt-2 flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      placeholder="ชื่อ Role ใหม่ เช่น ผู้จัดการ"
+                      value={draftRoleName}
+                      onChange={(e) => setDraftRoleName(e.target.value)}
+                      className="flex-1 border border-[#eae3cf] rounded-lg px-2.5 py-1 text-xs font-semibold focus:outline-none focus:border-[#118cd1]"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCustomRole}
+                      className="px-2.5 py-1 rounded-lg bg-[#118cd1] text-white text-xs font-bold cursor-pointer"
+                    >
+                      เพิ่ม
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-[#fef9ec] rounded-xl p-4 border border-[#eae3cf] space-y-2">
+              <div className="text-xs font-extrabold text-[#0d3a57]">
+                เลือกแท็บที่สามารถมองเห็นได้:
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                {ALL_TABS.map((t) => {
+                  const checked = newUserTabs.includes(t.key);
+                  return (
+                    <label
+                      key={t.key}
+                      className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition select-none ${
+                        checked
+                          ? 'bg-[#e8f5fd] border-[#118cd1] text-[#0d3a57]'
+                          : 'bg-white border-[#eae3cf] text-[#6b8799]'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => handleToggleNewUserTab(t.key)}
+                        className="w-4 h-4 accent-[#118cd1] rounded cursor-pointer"
+                      />
+                      <span className="text-xs font-bold">{t.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowAddUserModal(false)}
+                className="px-4 py-2 rounded-xl font-bold text-xs text-[#6b8799] hover:bg-slate-100 cursor-pointer"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="submit"
+                className="inline-flex items-center gap-1.5 bg-[#118cd1] hover:bg-[#0e76b2] text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow-sm transition cursor-pointer"
+              >
+                <Plus className="w-4 h-4" /> เพิ่มผู้ใช้งาน
+              </button>
+            </div>
+          </form>
+        </div>
       )}
       </div>
     </div>
