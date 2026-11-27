@@ -53,10 +53,26 @@ type ActiveTab = 'pos' | 'events' | 'warehouse' | 'recipes' | 'price_groups' | '
 const DB_REVISION_STAMP = 'boothbook-pos-unified-v1';
 
 export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile }) => {
-  const isStaff = userProfile?.role === 'staff';
+  const [state, setState] = useState<AppDatabaseState>(() => loadAppState());
+
+  const matchedManagedUser = useMemo(() => {
+    if (!userProfile) return null;
+    const users = state.settings.users || [];
+    const targetEmail = (userProfile.email || '').trim().toLowerCase();
+    const targetName = (userProfile.username || '').trim().toLowerCase();
+    return (
+      users.find(
+        (u) =>
+          (targetEmail && u.email.trim().toLowerCase() === targetEmail) ||
+          (targetName && u.name.trim().toLowerCase() === targetName)
+      ) || null
+    );
+  }, [userProfile, state.settings.users]);
+
+  const effectiveRole = matchedManagedUser?.role || userProfile?.role || 'owner';
+  const isStaff = effectiveRole === 'staff';
   const isOwner = !isStaff; // default owner
 
-  const [state, setState] = useState<AppDatabaseState>(() => loadAppState());
   const [activeTab, setActiveTab] = useState<ActiveTab>(isStaff ? 'pos' : 'events');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -311,7 +327,14 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
     { id: 'settings', label: 'ตั้งค่า', icon: <Settings className="w-5 h-5 shrink-0" />, ownerOnly: true },
   ];
 
-  const visibleNavItems = navItems.filter((item) => !item.ownerOnly || isOwner);
+  const canAccessTab = (tab: ActiveTab): boolean => {
+    if (matchedManagedUser) {
+      return matchedManagedUser.allowedTabs.includes(tab);
+    }
+    return tab === 'pos' || isOwner;
+  };
+
+  const visibleNavItems = navItems.filter((item) => canAccessTab(item.id));
 
   const handleSelectTab = (tab: ActiveTab) => {
     setActiveTab(tab);
@@ -548,7 +571,7 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
 
         {/* Main Content Area */}
         <main className="flex-1 py-4 px-2 sm:px-4">
-        {activeTab === 'pos' && (
+        {canAccessTab('pos') && activeTab === 'pos' && (
           <PosCashierView
             state={state}
             onRecordSale={handleRecordPosSale}
@@ -557,7 +580,7 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
           />
         )}
 
-        {isOwner && activeTab === 'events' && (
+        {canAccessTab('events') && activeTab === 'events' && (
           <EventPnLView
             state={state}
             sim={sim}
@@ -565,7 +588,7 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
           />
         )}
 
-        {isOwner && activeTab === 'warehouse' && (
+        {canAccessTab('warehouse') && activeTab === 'warehouse' && (
           <WarehouseView
             state={state}
             sim={sim}
@@ -573,7 +596,7 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
           />
         )}
 
-        {isOwner && activeTab === 'recipes' && (
+        {canAccessTab('recipes') && activeTab === 'recipes' && (
           <RecipeCostView
             state={state}
             sim={sim}
@@ -582,14 +605,14 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
           />
         )}
 
-        {isOwner && activeTab === 'price_groups' && (
+        {canAccessTab('price_groups') && activeTab === 'price_groups' && (
           <PriceGroupView
             state={state}
             onUpdateState={handleUpdateState}
           />
         )}
 
-        {isOwner && activeTab === 'settings' && (
+        {canAccessTab('settings') && activeTab === 'settings' && (
           <SettingsView
             state={state}
             onUpdateState={handleUpdateState}
@@ -604,8 +627,8 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
           />
         )}
 
-        {/* ถ้า Staff พยายามเข้าหน้าอื่น */}
-        {!isOwner && activeTab !== 'pos' && (
+        {/* ถ้าไม่มีสิทธิ์เข้าหน้านี้ */}
+        {!canAccessTab(activeTab) && (
           <div className="max-w-md mx-auto my-12 p-6 bg-white rounded-3xl border border-rose-200 text-center space-y-3">
             <ShieldAlert className="w-12 h-12 text-rose-500 mx-auto" />
             <h2 className="text-lg font-black text-[#0d3a57]">ไม่มีสิทธิ์เข้าถึงหน้านี้</h2>

@@ -295,6 +295,20 @@ export interface PosConnectionSettings {
   branchName: string;
   promptPayNumber?: string;
   priceCategories?: PriceCategoryOption[];
+  users?: ManagedAppUser[];
+}
+
+export type AppTabKey = 'pos' | 'events' | 'warehouse' | 'recipes' | 'price_groups' | 'settings';
+
+export type UserRole = 'owner' | 'staff';
+
+export interface ManagedAppUser {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  allowedTabs: AppTabKey[];
+  createdAt: string;
 }
 
 export interface PriceCategoryOption {
@@ -303,8 +317,6 @@ export interface PriceCategoryOption {
   singlePrice: number;
   halfPrice?: number;
 }
-
-export type UserRole = 'owner' | 'staff';
 
 export interface UserProfile {
   id: string;

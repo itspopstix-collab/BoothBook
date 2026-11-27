@@ -1,5 +1,11 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { AppDatabaseState, CloudStorageBackend } from '../types';
+import {
+  AppDatabaseState,
+  AppTabKey,
+  CloudStorageBackend,
+  ManagedAppUser,
+  UserRole,
+} from '../types';
 import { fetchAllPosSalesFromCloud } from '../services/posSync';
 import { getStorageEngineLabel } from '../services/nativeStorage';
 import { resyncRangeAndVerifyCloud } from '../services/offlineSync';
@@ -37,6 +43,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Info,
+  Users,
+  Plus,
+  Trash2,
 } from 'lucide-react';
 
 interface Props {
@@ -64,6 +73,104 @@ export const SettingsView: React.FC<Props> = ({
   isOnline = true,
   cloudBusy,
 }) => {
+  // Sub-tab ภายในหน้าตั้งค่า
+  const [settingsSubTab, setSettingsSubTab] = useState<'general' | 'users'>('general');
+
+  // จัดการผู้ใช้งาน & สิทธิ์แท็บ (User Sub-tab)
+  const ALL_TABS: { key: AppTabKey; label: string }[] = [
+    { key: 'pos', label: 'แคชเชียร์ POS' },
+    { key: 'events', label: 'ออกบูธ & P&L' },
+    { key: 'warehouse', label: 'คลัง' },
+    { key: 'recipes', label: 'สูตร' },
+    { key: 'price_groups', label: 'Price Group' },
+    { key: 'settings', label: 'ตั้งค่า' },
+  ];
+  const [newUserName, setNewUserName] = useState('');
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserRole, setNewUserRole] = useState<UserRole>('staff');
+  const [newUserTabs, setNewUserTabs] = useState<AppTabKey[]>(['pos']);
+
+  const handleNewUserRoleChange = (role: UserRole) => {
+    setNewUserRole(role);
+    if (role === 'owner') {
+      setNewUserTabs(ALL_TABS.map((t) => t.key));
+    } else {
+      setNewUserTabs(['pos']);
+    }
+  };
+
+  const handleToggleNewUserTab = (tab: AppTabKey) => {
+    setNewUserTabs((prev) =>
+      prev.includes(tab) ? prev.filter((t) => t !== tab) : [...prev, tab]
+    );
+  };
+
+  const handleAddManagedUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newUserName.trim() || !newUserEmail.trim()) return;
+    const newUser: ManagedAppUser = {
+      id: 'usr-' + Date.now(),
+      name: newUserName.trim(),
+      email: newUserEmail.trim(),
+      role: newUserRole,
+      allowedTabs: newUserTabs,
+      createdAt: new Date().toISOString().slice(0, 10),
+    };
+    onUpdateState((prev) => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        users: [...(prev.settings.users || []), newUser],
+      },
+    }));
+    setNewUserName('');
+    setNewUserEmail('');
+    setNewUserRole('staff');
+    setNewUserTabs(['pos']);
+  };
+
+  const handleUpdateManagedUserRole = (userId: string, role: UserRole) => {
+    onUpdateState((prev) => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        users: (prev.settings.users || []).map((u) =>
+          u.id === userId ? { ...u, role } : u
+        ),
+      },
+    }));
+  };
+
+  const handleToggleManagedUserTab = (userId: string, tab: AppTabKey) => {
+    onUpdateState((prev) => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        users: (prev.settings.users || []).map((u) => {
+          if (u.id !== userId) return u;
+          const exists = u.allowedTabs.includes(tab);
+          return {
+            ...u,
+            allowedTabs: exists
+              ? u.allowedTabs.filter((t) => t !== tab)
+              : [...u.allowedTabs, tab],
+          };
+        }),
+      },
+    }));
+  };
+
+  const handleDeleteManagedUser = (userId: string, name: string) => {
+    if (!window.confirm(`ต้องการลบผู้ใช้งาน "${name}" ใช่หรือไม่?`)) return;
+    onUpdateState((prev) => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        users: (prev.settings.users || []).filter((u) => u.id !== userId),
+      },
+    }));
+  };
+
   // Release 1: ใช้ Google Sheets เป็นหลักก่อน (comment Supabase ออกชั่วคราว)
   const [storageBackend, setStorageBackend] = useState<CloudStorageBackend>('google_sheets');
   const [sheetId, setSheetId] = useState(state.settings.sheetId);
@@ -283,6 +390,7 @@ export const SettingsView: React.FC<Props> = ({
     onUpdateState((prev) => ({
       ...prev,
       settings: {
+        ...prev.settings,
         storageBackend,
         sheetId: cleanedSheetId,
         appsScriptUrl: appsScriptUrl.trim(),
@@ -324,6 +432,214 @@ export const SettingsView: React.FC<Props> = ({
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
+      {/* Sub-tab Bar */}
+      <div className="bg-white rounded-2xl p-2 shadow-sm border border-[#eae3cf] inline-flex flex-wrap gap-1.5">
+        <button
+          type="button"
+          onClick={() => setSettingsSubTab('general')}
+          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition cursor-pointer ${
+            settingsSubTab === 'general'
+              ? 'bg-[#118cd1] text-white shadow-sm'
+              : 'text-[#6b8799] hover:bg-[#fef9ec] hover:text-[#0d3a57]'
+          }`}
+        >
+          <HardDrive className="w-4 h-4" />
+          ตั้งค่าทั่วไป &amp; Cloud
+        </button>
+        <button
+          type="button"
+          onClick={() => setSettingsSubTab('users')}
+          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition cursor-pointer ${
+            settingsSubTab === 'users'
+              ? 'bg-[#118cd1] text-white shadow-sm'
+              : 'text-[#6b8799] hover:bg-[#fef9ec] hover:text-[#0d3a57]'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          User ({(state.settings.users || []).length})
+        </button>
+      </div>
+
+      {settingsSubTab === 'users' && (
+        <div className="space-y-6">
+          <form
+            onSubmit={handleAddManagedUser}
+            className="bg-white rounded-2xl p-6 shadow-sm border border-[#eae3cf] space-y-4"
+          >
+            <h2 className="text-lg font-extrabold text-[#0d3a57] flex items-center gap-2">
+              <Users className="w-5 h-5 text-[#118cd1]" />
+              เพิ่มผู้ใช้งาน (User) &amp; กำหนดสิทธิ์แท็บ
+            </h2>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-[#6b8799] mb-1">
+                  ชื่อผู้ใช้งาน *
+                </label>
+                <input
+                  type="text"
+                  placeholder="เช่น น้องมายด์ (แคชเชียร์)"
+                  value={newUserName}
+                  onChange={(e) => setNewUserName(e.target.value)}
+                  className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:border-[#118cd1]"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-[#6b8799] mb-1">
+                  อีเมล / Username *
+                </label>
+                <input
+                  type="text"
+                  placeholder="เช่น staff@shop.com"
+                  value={newUserEmail}
+                  onChange={(e) => setNewUserEmail(e.target.value)}
+                  className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:border-[#118cd1]"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-[#6b8799] mb-1">
+                  Role *
+                </label>
+                <select
+                  value={newUserRole}
+                  onChange={(e) => handleNewUserRoleChange(e.target.value as UserRole)}
+                  className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-bold text-[#0d3a57] bg-white focus:outline-none focus:border-[#118cd1]"
+                >
+                  <option value="staff">Staff (พนักงาน)</option>
+                  <option value="owner">Owner (เจ้าของร้าน)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="bg-[#fef9ec] rounded-xl p-4 border border-[#eae3cf] space-y-2">
+              <div className="text-xs font-extrabold text-[#0d3a57]">
+                เลือกแท็บที่สามารถมองเห็นได้:
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                {ALL_TABS.map((t) => {
+                  const checked = newUserTabs.includes(t.key);
+                  return (
+                    <label
+                      key={t.key}
+                      className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition select-none ${
+                        checked
+                          ? 'bg-[#e8f5fd] border-[#118cd1] text-[#0d3a57]'
+                          : 'bg-white border-[#eae3cf] text-[#6b8799]'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => handleToggleNewUserTab(t.key)}
+                        className="w-4 h-4 accent-[#118cd1] rounded cursor-pointer"
+                      />
+                      <span className="text-xs font-bold">{t.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                className="inline-flex items-center gap-1.5 bg-[#118cd1] hover:bg-[#0e76b2] text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow-sm transition cursor-pointer"
+              >
+                <Plus className="w-4 h-4" /> เพิ่มผู้ใช้งาน
+              </button>
+            </div>
+          </form>
+
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#eae3cf] space-y-4">
+            <h3 className="text-base font-extrabold text-[#0d3a57]">
+              รายชื่อผู้ใช้งานในระบบ ({(state.settings.users || []).length})
+            </h3>
+
+            {(state.settings.users || []).length === 0 ? (
+              <div className="bg-[#fef9ec] rounded-xl p-6 text-center text-xs text-[#6b8799] border border-dashed border-[#eae3cf]">
+                ยังไม่มีผู้ใช้งานที่เพิ่มไว้ — กรอกฟอร์มด้านบนเพื่อเพิ่มผู้ใช้งานและกำหนดสิทธิ์การมองเห็นแท็บได้เลย
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {(state.settings.users || []).map((u) => (
+                  <div
+                    key={u.id}
+                    className="p-4 rounded-2xl bg-[#fef9ec]/60 border border-[#eae3cf] space-y-3"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <div className="font-extrabold text-sm text-[#0d3a57] flex items-center gap-2">
+                          <span>{u.name}</span>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                              u.role === 'owner'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-sky-100 text-sky-800'
+                            }`}
+                          >
+                            {u.role === 'owner' ? 'Owner' : 'Staff'}
+                          </span>
+                        </div>
+                        <div className="text-xs text-[#6b8799]">{u.email}</div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={u.role}
+                          onChange={(e) =>
+                            handleUpdateManagedUserRole(u.id, e.target.value as UserRole)
+                          }
+                          className="bg-white border border-[#eae3cf] rounded-lg px-2.5 py-1 text-xs font-bold text-[#0d3a57]"
+                        >
+                          <option value="staff">Staff</option>
+                          <option value="owner">Owner</option>
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteManagedUser(u.id, u.name)}
+                          className="p-1.5 rounded-lg text-rose-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                          title="ลบผู้ใช้งาน"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {ALL_TABS.map((t) => {
+                        const checked = u.allowedTabs.includes(t.key);
+                        return (
+                          <label
+                            key={t.key}
+                            className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border cursor-pointer text-xs font-bold transition select-none ${
+                              checked
+                                ? 'bg-[#e8f5fd] border-[#118cd1] text-[#0d3a57]'
+                                : 'bg-white border-[#eae3cf] text-[#6b8799]'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => handleToggleManagedUserTab(u.id, t.key)}
+                              className="w-3.5 h-3.5 accent-[#118cd1] rounded cursor-pointer"
+                            />
+                            <span className="truncate">{t.label}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {settingsSubTab === 'general' && (
+        <>
       {/* แบนเนอร์แพ็กเกจปัจจุบัน (แสดงแยก 2 แบบ: ยังไม่ได้ซื้อ vs เลือกแพ็กเกจแล้ว) */}
       {!purchasedPackage ? (
         <div className="bg-gradient-to-r from-[#0d3a57] via-[#11649c] to-[#118cd1] rounded-2xl p-5 sm:p-6 shadow-md text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1180,6 +1496,8 @@ export const SettingsView: React.FC<Props> = ({
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );
