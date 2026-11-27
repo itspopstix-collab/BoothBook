@@ -52,7 +52,10 @@ type ActiveTab = 'pos' | 'events' | 'warehouse' | 'recipes' | 'price_groups' | '
 
 const DB_REVISION_STAMP = 'boothbook-pos-unified-v1';
 
-export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile }) => {
+export const App: React.FC<{
+  userProfile: UserProfile | null;
+  onLogout?: () => void;
+}> = ({ userProfile, onLogout }) => {
   const [state, setState] = useState<AppDatabaseState>(() => loadAppState());
 
   const matchedManagedUser = useMemo(() => {
@@ -182,12 +185,12 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
     }
   }, []);
 
-  // Auto-switch to pos tab if staff
+  // Auto-switch to an allowed tab if current tab isn't permitted
   useEffect(() => {
-    if (isStaff && activeTab !== 'pos') {
-      setActiveTab('pos');
+    if (!canAccessTab(activeTab)) {
+      setActiveTab(visibleNavItems[0]?.id || 'pos');
     }
-  }, [isStaff]);
+  }, [matchedManagedUser, effectiveRole, activeTab]);
 
   // โหลดข้อมูลล่าสุดจาก iOS Native Storage / IndexedDB และ Cloud ตอนเปิดแอป
   useEffect(() => {
@@ -457,7 +460,13 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
 
             <button
               type="button"
-              onClick={() => signOut()}
+              onClick={() => {
+                if (onLogout) {
+                  onLogout();
+                } else {
+                  signOut();
+                }
+              }}
               title="ออกจากระบบ"
               className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 transition cursor-pointer ${
                 sidebarCollapsed ? 'lg:justify-center lg:px-2' : ''
