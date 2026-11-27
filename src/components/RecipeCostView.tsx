@@ -9,7 +9,8 @@ import {
 } from '../types';
 import {
   calculateRecipeUnitCost,
-  POS_SELLING_PRICE,
+  getEffectivePriceCategories,
+  getRecipeSellingPrice,
   SystemSimulationResult,
 } from '../services/fifoEngine';
 import { formatBaht } from '../services/storage';
@@ -1109,15 +1110,9 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
               <div className="bg-[#fef9ec] rounded-xl p-4 border border-[#eae3cf] space-y-2.5 text-sm">
                 {(() => {
                   const effectivePrice = selectedCost.sellingPriceSingle;
-                  const allPriceCategories = [
-                    { id: 'Original', name: 'Original', singlePrice: 79, halfPrice: 40, isBuiltIn: true },
-                    { id: 'Premium', name: 'Premium', singlePrice: 89, halfPrice: 45, isBuiltIn: true },
-                    { id: 'Signature', name: 'Signature', singlePrice: 99, halfPrice: 50, isBuiltIn: true },
-                    ...(state.settings.priceCategories || []).map((c) => ({
-                      ...c,
-                      isBuiltIn: false,
-                    })),
-                  ];
+                  const allPriceCategories = getEffectivePriceCategories(
+                    state.settings.priceCategories
+                  );
 
                   const explicitCatId = selectedRecipe.priceCategoryId;
                   const matchedById = explicitCatId
@@ -1132,8 +1127,8 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                   const selectValue = isCustomPriceMode
                     ? 'custom'
                     : (matchedById?.id || matchedByPrice?.id || 'custom');
-                  const selectedCustomCat = allPriceCategories.find(
-                    (c) => !c.isBuiltIn && c.id === selectValue
+                  const selectedCatObj = allPriceCategories.find(
+                    (c) => c.id === selectValue
                   );
 
                   const handleSaveNewPriceCategory = (e: React.FormEvent) => {
@@ -1147,7 +1142,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                       settings: {
                         ...prev.settings,
                         priceCategories: [
-                          ...(prev.settings.priceCategories || []),
+                          ...getEffectivePriceCategories(prev.settings.priceCategories),
                           { id: newCatId, name: trimmed, singlePrice: priceVal },
                         ],
                       },
@@ -1202,7 +1197,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                                 }));
                               } else {
                                 const picked = allPriceCategories.find((c) => c.id === val);
-                                const tierPrice = picked?.singlePrice ?? 79;
+                                const tierPrice = picked?.singlePrice ?? 0;
                                 setCustomPriceModeByRecipe((prev) => ({
                                   ...prev,
                                   [selectedRecipe.id]: false,
@@ -1229,27 +1224,36 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                             <option value="__add_new__">+ เพิ่มหมวดราคาใหม่...</option>
                             <option value="custom">ระบุราคาเอง</option>
                           </select>
-                          {selectedCustomCat && (
+                          {selectedCatObj && (
                             <button
                               type="button"
-                              title={`ลบหมวดราคา "${selectedCustomCat.name}"`}
+                              title={`ลบหมวดราคา "${selectedCatObj.name}"`}
                               onClick={() => {
-                                onUpdateState((prev) => ({
-                                  ...prev,
-                                  settings: {
-                                    ...prev.settings,
-                                    priceCategories: (prev.settings.priceCategories || []).filter(
-                                      (c) => c.id !== selectedCustomCat.id
-                                    ),
-                                  },
-                                  recipes: prev.recipes.map((r) =>
-                                    r.priceCategoryId === selectedCustomCat.id
-                                      ? { ...r, priceCategoryId: 'custom' }
-                                      : r
-                                  ),
-                                }));
+                                onUpdateState((prev) => {
+                                  const base = getEffectivePriceCategories(
+                                    prev.settings.priceCategories
+                                  );
+                                  return {
+                                    ...prev,
+                                    settings: {
+                                      ...prev.settings,
+                                      priceCategories: base.filter(
+                                        (c) => c.id !== selectedCatObj.id
+                                      ),
+                                    },
+                                    recipes: prev.recipes.map((r) => {
+                                      const isInDeleted =
+                                        r.priceCategoryId === selectedCatObj.id ||
+                                        (!r.priceCategoryId &&
+                                          getRecipeSellingPrice(r) === selectedCatObj.singlePrice);
+                                      return isInDeleted
+                                        ? { ...r, priceCategoryId: 'custom', sellingPrice: 0 }
+                                        : r;
+                                    }),
+                                  };
+                                });
                               }}
-                              className="p-1 rounded-md text-rose-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                              className="p-1 rounded-md text-rose-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                             >
                               <X className="w-3.5 h-3.5" />
                             </button>

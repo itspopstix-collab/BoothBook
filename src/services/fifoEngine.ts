@@ -17,6 +17,18 @@ export const POS_SELLING_PRICE: Record<string, { single: number; half: number; a
   Signature: { single: 99, half: 50, affogato: 89 },
 };
 
+export const DEFAULT_PRICE_CATEGORIES = [
+  { id: 'Original', name: 'Original', singlePrice: POS_SELLING_PRICE.Original.single, halfPrice: POS_SELLING_PRICE.Original.half },
+  { id: 'Premium', name: 'Premium', singlePrice: POS_SELLING_PRICE.Premium.single, halfPrice: POS_SELLING_PRICE.Premium.half },
+  { id: 'Signature', name: 'Signature', singlePrice: POS_SELLING_PRICE.Signature.single, halfPrice: POS_SELLING_PRICE.Signature.half },
+];
+
+export function getEffectivePriceCategories<T extends { id: string; name: string; singlePrice: number; halfPrice?: number }>(
+  priceCategories?: T[]
+): { id: string; name: string; singlePrice: number; halfPrice?: number }[] {
+  return priceCategories !== undefined ? priceCategories : DEFAULT_PRICE_CATEGORIES;
+}
+
 export function getRecipeSellingPrice(recipe?: FlavorRecipe | null): number {
   if (!recipe) return 0;
   if (typeof recipe.sellingPrice === 'number' && !Number.isNaN(recipe.sellingPrice)) {

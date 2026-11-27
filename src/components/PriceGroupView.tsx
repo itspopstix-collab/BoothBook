@@ -4,7 +4,10 @@ import {
   FlavorRecipe,
   PriceCategoryOption,
 } from '../types';
-import { getRecipeSellingPrice, POS_SELLING_PRICE } from '../services/fifoEngine';
+import {
+  getEffectivePriceCategories,
+  getRecipeSellingPrice,
+} from '../services/fifoEngine';
 import { formatBaht } from '../services/storage';
 import {
   Tags,
@@ -22,43 +25,13 @@ interface Props {
   onUpdateState: (updater: (prev: AppDatabaseState) => AppDatabaseState) => void;
 }
 
-interface ResolvedPriceGroup extends PriceCategoryOption {
-  isBuiltIn: boolean;
-}
-
 export const PriceGroupView: React.FC<Props> = ({ state, onUpdateState }) => {
-  const allGroups: ResolvedPriceGroup[] = useMemo(
-    () => [
-      {
-        id: 'Original',
-        name: 'Original',
-        singlePrice: POS_SELLING_PRICE.Original.single,
-        halfPrice: POS_SELLING_PRICE.Original.half,
-        isBuiltIn: true,
-      },
-      {
-        id: 'Premium',
-        name: 'Premium',
-        singlePrice: POS_SELLING_PRICE.Premium.single,
-        halfPrice: POS_SELLING_PRICE.Premium.half,
-        isBuiltIn: true,
-      },
-      {
-        id: 'Signature',
-        name: 'Signature',
-        singlePrice: POS_SELLING_PRICE.Signature.single,
-        halfPrice: POS_SELLING_PRICE.Signature.half,
-        isBuiltIn: true,
-      },
-      ...(state.settings.priceCategories || []).map((c) => ({
-        ...c,
-        isBuiltIn: false,
-      })),
-    ],
+  const allGroups: PriceCategoryOption[] = useMemo(
+    () => getEffectivePriceCategories(state.settings.priceCategories),
     [state.settings.priceCategories]
   );
 
-  const [selectedGroupId, setSelectedGroupId] = useState<string>('Original');
+  const [selectedGroupId, setSelectedGroupId] = useState<string>(allGroups[0]?.id || '');
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupPrice, setNewGroupPrice] = useState('');
   const [newGroupHalfPrice, setNewGroupHalfPrice] = useState('');
@@ -126,7 +99,7 @@ export const PriceGroupView: React.FC<Props> = ({ state, onUpdateState }) => {
       settings: {
         ...prev.settings,
         priceCategories: [
-          ...(prev.settings.priceCategories || []),
+          ...getEffectivePriceCategories(prev.settings.priceCategories),
           { id: newId, name, singlePrice: price, halfPrice: half },
         ],
       },
@@ -138,27 +111,33 @@ export const PriceGroupView: React.FC<Props> = ({ state, onUpdateState }) => {
     setShowAddGroupForm(false);
   };
 
-  const handleDeletePriceGroup = (group: ResolvedPriceGroup) => {
-    if (group.isBuiltIn) return;
-    if (!window.confirm(`ต้องการลบ Price Group "${group.name}" ใช่หรือไม่?`)) return;
-    onUpdateState((prev) => ({
-      ...prev,
-      settings: {
-        ...prev.settings,
-        priceCategories: (prev.settings.priceCategories || []).filter(
-          (c) => c.id !== group.id
-        ),
-      },
-      recipes: prev.recipes.map((r) =>
-        r.priceCategoryId === group.id ? { ...r, priceCategoryId: 'custom' } : r
-      ),
-    }));
+  const handleDeletePriceGroup = (group: PriceCategoryOption) => {
+    if (!window.confirm(`ต้องการลบ Price Group "${group.name}" ใช่หรือไม่? (สินค้าที่อยู่ในกลุ่มนี้จะถูกตั้งราคาเป็น ฿0)`)) return;
+    const remainingGroups = allGroups.filter((c) => c.id !== group.id);
+    onUpdateState((prev) => {
+      const base = getEffectivePriceCategories(prev.settings.priceCategories);
+      return {
+        ...prev,
+        settings: {
+          ...prev.settings,
+          priceCategories: base.filter((c) => c.id !== group.id),
+        },
+        recipes: prev.recipes.map((r) => {
+          const isInDeletedGroup =
+            r.priceCategoryId === group.id ||
+            (!r.priceCategoryId && getRecipeSellingPrice(r) === group.singlePrice);
+          return isInDeletedGroup
+            ? { ...r, priceCategoryId: 'custom', sellingPrice: 0 }
+            : r;
+        }),
+      };
+    });
     if (selectedGroupId === group.id) {
-      setSelectedGroupId('Original');
+      setSelectedGroupId(remainingGroups[0]?.id || '');
     }
   };
 
-  const handleAssignRecipeToGroup = (recipeId: string, group: ResolvedPriceGroup) => {
+  const handleAssignRecipeToGroup = (recipeId: string, group: PriceCategoryOption) => {
     onUpdateState((prev) => ({
       ...prev,
       recipes: prev.recipes.map((r) =>
@@ -334,11 +313,6 @@ export const PriceGroupView: React.FC<Props> = ({ state, onUpdateState }) => {
                     <span className="font-extrabold text-sm text-[#0d3a57] truncate">
                       {group.name}
                     </span>
-                    {!group.isBuiltIn && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">
-                        กำหนดเอง
-                      </span>
-                    )}
                   </div>
                   <div className="text-xs font-bold text-[#118cd1] mt-0.5">
                     {formatBaht(group.singlePrice)}
@@ -350,19 +324,17 @@ export const PriceGroupView: React.FC<Props> = ({ state, onUpdateState }) => {
                     </span>
                   </div>
                 </div>
-                {!group.isBuiltIn && (
-                  <button
-                    type="button"
-                    title="ลบ Price Group นี้"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeletePriceGroup(group);
-                    }}
-                    className="p-1.5 rounded-lg text-rose-400 hover:text-rose-600 hover:bg-rose-50 transition"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
+                <button
+                  type="button"
+                  title={`ลบ Price Group "${group.name}"`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeletePriceGroup(group);
+                  }}
+                  className="p-1.5 rounded-lg text-rose-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             );
           })}
