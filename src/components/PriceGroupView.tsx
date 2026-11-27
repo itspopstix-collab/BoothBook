@@ -345,7 +345,7 @@ export const PriceGroupView: React.FC<Props> = ({ state, onUpdateState }) => {
                       <div
                         key={r.id}
                         onClick={() => toggleRecipeForNewGroup(r.id)}
-                        className={`flex items-start gap-2 p-2.5 rounded-xl border cursor-pointer transition select-none ${
+                        className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition select-none ${
                           checked
                             ? 'bg-[#e8f5fd] border-[#118cd1] shadow-xs'
                             : 'bg-[#fef9ec]/60 border-[#eae3cf] hover:border-[#118cd1]/50'
@@ -356,8 +356,19 @@ export const PriceGroupView: React.FC<Props> = ({ state, onUpdateState }) => {
                           checked={checked}
                           onChange={() => toggleRecipeForNewGroup(r.id)}
                           onClick={(e) => e.stopPropagation()}
-                          className="w-4 h-4 mt-0.5 accent-[#118cd1] rounded cursor-pointer shrink-0"
+                          className="w-4 h-4 accent-[#118cd1] rounded cursor-pointer shrink-0"
                         />
+                        {r.image ? (
+                          <img
+                            src={r.image}
+                            alt={r.name}
+                            className="w-9 h-9 rounded-lg object-cover shrink-0 border border-[#eae3cf]"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-lg bg-[#e8f5fd] text-[#118cd1] flex items-center justify-center shrink-0">
+                            <IceCream className="w-4 h-4" />
+                          </div>
+                        )}
                         <div className="min-w-0 flex-1">
                           <div className="font-bold text-xs text-[#0d3a57] truncate">
                             {r.name}
@@ -606,12 +617,25 @@ export const PriceGroupView: React.FC<Props> = ({ state, onUpdateState }) => {
                       onClick={() => handleAssignRecipeToGroup(r.id, selectedGroup)}
                       className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-[#fef9ec] hover:bg-[#e8f5fd] border border-[#eae3cf] hover:border-[#118cd1] text-left transition cursor-pointer"
                     >
-                      <div className="min-w-0">
-                        <div className="font-bold text-xs text-[#0d3a57] truncate">
-                          {r.name}
-                        </div>
-                        <div className="text-[11px] text-[#6b8799] truncate">
-                          {r.category} · เดิม {formatBaht(getRecipeSellingPrice(r))}
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {r.image ? (
+                          <img
+                            src={r.image}
+                            alt={r.name}
+                            className="w-9 h-9 rounded-lg object-cover shrink-0 border border-[#eae3cf]"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-lg bg-[#e8f5fd] text-[#118cd1] flex items-center justify-center shrink-0">
+                            <IceCream className="w-4 h-4" />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <div className="font-bold text-xs text-[#0d3a57] truncate">
+                            {r.name}
+                          </div>
+                          <div className="text-[11px] text-[#6b8799] truncate">
+                            {r.category} · เดิม {formatBaht(getRecipeSellingPrice(r))}
+                          </div>
                         </div>
                       </div>
                       <span className="shrink-0 inline-flex items-center gap-1 text-[11px] font-extrabold text-[#118cd1] bg-white px-2 py-1 rounded-lg border border-[#eae3cf]">
