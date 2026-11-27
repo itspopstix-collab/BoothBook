@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AppDatabaseState, PosSaleRow } from '../types';
 import { getRecipeSellingPrice } from '../services/fifoEngine';
 import { generatePromptPayPayload, generateQrDataUrl } from '../services/promptpay';
@@ -43,6 +43,16 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
   const [payMethod, setPayMethod] = useState<'cash' | 'qr'>('qr');
   const [cashReceived, setCashReceived] = useState<number>(0);
   const [qrImageUrl, setQrImageUrl] = useState<string>('');
+  const [activeCatJump, setActiveCatJump] = useState<string>('');
+  const categorySectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const handleJumpToCategory = (cat: string) => {
+    setActiveCatJump(cat);
+    const el = categorySectionRefs.current[cat];
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
@@ -196,9 +206,46 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* ซ้าย: รายการสินค้า (8 คอลัมน์) */}
-        <div className="lg:col-span-8 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* ซ้ายสุด: Sub-Tab แสดง Category สำหรับกดเลื่อนไปหมวดนั้นทันที */}
+        {categories.length > 0 && (
+          <div className="lg:col-span-2 bg-white rounded-2xl p-3 border border-[#eae3cf] shadow-sm lg:sticky lg:top-4">
+            <div className="text-[11px] font-extrabold text-[#6b8799] px-1.5 mb-2">
+              หมวดหมู่ ({categories.length})
+            </div>
+            <div className="flex lg:flex-col gap-1.5 overflow-x-auto lg:overflow-x-visible pb-1 lg:pb-0">
+              {categories.map((cat) => {
+                const count = products.filter((p) => p.category === cat).length;
+                if (count === 0) return null;
+                const isSelected = (activeCatJump || categories[0]) === cat;
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => handleJumpToCategory(cat)}
+                    className={`shrink-0 flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer text-left ${
+                      isSelected
+                        ? 'bg-[#118cd1] text-white shadow-xs'
+                        : 'bg-[#fef9ec]/70 text-[#0d3a57] hover:bg-[#e8f5fd]'
+                    }`}
+                  >
+                    <span className="truncate">{cat}</span>
+                    <span
+                      className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                        isSelected ? 'bg-white/20 text-white' : 'bg-white text-[#6b8799]'
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* กลาง: รายการสินค้า */}
+        <div className={`${categories.length > 0 ? 'lg:col-span-6' : 'lg:col-span-8'} space-y-6`}>
           {products.length === 0 ? (
             <div className="bg-white rounded-2xl border border-dashed border-[#eae3cf] p-12 text-center space-y-2">
               <Package className="w-10 h-10 text-[#6b8799]/50 mx-auto" />
@@ -213,7 +260,13 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
               if (catProducts.length === 0) return null;
 
               return (
-                <div key={cat} className="space-y-2.5">
+                <div
+                  key={cat}
+                  ref={(el) => {
+                    categorySectionRefs.current[cat] = el;
+                  }}
+                  className="space-y-2.5 scroll-mt-4"
+                >
                   <div className="flex items-center justify-between px-1">
                     <span className="font-extrabold text-[#0d3a57] text-sm flex items-center gap-1.5">
                       <Tag className="w-4 h-4 text-[#118cd1]" />
