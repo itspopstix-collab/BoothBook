@@ -34,7 +34,8 @@ export const PriceGroupView: React.FC<Props> = ({ state, onUpdateState }) => {
   const [selectedGroupId, setSelectedGroupId] = useState<string>(allGroups[0]?.id || '');
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupPrice, setNewGroupPrice] = useState('');
-  const [newGroupHalfPrice, setNewGroupHalfPrice] = useState('');
+  const [newGroupRecipeSearch, setNewGroupRecipeSearch] = useState('');
+  const [selectedRecipeIdsForNewGroup, setSelectedRecipeIdsForNewGroup] = useState<string[]>([]);
   const [showAddGroupForm, setShowAddGroupForm] = useState(false);
 
   // ค้นหาสินค้าเพื่อดึงเข้ากลุ่ม
@@ -84,30 +85,53 @@ export const PriceGroupView: React.FC<Props> = ({ state, onUpdateState }) => {
     });
   }, [state.recipes, selectedGroup, assignSearch, allGroups]);
 
+  const filteredRecipesForNewGroup = useMemo(() => {
+    const q = newGroupRecipeSearch.trim().toLowerCase();
+    if (!q) return state.recipes;
+    return state.recipes.filter(
+      (r) =>
+        r.name.toLowerCase().includes(q) ||
+        (r.category || '').toLowerCase().includes(q)
+    );
+  }, [state.recipes, newGroupRecipeSearch]);
+
+  const toggleRecipeForNewGroup = (recipeId: string) => {
+    setSelectedRecipeIdsForNewGroup((prev) =>
+      prev.includes(recipeId) ? prev.filter((id) => id !== recipeId) : [...prev, recipeId]
+    );
+  };
+
   const handleAddPriceGroup = (e: React.FormEvent) => {
     e.preventDefault();
     const name = newGroupName.trim();
     const price = Math.max(0, parseFloat(newGroupPrice) || 0);
-    const half = newGroupHalfPrice.trim()
-      ? Math.max(0, parseFloat(newGroupHalfPrice) || 0)
-      : undefined;
     if (!name) return;
 
     const newId = 'pcat-' + Date.now();
+    const selectedSet = new Set(selectedRecipeIdsForNewGroup);
     onUpdateState((prev) => ({
       ...prev,
       settings: {
         ...prev.settings,
         priceCategories: [
           ...getEffectivePriceCategories(prev.settings.priceCategories),
-          { id: newId, name, singlePrice: price, halfPrice: half },
+          { id: newId, name, singlePrice: price },
         ],
       },
+      recipes:
+        selectedSet.size > 0
+          ? prev.recipes.map((r) =>
+              selectedSet.has(r.id)
+                ? { ...r, priceCategoryId: newId, sellingPrice: price }
+                : r
+            )
+          : prev.recipes,
     }));
     setSelectedGroupId(newId);
     setNewGroupName('');
     setNewGroupPrice('');
-    setNewGroupHalfPrice('');
+    setNewGroupRecipeSearch('');
+    setSelectedRecipeIdsForNewGroup([]);
     setShowAddGroupForm(false);
   };
 
@@ -224,7 +248,7 @@ export const PriceGroupView: React.FC<Props> = ({ state, onUpdateState }) => {
               <X className="w-4 h-4" />
             </button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-[#6b8799] mb-1">
                 ชื่อ Price Group *
@@ -254,19 +278,108 @@ export const PriceGroupView: React.FC<Props> = ({ state, onUpdateState }) => {
                 required
               />
             </div>
-            <div>
-              <label className="block text-xs font-bold text-[#6b8799] mb-1">
-                ราคาครึ่งสกู๊ป (฿) (ถ้ามี)
-              </label>
-              <input
-                type="number"
-                min={0}
-                step="any"
-                placeholder="ไม่บังคับ"
-                value={newGroupHalfPrice}
-                onChange={(e) => setNewGroupHalfPrice(e.target.value)}
-                className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-bold focus:outline-none focus:border-[#118cd1]"
-              />
+          </div>
+
+          {/* Data table เลือกสินค้าเพื่อเพิ่มเข้า Price Group นี้ */}
+          <div className="border border-[#eae3cf] rounded-xl overflow-hidden bg-[#fef9ec]/50">
+            <div className="p-3 bg-[#fef9ec] border-b border-[#eae3cf] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-extrabold text-[#0d3a57]">
+                  เลือกสินค้าเพิ่มเข้า Price Group นี้
+                </span>
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#e8f5fd] text-[#118cd1]">
+                  เลือกแล้ว {selectedRecipeIdsForNewGroup.length} รายการ
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-[#6b8799] absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="ค้นหาสินค้า..."
+                    value={newGroupRecipeSearch}
+                    onChange={(e) => setNewGroupRecipeSearch(e.target.value)}
+                    className="bg-white border border-[#eae3cf] rounded-lg pl-8 pr-2.5 py-1 text-xs font-semibold focus:outline-none focus:border-[#118cd1]"
+                  />
+                </div>
+                {filteredRecipesForNewGroup.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const visibleIds = filteredRecipesForNewGroup.map((r) => r.id);
+                      const allVisibleSelected = visibleIds.every((id) =>
+                        selectedRecipeIdsForNewGroup.includes(id)
+                      );
+                      if (allVisibleSelected) {
+                        setSelectedRecipeIdsForNewGroup((prev) =>
+                          prev.filter((id) => !visibleIds.includes(id))
+                        );
+                      } else {
+                        setSelectedRecipeIdsForNewGroup((prev) =>
+                          Array.from(new Set([...prev, ...visibleIds]))
+                        );
+                      }
+                    }}
+                    className="text-[11px] font-bold text-[#118cd1] hover:underline whitespace-nowrap cursor-pointer"
+                  >
+                    {filteredRecipesForNewGroup.every((r) =>
+                      selectedRecipeIdsForNewGroup.includes(r.id)
+                    )
+                      ? 'ยกเลิกทั้งหมด'
+                      : 'เลือกทั้งหมด'}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="max-h-60 overflow-y-auto bg-white">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead className="bg-[#fef9ec] text-[#6b8799] sticky top-0 border-b border-[#eae3cf]">
+                  <tr>
+                    <th className="py-2 px-3 w-10 text-center">เลือก</th>
+                    <th className="py-2 px-3 font-bold">ชื่อสินค้า</th>
+                    <th className="py-2 px-3 font-bold">หมวดหมู่</th>
+                    <th className="py-2 px-3 font-bold text-right">ราคาเดิม</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#eae3cf]/60">
+                  {filteredRecipesForNewGroup.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="py-6 text-center text-[#6b8799]">
+                        ไม่พบสินค้าที่ตรงกับการค้นหา
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredRecipesForNewGroup.map((r) => {
+                      const checked = selectedRecipeIdsForNewGroup.includes(r.id);
+                      return (
+                        <tr
+                          key={r.id}
+                          onClick={() => toggleRecipeForNewGroup(r.id)}
+                          className={`cursor-pointer transition ${
+                            checked ? 'bg-[#e8f5fd]/60' : 'hover:bg-[#fef9ec]/60'
+                          }`}
+                        >
+                          <td className="py-2 px-3 text-center">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleRecipeForNewGroup(r.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-4 h-4 accent-[#118cd1] rounded cursor-pointer"
+                            />
+                          </td>
+                          <td className="py-2 px-3 font-bold text-[#0d3a57]">{r.name}</td>
+                          <td className="py-2 px-3 text-[#6b8799]">{r.category || '-'}</td>
+                          <td className="py-2 px-3 text-right font-bold text-[#0d3a57]">
+                            {formatBaht(getRecipeSellingPrice(r))}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
           <div className="flex justify-end gap-2">
