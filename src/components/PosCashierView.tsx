@@ -355,7 +355,7 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
           </div>
 
           {/* Cart items list */}
-          <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+          <div className="space-y-2.5 max-h-[190px] overflow-y-auto pr-1">
             {cart.length === 0 ? (
               <div className="text-center py-8 text-xs text-[#6b8799]">
                 ยังไม่มีรายการในตะกร้า
