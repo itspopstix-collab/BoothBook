@@ -148,6 +148,18 @@ export const RecipeCostView: React.FC<Props> = ({
   const [newIngVendor, setNewIngVendor] = useState('');
   const [newIngWeight, setNewIngWeight] = useState('1000');
   const [newIngPrice, setNewIngPrice] = useState('');
+  const [newIngPurchaseDate, setNewIngPurchaseDate] = useState(() =>
+    new Date().toISOString().slice(0, 10)
+  );
+
+  // Modal เพิ่ม Slot (Lot) ใหม่ให้วัตถุดิบที่มีอยู่แล้ว
+  const [addSlotTargetIng, setAddSlotTargetIng] = useState<Ingredient | null>(null);
+  const [slotVendor, setSlotVendor] = useState('');
+  const [slotWeight, setSlotWeight] = useState('1000');
+  const [slotPrice, setSlotPrice] = useState('');
+  const [slotPurchaseDate, setSlotPurchaseDate] = useState(() =>
+    new Date().toISOString().slice(0, 10)
+  );
 
   // เพิ่มวัตถุดิบที่มีอยู่แล้วลงในสูตรที่เลือก
   const [addIngId, setAddIngId] = useState<string>(state.ingredients[0]?.id || '');
@@ -249,7 +261,7 @@ export const RecipeCostView: React.FC<Props> = ({
     const newLot: IngredientLot = {
       id: newLotId,
       ingredientId: newIngId,
-      purchaseDate: new Date().toISOString().slice(0, 10),
+      purchaseDate: newIngPurchaseDate || new Date().toISOString().slice(0, 10),
       vendor: newIngVendor.trim() || 'ล็อตตั้งต้น',
       weightGrams: weightG,
       totalPrice: totalP,
@@ -259,14 +271,41 @@ export const RecipeCostView: React.FC<Props> = ({
     onUpdateState((prev) => ({
       ...prev,
       ingredients: [...prev.ingredients, newIng],
-      ingredientLots: totalP > 0 ? [...prev.ingredientLots, newLot] : prev.ingredientLots,
+      ingredientLots:
+        newIngPrice !== '' ? [...prev.ingredientLots, newLot] : prev.ingredientLots,
     }));
 
     setAddIngId(newIngId);
     setNewIngName('');
     setNewIngVendor('');
     setNewIngPrice('');
+    setNewIngPurchaseDate(new Date().toISOString().slice(0, 10));
     setShowQuickNewIngModal(false);
+  };
+
+  const handleSaveAddSlot = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!addSlotTargetIng) return;
+    const weightG = Math.max(1, parseFloat(slotWeight) || 1000);
+    const totalP = Math.max(0, parseFloat(slotPrice) || 0);
+    const newLot: IngredientLot = {
+      id: 'ilot-' + Date.now(),
+      ingredientId: addSlotTargetIng.id,
+      purchaseDate: slotPurchaseDate || new Date().toISOString().slice(0, 10),
+      vendor: slotVendor.trim() || 'ไม่ระบุ Vendor',
+      weightGrams: weightG,
+      totalPrice: totalP,
+      costPerGram: totalP / weightG,
+    };
+    onUpdateState((prev) => ({
+      ...prev,
+      ingredientLots: [...prev.ingredientLots, newLot],
+    }));
+    setAddSlotTargetIng(null);
+    setSlotVendor('');
+    setSlotWeight('1000');
+    setSlotPrice('');
+    setSlotPurchaseDate(new Date().toISOString().slice(0, 10));
   };
 
   const handleCreateNewProductionRun = () => {
@@ -842,6 +881,20 @@ export const RecipeCostView: React.FC<Props> = ({
                         )}
                       </div>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAddSlotTargetIng(ing);
+                        setSlotVendor('');
+                        setSlotWeight('1000');
+                        setSlotPrice('');
+                        setSlotPurchaseDate(new Date().toISOString().slice(0, 10));
+                      }}
+                      className="w-full inline-flex items-center justify-center gap-1.5 bg-[#118cd1]/10 hover:bg-[#118cd1] text-[#118cd1] hover:text-white font-black py-2 px-3 rounded-xl text-xs transition cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Add Slot
+                    </button>
                   </div>
                 );
               })}
@@ -1954,6 +2007,110 @@ export const RecipeCostView: React.FC<Props> = ({
         </div>
       )}
 
+      {/* Modal เพิ่ม Slot (Lot) ใหม่ให้วัตถุดิบ */}
+      {addSlotTargetIng && (
+        <div className="fixed inset-0 bg-[#0d3a57]/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-[#eae3cf]">
+            <h3 className="text-lg font-extrabold text-[#0d3a57]">
+              Add Slot — {addSlotTargetIng.name}
+            </h3>
+            <p className="text-xs text-[#6b8799] mt-1">
+              บันทึกล็อตราคาซื้อใหม่สำหรับ {addSlotTargetIng.name}
+            </p>
+            <form onSubmit={handleSaveAddSlot} className="space-y-3 mt-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-[#6b8799] mb-1">
+                    ชื่อร้านที่ซื้อ (Vendor) *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="เช่น ProBake, Makro"
+                    value={slotVendor}
+                    onChange={(e) => setSlotVendor(e.target.value)}
+                    className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-semibold"
+                    required
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-[#6b8799] mb-1">
+                    วันที่ซื้อ *
+                  </label>
+                  <input
+                    type="date"
+                    value={slotPurchaseDate}
+                    onChange={(e) => setSlotPurchaseDate(e.target.value)}
+                    className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-semibold"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-[#6b8799] mb-1">
+                    ปริมาณที่ซื้อมา (กรัม) *
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    min={1}
+                    placeholder="เช่น 1000"
+                    value={slotWeight}
+                    onChange={(e) => setSlotWeight(e.target.value)}
+                    className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-bold"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-[#6b8799] mb-1">
+                    ราคารวมที่ซื้อมา (บาท) *
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    min={0}
+                    placeholder="เช่น 450"
+                    value={slotPrice}
+                    onChange={(e) => setSlotPrice(e.target.value)}
+                    className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-bold"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="bg-[#fef9ec] p-3 rounded-xl border border-[#eae3cf] flex items-center justify-between text-xs">
+                <span className="font-bold text-[#6b8799]">ราคาต่อกรัมที่คำนวณได้:</span>
+                <b className="text-sm text-[#118cd1]">
+                  {formatBaht(
+                    (parseFloat(slotPrice) || 0) / Math.max(1, parseFloat(slotWeight) || 1),
+                    4
+                  )}{' '}
+                  / กรัม
+                </b>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setAddSlotTargetIng(null)}
+                  className="px-4 py-2 rounded-xl font-bold text-sm text-[#6b8799]"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl font-bold text-sm bg-[#118cd1] hover:bg-[#0e76b2] text-white cursor-pointer"
+                >
+                  บันทึก Slot
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Modal เพิ่มวัตถุดิบใหม่พร้อมใส่ล็อตราคาซื้อแรกได้ทันที */}
       {showQuickNewIngModal && (
         <div className="fixed inset-0 bg-[#0d3a57]/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
@@ -1979,21 +2136,22 @@ export const RecipeCostView: React.FC<Props> = ({
                 />
               </div>
 
+              <div>
+                <label className="block text-xs font-bold text-[#6b8799] mb-1">หมวดหมู่</label>
+                <select
+                  value={newIngCat}
+                  onChange={(e) => setNewIngCat(e.target.value as Ingredient['category'])}
+                  className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-semibold"
+                >
+                  <option value="flavoring">วัตถุดิบหลัก</option>
+                  <option value="dairy">วัตถุดิบสด / แช่เย็น</option>
+                  <option value="base">วัตถุดิบแห้ง / ส่วนผสม</option>
+                  <option value="topping">ส่วนเสริม / ตกแต่ง</option>
+                  <option value="beverage">เครื่องดื่ม / อื่นๆ</option>
+                </select>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-[#6b8799] mb-1">หมวดหมู่</label>
-                  <select
-                    value={newIngCat}
-                    onChange={(e) => setNewIngCat(e.target.value as Ingredient['category'])}
-                    className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-semibold"
-                  >
-                    <option value="flavoring">วัตถุดิบหลัก</option>
-                    <option value="dairy">วัตถุดิบสด / แช่เย็น</option>
-                    <option value="base">วัตถุดิบแห้ง / ส่วนผสม</option>
-                    <option value="topping">ส่วนเสริม / ตกแต่ง</option>
-                    <option value="beverage">เครื่องดื่ม / อื่นๆ</option>
-                  </select>
-                </div>
                 <div>
                   <label className="block text-xs font-bold text-[#6b8799] mb-1">
                     ชื่อร้านที่ซื้อ (Vendor)
@@ -2004,6 +2162,18 @@ export const RecipeCostView: React.FC<Props> = ({
                     value={newIngVendor}
                     onChange={(e) => setNewIngVendor(e.target.value)}
                     className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-[#6b8799] mb-1">
+                    วันที่ซื้อ *
+                  </label>
+                  <input
+                    type="date"
+                    value={newIngPurchaseDate}
+                    onChange={(e) => setNewIngPurchaseDate(e.target.value)}
+                    className="w-full border-2 border-[#eae3cf] rounded-xl px-3 py-2 text-sm font-semibold"
+                    required
                   />
                 </div>
               </div>
