@@ -101,7 +101,7 @@ export const PosCashierView: React.FC<PosCashierViewProps> = ({
     setCart((prev) => {
       const existing = prev.find((c) => c.productId === prod.id);
       if (existing) {
-        return prev.map((c) => (c.productId === prod.id ? { ...c, qty: c.qty + 1 } : c));
+        return prev.filter((c) => c.productId !== prod.id);
       }
       return [
         ...prev,
