@@ -17,7 +17,6 @@ import {
   IceCream,
   Check,
   X,
-  PackagePlus,
 } from 'lucide-react';
 
 interface Props {
@@ -38,24 +37,12 @@ export const PriceGroupView: React.FC<Props> = ({ state, onUpdateState }) => {
   const [selectedRecipeIdsForNewGroup, setSelectedRecipeIdsForNewGroup] = useState<string[]>([]);
   const [showAddGroupForm, setShowAddGroupForm] = useState(false);
 
-  // ค้นหาสินค้าเพื่อดึงเข้ากลุ่ม
+  // ค้นหาและเลือกสินค้าเพื่อดึงเข้ากลุ่ม
   const [assignSearch, setAssignSearch] = useState('');
-  // สร้างสินค้าใหม่ในกลุ่มราคานี้เลย
-  const [showCreateProductForm, setShowCreateProductForm] = useState(false);
-  const [newProdName, setNewProdName] = useState('');
-  const [newProdCategory, setNewProdCategory] = useState('Ice Cream');
-  const [newProdUnit, setNewProdUnit] = useState('ชิ้น');
+  const [selectedRecipeIdsToAdd, setSelectedRecipeIdsToAdd] = useState<string[]>([]);
 
   const selectedGroup =
     allGroups.find((g) => g.id === selectedGroupId) || allGroups[0];
-
-  const existingCategories = useMemo(() => {
-    const set = new Set<string>(['Ice Cream', 'กาแฟ', 'ชา & นม', 'เบเกอรี่']);
-    state.recipes.forEach((r) => {
-      if (r.category?.trim()) set.add(r.category.trim());
-    });
-    return Array.from(set);
-  }, [state.recipes]);
 
   const getRecipeGroupId = (r: FlavorRecipe): string | null => {
     if (r.priceCategoryId === 'custom') return null;
@@ -161,19 +148,39 @@ export const PriceGroupView: React.FC<Props> = ({ state, onUpdateState }) => {
     }
   };
 
-  const handleAssignRecipeToGroup = (recipeId: string, group: PriceCategoryOption) => {
+  const toggleRecipeToAdd = (recipeId: string) => {
+    setSelectedRecipeIdsToAdd((prev) =>
+      prev.includes(recipeId) ? prev.filter((id) => id !== recipeId) : [...prev, recipeId]
+    );
+  };
+
+  const handleConfirmAddSelectedToGroup = () => {
+    if (!selectedGroup || selectedRecipeIdsToAdd.length === 0) return;
+    const selectedSet = new Set(selectedRecipeIdsToAdd);
+    const alreadyGroupedCount = state.recipes.filter(
+      (r) => selectedSet.has(r.id) && getRecipeGroupId(r) !== null
+    ).length;
+
+    const confirmMsg =
+      alreadyGroupedCount > 0
+        ? `ยืนยันเพิ่มสินค้า ${selectedRecipeIdsToAdd.length} รายการเข้ากลุ่ม "${selectedGroup.name}" (${formatBaht(selectedGroup.singlePrice)})?\n(มี ${alreadyGroupedCount} รายการที่จะถูกย้ายมาจากกลุ่มราคาเดิม)`
+        : `ยืนยันเพิ่มสินค้า ${selectedRecipeIdsToAdd.length} รายการเข้ากลุ่ม "${selectedGroup.name}" (${formatBaht(selectedGroup.singlePrice)})?`;
+
+    if (!window.confirm(confirmMsg)) return;
+
     onUpdateState((prev) => ({
       ...prev,
       recipes: prev.recipes.map((r) =>
-        r.id === recipeId
+        selectedSet.has(r.id)
           ? {
               ...r,
-              priceCategoryId: group.id,
-              sellingPrice: group.singlePrice,
+              priceCategoryId: selectedGroup.id,
+              sellingPrice: selectedGroup.singlePrice,
             }
           : r
       ),
     }));
+    setSelectedRecipeIdsToAdd([]);
   };
 
   const handleRemoveRecipeFromGroup = (recipeId: string) => {
@@ -183,31 +190,6 @@ export const PriceGroupView: React.FC<Props> = ({ state, onUpdateState }) => {
         r.id === recipeId ? { ...r, priceCategoryId: 'custom' } : r
       ),
     }));
-  };
-
-  const handleCreateProductInGroup = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedGroup || !newProdName.trim()) return;
-    const newRecipe: FlavorRecipe = {
-      id: 'flav-' + Date.now(),
-      name: newProdName.trim(),
-      category: newProdCategory.trim() || 'Ice Cream',
-      sellingPrice: selectedGroup.singlePrice,
-      priceCategoryId: selectedGroup.id,
-      unitLabel: newProdUnit.trim() || 'ชิ้น',
-      mode: 'per_cup',
-      batchYieldCups: 1,
-      gramsPerCup: 80,
-      gramsPerHalfCup: 40,
-      halfScoopRatio: 0.5,
-      ingredients: [],
-    };
-    onUpdateState((prev) => ({
-      ...prev,
-      recipes: [...prev.recipes, newRecipe],
-    }));
-    setNewProdName('');
-    setShowCreateProductForm(false);
   };
 
   return (
@@ -341,6 +323,7 @@ export const PriceGroupView: React.FC<Props> = ({ state, onUpdateState }) => {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                   {filteredRecipesForNewGroup.map((r) => {
                     const checked = selectedRecipeIdsForNewGroup.includes(r.id);
+                    const currentGroup = allGroups.find((g) => g.id === getRecipeGroupId(r));
                     return (
                       <div
                         key={r.id}
@@ -376,8 +359,15 @@ export const PriceGroupView: React.FC<Props> = ({ state, onUpdateState }) => {
                           <div className="text-[11px] text-[#6b8799] truncate">
                             {r.category || '-'}
                           </div>
-                          <div className="text-[11px] font-extrabold text-[#118cd1] mt-0.5">
-                            เดิม {formatBaht(getRecipeSellingPrice(r))}
+                          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                            <span className="text-[11px] font-extrabold text-[#118cd1]">
+                              เดิม {formatBaht(getRecipeSellingPrice(r))}
+                            </span>
+                            {currentGroup && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 truncate max-w-full">
+                                กลุ่ม: {currentGroup.name}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -419,7 +409,10 @@ export const PriceGroupView: React.FC<Props> = ({ state, onUpdateState }) => {
             return (
               <div
                 key={group.id}
-                onClick={() => setSelectedGroupId(group.id)}
+                onClick={() => {
+                  setSelectedGroupId(group.id);
+                  setSelectedRecipeIdsToAdd([]);
+                }}
                 className={`group flex items-center justify-between gap-2 p-3 rounded-xl border-2 cursor-pointer transition ${
                   isSelected
                     ? 'bg-[#e8f5fd] border-[#118cd1]'
@@ -463,86 +456,22 @@ export const PriceGroupView: React.FC<Props> = ({ state, onUpdateState }) => {
           <div className="flex-1 w-full space-y-5">
             {/* การ์ดสินค้าในกลุ่มนี้ */}
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-[#eae3cf] space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-base font-extrabold text-[#0d3a57] flex items-center gap-2">
-                    <span>สินค้าในกลุ่ม &ldquo;{selectedGroup.name}&rdquo;</span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-[#e8f5fd] text-[#118cd1] text-xs font-black">
-                      {formatBaht(selectedGroup.singlePrice)}
-                    </span>
-                  </h3>
-                  <p className="text-xs text-[#6b8799] mt-0.5">
-                    มีทั้งหมด {recipesInSelectedGroup.length} รายการที่ใช้ราคากลุ่มนี้
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateProductForm((v) => !v)}
-                  className="shrink-0 inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition cursor-pointer"
-                >
-                  <PackagePlus className="w-4 h-4" /> สร้างสินค้าใหม่ในกลุ่มนี้
-                </button>
+              <div>
+                <h3 className="text-base font-extrabold text-[#0d3a57] flex items-center gap-2">
+                  <span>สินค้าในกลุ่ม &ldquo;{selectedGroup.name}&rdquo;</span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#e8f5fd] text-[#118cd1] text-xs font-black">
+                    {formatBaht(selectedGroup.singlePrice)}
+                  </span>
+                </h3>
+                <p className="text-xs text-[#6b8799] mt-0.5">
+                  มีทั้งหมด {recipesInSelectedGroup.length} รายการที่ใช้ราคากลุ่มนี้
+                </p>
               </div>
-
-              {showCreateProductForm && (
-                <form
-                  onSubmit={handleCreateProductInGroup}
-                  className="bg-[#fef9ec] rounded-xl p-4 border border-[#eae3cf] space-y-3"
-                >
-                  <div className="text-xs font-extrabold text-[#0d3a57]">
-                    สร้างสินค้าใหม่ (ราคาเริ่มต้น {formatBaht(selectedGroup.singlePrice)})
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <input
-                      type="text"
-                      placeholder="ชื่อสินค้า *"
-                      value={newProdName}
-                      onChange={(e) => setNewProdName(e.target.value)}
-                      className="bg-white border border-[#eae3cf] rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-[#118cd1]"
-                      required
-                      autoFocus
-                    />
-                    <select
-                      value={newProdCategory}
-                      onChange={(e) => setNewProdCategory(e.target.value)}
-                      className="bg-white border border-[#eae3cf] rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-[#118cd1]"
-                    >
-                      {existingCategories.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      type="text"
-                      placeholder="หน่วยขาย (เช่น ชิ้น, แก้ว)"
-                      value={newProdUnit}
-                      onChange={(e) => setNewProdUnit(e.target.value)}
-                      className="bg-white border border-[#eae3cf] rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-[#118cd1]"
-                    />
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowCreateProductForm(false)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-bold text-[#6b8799] hover:bg-white"
-                    >
-                      ยกเลิก
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
-                    >
-                      สร้าง &amp; เพิ่มเข้ากลุ่ม
-                    </button>
-                  </div>
-                </form>
-              )}
 
               {recipesInSelectedGroup.length === 0 ? (
                 <div className="bg-[#fef9ec] rounded-xl p-6 text-center text-xs text-[#6b8799] border border-dashed border-[#eae3cf]">
                   ยังไม่มีสินค้าในกลุ่มราคา &ldquo;{selectedGroup.name}&rdquo; —
-                  เลือกเพิ่มจากรายการด้านล่าง หรือกด &ldquo;+ สร้างสินค้าใหม่ในกลุ่มนี้&rdquo;
+                  เลือกติ๊กสินค้าจากรายการด้านล่างแล้วกด Add เพื่อเพิ่มเข้ากลุ่ม
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
@@ -586,21 +515,43 @@ export const PriceGroupView: React.FC<Props> = ({ state, onUpdateState }) => {
               )}
             </div>
 
-            {/* ดึงสินค้าที่มีอยู่แล้วเข้า Price Group นี้ */}
+            {/* ดึงสินค้าที่มีอยู่แล้วเข้า Price Group นี้ (ติ๊กเลือกแล้วกด Add) */}
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-[#eae3cf] space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <h4 className="text-sm font-extrabold text-[#0d3a57]">
-                  เพิ่มสินค้าที่มีอยู่เข้ากลุ่ม &ldquo;{selectedGroup.name}&rdquo;
-                </h4>
-                <div className="relative w-full sm:w-64">
-                  <Search className="w-3.5 h-3.5 text-[#6b8799] absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    placeholder="ค้นหาชื่อสินค้าหรือหมวดหมู่..."
-                    value={assignSearch}
-                    onChange={(e) => setAssignSearch(e.target.value)}
-                    className="w-full bg-[#fef9ec] border border-[#eae3cf] rounded-xl pl-8 pr-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-[#118cd1]"
-                  />
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="text-sm font-extrabold text-[#0d3a57]">
+                    เพิ่มสินค้าที่มีอยู่เข้ากลุ่ม &ldquo;{selectedGroup.name}&rdquo;
+                  </h4>
+                  {selectedRecipeIdsToAdd.length > 0 && (
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#e8f5fd] text-[#118cd1]">
+                      เลือกแล้ว {selectedRecipeIdsToAdd.length} รายการ
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1 sm:w-56">
+                    <Search className="w-3.5 h-3.5 text-[#6b8799] absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="ค้นหาชื่อสินค้าหรือหมวดหมู่..."
+                      value={assignSearch}
+                      onChange={(e) => setAssignSearch(e.target.value)}
+                      className="w-full bg-[#fef9ec] border border-[#eae3cf] rounded-xl pl-8 pr-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-[#118cd1]"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={selectedRecipeIdsToAdd.length === 0}
+                    onClick={handleConfirmAddSelectedToGroup}
+                    className={`shrink-0 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-extrabold transition ${
+                      selectedRecipeIdsToAdd.length > 0
+                        ? 'bg-[#118cd1] hover:bg-[#0e76b2] text-white cursor-pointer shadow-xs'
+                        : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                    }`}
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    Add ({selectedRecipeIdsToAdd.length})
+                  </button>
                 </div>
               </div>
 
@@ -610,14 +561,26 @@ export const PriceGroupView: React.FC<Props> = ({ state, onUpdateState }) => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5 max-h-80 overflow-y-auto pr-1">
-                  {otherRecipes.map((r) => (
-                    <button
-                      key={r.id}
-                      type="button"
-                      onClick={() => handleAssignRecipeToGroup(r.id, selectedGroup)}
-                      className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-[#fef9ec] hover:bg-[#e8f5fd] border border-[#eae3cf] hover:border-[#118cd1] text-left transition cursor-pointer"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
+                  {otherRecipes.map((r) => {
+                    const checked = selectedRecipeIdsToAdd.includes(r.id);
+                    const currentGroup = allGroups.find((g) => g.id === getRecipeGroupId(r));
+                    return (
+                      <div
+                        key={r.id}
+                        onClick={() => toggleRecipeToAdd(r.id)}
+                        className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-left transition cursor-pointer select-none ${
+                          checked
+                            ? 'bg-[#e8f5fd] border-[#118cd1] shadow-xs'
+                            : 'bg-[#fef9ec] hover:bg-[#e8f5fd]/40 border-[#eae3cf] hover:border-[#118cd1]/60'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleRecipeToAdd(r.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-4 h-4 accent-[#118cd1] rounded cursor-pointer shrink-0"
+                        />
                         {r.image ? (
                           <img
                             src={r.image}
@@ -629,20 +592,24 @@ export const PriceGroupView: React.FC<Props> = ({ state, onUpdateState }) => {
                             <IceCream className="w-4 h-4" />
                           </div>
                         )}
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <div className="font-bold text-xs text-[#0d3a57] truncate">
                             {r.name}
                           </div>
                           <div className="text-[11px] text-[#6b8799] truncate">
                             {r.category} · เดิม {formatBaht(getRecipeSellingPrice(r))}
                           </div>
+                          {currentGroup && (
+                            <div className="mt-0.5">
+                              <span className="inline-block text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 truncate max-w-full">
+                                อยู่ในกลุ่ม: {currentGroup.name}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
-                      <span className="shrink-0 inline-flex items-center gap-1 text-[11px] font-extrabold text-[#118cd1] bg-white px-2 py-1 rounded-lg border border-[#eae3cf]">
-                        <Check className="w-3 h-3" /> เพิ่ม
-                      </span>
-                    </button>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
