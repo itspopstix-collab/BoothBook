@@ -16,6 +16,7 @@ import { buildDemo50Recipes } from './services/demo50Menus';
 import { EventPnLView } from './components/EventPnLView';
 import { FifoInventoryView } from './components/FifoInventoryView';
 import { RecipeCostView } from './components/RecipeCostView';
+import { PriceGroupView } from './components/PriceGroupView';
 import { SettingsView } from './components/SettingsView';
 import { PosCashierView } from './components/PosCashierView';
 import { signOut } from './services/supabase';
@@ -30,6 +31,7 @@ import {
   BarChart3,
   Package,
   IceCream,
+  Tags,
   Settings,
   TrendingUp,
   CloudUpload,
@@ -46,7 +48,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
-type ActiveTab = 'pos' | 'events' | 'inventory' | 'recipes' | 'settings';
+type ActiveTab = 'pos' | 'events' | 'inventory' | 'recipes' | 'price_groups' | 'settings';
 
 const DB_REVISION_STAMP = 'boothbook-pos-unified-v1';
 
@@ -305,6 +307,7 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
     { id: 'events', label: 'ออกบูธ & P&L', icon: <BarChart3 className="w-5 h-5 shrink-0" />, ownerOnly: true },
     { id: 'inventory', label: 'สต็อก FIFO', icon: <Package className="w-5 h-5 shrink-0" />, ownerOnly: true },
     { id: 'recipes', label: 'สูตร & สินค้า', icon: <IceCream className="w-5 h-5 shrink-0" />, ownerOnly: true },
+    { id: 'price_groups', label: 'Price Group', icon: <Tags className="w-5 h-5 shrink-0" />, ownerOnly: true },
     { id: 'settings', label: 'ตั้งค่า', icon: <Settings className="w-5 h-5 shrink-0" />, ownerOnly: true },
   ];
 
@@ -574,6 +577,13 @@ export const App: React.FC<{ userProfile: UserProfile | null }> = ({ userProfile
           <RecipeCostView
             state={state}
             sim={sim}
+            onUpdateState={handleUpdateState}
+          />
+        )}
+
+        {isOwner && activeTab === 'price_groups' && (
+          <PriceGroupView
+            state={state}
             onUpdateState={handleUpdateState}
           />
         )}
