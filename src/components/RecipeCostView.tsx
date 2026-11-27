@@ -713,7 +713,7 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                 คลังวัตถุดิบทั้งหมด (สำหรับดึงไปกรอกในสูตร)
               </h2>
               <p className="text-xs text-[#6b8799] mt-0.5">
-                ดูรายการวัตถุดิบทั้งหมด ราคาต่อหน่วยจากล็อตที่ซื้อไว้ หรือกดปุ่ม &ldquo;ดึงไปใส่สูตร&rdquo; เพื่อนำไปใช้งานได้ทันที
+                ดูรายการวัตถุดิบทั้งหมดและราคาต่อหน่วยจากล็อตที่ซื้อไว้ในระบบ
               </p>
             </div>
             <button
@@ -832,19 +832,6 @@ export const RecipeCostView: React.FC<Props> = ({ state, sim, onUpdateState }) =
                         )}
                       </div>
                     </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAddIngId(ing.id);
-                        setAddIngLotId('fifo');
-                        setActiveSubTab('recipes');
-                      }}
-                      className="w-full inline-flex items-center justify-center gap-1.5 bg-[#118cd1]/10 hover:bg-[#118cd1] text-[#118cd1] hover:text-white font-black py-2 px-3 rounded-xl text-xs transition cursor-pointer"
-                    >
-                      ดึงไปใส่สูตร
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
                   </div>
                 );
               })}
