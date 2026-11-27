@@ -33,6 +33,7 @@ import {
   ChevronDown,
   Upload,
   X,
+  Eye,
 } from 'lucide-react';
 
 interface Props {
@@ -152,8 +153,9 @@ export const RecipeCostView: React.FC<Props> = ({
     new Date().toISOString().slice(0, 10)
   );
 
-  // Modal เพิ่ม Slot (Lot) ใหม่ให้วัตถุดิบที่มีอยู่แล้ว
+  // Modal เพิ่ม / ดู Slot (Lot) ของวัตถุดิบ
   const [addSlotTargetIng, setAddSlotTargetIng] = useState<Ingredient | null>(null);
+  const [viewSlotsTargetIng, setViewSlotsTargetIng] = useState<Ingredient | null>(null);
   const [slotVendor, setSlotVendor] = useState('');
   const [slotWeight, setSlotWeight] = useState('1000');
   const [slotPrice, setSlotPrice] = useState('');
@@ -882,19 +884,28 @@ export const RecipeCostView: React.FC<Props> = ({
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAddSlotTargetIng(ing);
-                        setSlotVendor('');
-                        setSlotWeight('1000');
-                        setSlotPrice('');
-                        setSlotPurchaseDate(new Date().toISOString().slice(0, 10));
-                      }}
-                      className="w-full inline-flex items-center justify-center gap-1.5 bg-[#118cd1]/10 hover:bg-[#118cd1] text-[#118cd1] hover:text-white font-black py-2 px-3 rounded-xl text-xs transition cursor-pointer"
-                    >
-                      <Plus className="w-3.5 h-3.5" /> Add Slot
-                    </button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAddSlotTargetIng(ing);
+                          setSlotVendor('');
+                          setSlotWeight('1000');
+                          setSlotPrice('');
+                          setSlotPurchaseDate(new Date().toISOString().slice(0, 10));
+                        }}
+                        className="inline-flex items-center justify-center gap-1.5 bg-[#118cd1]/10 hover:bg-[#118cd1] text-[#118cd1] hover:text-white font-black py-2 px-3 rounded-xl text-xs transition cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Add Slot
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setViewSlotsTargetIng(ing)}
+                        className="inline-flex items-center justify-center gap-1.5 bg-white hover:bg-[#fef9ec] text-[#0d3a57] border border-[#eae3cf] font-black py-2 px-3 rounded-xl text-xs transition cursor-pointer"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-[#6b8799]" /> View Slot ({lots.length})
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -2003,6 +2014,120 @@ export const RecipeCostView: React.FC<Props> = ({
           </div>
         </div>
       )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal ดูรายการ Slot (Lot) ทั้งหมดของวัตถุดิบแบบ Data Table */}
+      {viewSlotsTargetIng && (
+        <div className="fixed inset-0 bg-[#0d3a57]/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl border border-[#eae3cf] space-y-4 max-h-[90vh] flex flex-col">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-extrabold text-[#0d3a57]">
+                  View Slot — {viewSlotsTargetIng.name}
+                </h3>
+                <p className="text-xs text-[#6b8799] mt-0.5">
+                  ประวัติการซื้อและ Vendor ทั้งหมดของ {viewSlotsTargetIng.name}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const target = viewSlotsTargetIng;
+                    setViewSlotsTargetIng(null);
+                    setAddSlotTargetIng(target);
+                    setSlotVendor('');
+                    setSlotWeight('1000');
+                    setSlotPrice('');
+                    setSlotPurchaseDate(new Date().toISOString().slice(0, 10));
+                  }}
+                  className="inline-flex items-center gap-1 bg-[#118cd1] hover:bg-[#0e76b2] text-white font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add Slot
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewSlotsTargetIng(null)}
+                  className="p-1.5 rounded-lg text-[#6b8799] hover:text-[#0d3a57] hover:bg-slate-100 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {(() => {
+              const targetLots = state.ingredientLots
+                .filter((l) => l.ingredientId === viewSlotsTargetIng.id)
+                .sort((a, b) => b.purchaseDate.localeCompare(a.purchaseDate) || b.id.localeCompare(a.id));
+
+              if (targetLots.length === 0) {
+                return (
+                  <div className="bg-[#fef9ec] rounded-xl p-8 text-center text-xs text-[#6b8799] border border-dashed border-[#eae3cf]">
+                    ยังไม่มี Slot สำหรับวัตถุดิบนี้ — กดปุ่ม &ldquo;+ Add Slot&rdquo; ด้านบนเพื่อเพิ่มได้เลยครับ
+                  </div>
+                );
+              }
+
+              return (
+                <div className="overflow-auto border border-[#eae3cf] rounded-xl">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead className="bg-[#fef9ec] text-[#6b8799] border-b border-[#eae3cf] sticky top-0">
+                      <tr>
+                        <th className="py-2.5 px-3 font-bold">#</th>
+                        <th className="py-2.5 px-3 font-bold">วันที่ซื้อ</th>
+                        <th className="py-2.5 px-3 font-bold">Vendor / แหล่งซื้อ</th>
+                        <th className="py-2.5 px-3 font-bold text-right">ปริมาณ</th>
+                        <th className="py-2.5 px-3 font-bold text-right">ราคารวม</th>
+                        <th className="py-2.5 px-3 font-bold text-right">ราคา/หน่วย</th>
+                        <th className="py-2.5 px-3 font-bold text-center w-12">ลบ</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#eae3cf]/60">
+                      {targetLots.map((lot, idx) => (
+                        <tr key={lot.id} className="hover:bg-[#fef9ec]/50">
+                          <td className="py-2.5 px-3 font-bold text-[#6b8799]">
+                            {targetLots.length - idx}
+                          </td>
+                          <td className="py-2.5 px-3 font-semibold text-[#0d3a57]">
+                            {lot.purchaseDate}
+                          </td>
+                          <td className="py-2.5 px-3 font-bold text-[#0d3a57]">
+                            {lot.vendor || '-'}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-semibold text-[#0d3a57]">
+                            {lot.weightGrams.toLocaleString()} {lot.unit === 'pcs' ? 'ชิ้น' : 'g'}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-bold text-[#0d3a57]">
+                            {formatBaht(lot.totalPrice)}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-extrabold text-emerald-700">
+                            {formatBaht(lot.costPerGram, 4)} / {lot.unit === 'pcs' ? 'ชิ้น' : 'g'}
+                          </td>
+                          <td className="py-2.5 px-3 text-center">
+                            <button
+                              type="button"
+                              title="ลบ Slot นี้"
+                              onClick={() => {
+                                if (!window.confirm('ต้องการลบ Slot นี้ใช่หรือไม่?')) return;
+                                onUpdateState((prev) => ({
+                                  ...prev,
+                                  ingredientLots: prev.ingredientLots.filter((l) => l.id !== lot.id),
+                                }));
+                              }}
+                              className="p-1 rounded-lg text-rose-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
